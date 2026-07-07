@@ -1,0 +1,86 @@
+{
+  "common": {
+    "appName": "Petit Bailleur",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "soon": "Bientôt",
+    "start": "Commencer",
+    "logout": "Deconnexion"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "properties": "Biens",
+    "tenants": "Locataires",
+    "documents": "Documents",
+    "tax": "Dossier fiscal",
+    "settings": "Paramètres"
+  },
+  "landing": {
+    "eyebrow": "Pour les petits bailleurs LMNP",
+    "heroTitle": "Vos loyers, reçus et travaux prêts pour la déclaration",
+    "heroCopy": "Un espace simple pour classer les loyers, dépôts, réparations, factures et contrats par bien, chambre, locataire et mois.",
+    "primaryCta": "Organiser mes locations",
+    "secondaryCta": "Voir le tableau de bord",
+    "proof": "Pensé pour 1 à 5 biens, colocations et locations meublées.",
+    "painTitle": "Remplacez le chaos Excel + Drive + boîte mail",
+    "painCopy": "Retrouvez les justificatifs manquants avant la saison fiscale, pas pendant.",
+    "featureRent": "Suivi mensuel des loyers",
+    "featureReceipts": "Factures et reçus classés",
+    "featureTax": "Export annuel pour votre comptable"
+  },
+  "auth": {
+    "title": "Connexion",
+    "subtitle": "L'authentification Supabase sera branchée dans la prochaine étape.",
+    "email": "Email",
+    "password": "Mot de passe",
+    "country": "Pays",
+    "countryFrance": "France",
+    "submit": "Continuer",
+    "signIn": "Se connecter",
+    "signUp": "Creer un compte",
+    "errors": {
+      "invalid_credentials": "Email ou mot de passe incorrect.",
+      "signup_failed": "Inscription impossible. Verifiez l'email et le mot de passe."
+    },
+    "registered": {
+      "check_email": "Inscription envoyee. Verifiez votre email pour confirmer le compte."
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Une vue claire de vos loyers, documents et tâches fiscales.",
+    "monthlyRent": "Loyers du mois",
+    "missingReceipts": "Justificatifs manquants",
+    "yearlyIncome": "Revenus annuels",
+    "recentDocuments": "Documents récents",
+    "quickActions": "Actions rapides",
+    "addRent": "Ajouter un loyer",
+    "addExpense": "Ajouter une dépense",
+    "uploadDocument": "Téléverser un justificatif"
+  },
+  "properties": {
+    "title": "Biens",
+    "subtitle": "Gérez les biens, chambres et unités louées.",
+    "newProperty": "Nouveau bien"
+  },
+  "tenants": {
+    "title": "Locataires",
+    "subtitle": "Suivez les locataires, baux, dépôts et périodes de location."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Classez contrats, factures, assurances et justificatifs par bien et par période."
+  },
+  "tax": {
+    "title": "Dossier fiscal",
+    "subtitle": "Préparez un export annuel clair pour votre comptable.",
+    "disclaimer": "Les catégories sont indicatives et ne remplacent pas un conseil fiscal."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Pays, langue, facturation et export des données.",
+    "country": "Pays du compte",
+    "locale": "Langue",
+    "billing": "Facturation"
+  }
+}

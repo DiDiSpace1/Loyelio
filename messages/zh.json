@@ -1,0 +1,86 @@
+{
+  "common": {
+    "appName": "Petit Bailleur",
+    "cancel": "取消",
+    "save": "保存",
+    "soon": "即将推出",
+    "start": "开始",
+    "logout": "退出登录"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "properties": "房源",
+    "tenants": "租客",
+    "documents": "文件",
+    "tax": "税务包",
+    "settings": "设置"
+  },
+  "landing": {
+    "eyebrow": "为法国 LMNP 小房东设计",
+    "heroTitle": "把房租、票据和维修记录整理到报税前就绪",
+    "heroCopy": "一个简单的工作台，按房源、房间、租客和月份归档房租、押金、维修、发票、收据和合同。",
+    "primaryCta": "开始整理出租记录",
+    "secondaryCta": "查看后台",
+    "proof": "适合 1 到 5 套房源、合租房和带家具出租。",
+    "painTitle": "告别 Excel、网盘和邮箱里的混乱",
+    "painCopy": "在报税季之前发现缺失票据，而不是报税时才崩溃。",
+    "featureRent": "月度租金跟踪",
+    "featureReceipts": "票据和发票归档",
+    "featureTax": "年度税务资料导出"
+  },
+  "auth": {
+    "title": "登录",
+    "subtitle": "Supabase 登录将在下一阶段接入。",
+    "email": "邮箱",
+    "password": "密码",
+    "country": "国家",
+    "countryFrance": "法国",
+    "submit": "继续",
+    "signIn": "登录",
+    "signUp": "注册新账户",
+    "errors": {
+      "invalid_credentials": "邮箱或密码不正确。",
+      "signup_failed": "注册失败，请检查邮箱和密码后重试。"
+    },
+    "registered": {
+      "check_email": "注册已提交，请检查邮箱并完成确认。"
+    }
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "subtitle": "清楚查看你的租金、文件和税务准备事项。",
+    "monthlyRent": "本月租金",
+    "missingReceipts": "缺失票据",
+    "yearlyIncome": "年度收入",
+    "recentDocuments": "最近文件",
+    "quickActions": "快捷操作",
+    "addRent": "添加租金",
+    "addExpense": "添加费用",
+    "uploadDocument": "上传票据"
+  },
+  "properties": {
+    "title": "房源",
+    "subtitle": "管理出租房源、房间和出租单元。",
+    "newProperty": "新增房源"
+  },
+  "tenants": {
+    "title": "租客",
+    "subtitle": "跟踪租客、租约、押金和租期。"
+  },
+  "documents": {
+    "title": "文件",
+    "subtitle": "按房源和期间归档合同、发票、保险和其他凭证。"
+  },
+  "tax": {
+    "title": "税务包",
+    "subtitle": "准备一份清晰的年度导出资料，方便交给会计师。",
+    "disclaimer": "这些分类仅供整理参考，不能替代税务建议。"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "管理国家、语言、账单和数据导出。",
+    "country": "账户国家",
+    "locale": "语言",
+    "billing": "账单"
+  }
+}

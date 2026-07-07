@@ -1,0 +1,86 @@
+{
+  "common": {
+    "appName": "Petit Bailleur",
+    "cancel": "Cancel",
+    "save": "Save",
+    "soon": "Soon",
+    "start": "Start",
+    "logout": "Log out"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "properties": "Properties",
+    "tenants": "Tenants",
+    "documents": "Documents",
+    "tax": "Tax pack",
+    "settings": "Settings"
+  },
+  "landing": {
+    "eyebrow": "For small LMNP landlords",
+    "heroTitle": "Your rents, receipts and repairs ready before tax season",
+    "heroCopy": "A simple workspace to file rent, deposits, repairs, invoices, receipts and leases by property, room, tenant and month.",
+    "primaryCta": "Organize my rentals",
+    "secondaryCta": "View dashboard",
+    "proof": "Built for 1 to 5 properties, shared flats and furnished rentals.",
+    "painTitle": "Replace the Excel + Drive + inbox chaos",
+    "painCopy": "Find missing receipts before tax season, not during it.",
+    "featureRent": "Monthly rent tracking",
+    "featureReceipts": "Receipts and invoices filed",
+    "featureTax": "Annual export for your accountant"
+  },
+  "auth": {
+    "title": "Login",
+    "subtitle": "Supabase authentication is now wired through server actions.",
+    "email": "Email",
+    "password": "Password",
+    "country": "Country",
+    "countryFrance": "France",
+    "submit": "Continue",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "errors": {
+      "invalid_credentials": "Email or password is incorrect.",
+      "signup_failed": "Could not create the account. Check the email and password."
+    },
+    "registered": {
+      "check_email": "Registration submitted. Check your email to confirm the account."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "A clear view of rents, documents and tax tasks.",
+    "monthlyRent": "Monthly rent",
+    "missingReceipts": "Missing receipts",
+    "yearlyIncome": "Yearly income",
+    "recentDocuments": "Recent documents",
+    "quickActions": "Quick actions",
+    "addRent": "Add rent",
+    "addExpense": "Add expense",
+    "uploadDocument": "Upload receipt"
+  },
+  "properties": {
+    "title": "Properties",
+    "subtitle": "Manage properties, rooms and rented units.",
+    "newProperty": "New property"
+  },
+  "tenants": {
+    "title": "Tenants",
+    "subtitle": "Track tenants, leases, deposits and rental periods."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "File leases, invoices, insurance and supporting documents by property and period."
+  },
+  "tax": {
+    "title": "Tax pack",
+    "subtitle": "Prepare a clear annual export for your accountant.",
+    "disclaimer": "Categories are indicative and do not replace tax advice."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Country, language, billing and data export.",
+    "country": "Account country",
+    "locale": "Language",
+    "billing": "Billing"
+  }
+}

@@ -1,0 +1,104 @@
+import JSZip from 'jszip';
+import {NextResponse, type NextRequest} from 'next/server';
+
+import {createSupabaseServerClient} from '@/lib/supabase/server';
+import {buildTaxCsv, buildTaxPdf, fetchTaxExportData, getWorkspaceIdForUser, parseExportYear} from '@/lib/tax/export';
+
+export const runtime = 'nodejs';
+
+function safeZipName(name: string) {
+  return name.replace(/[^a-zA-Z0-9.\-_\s]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'document';
+}
+
+export async function GET(request: NextRequest) {
+  const year = parseExportYear(request.nextUrl.searchParams.get('year'));
+
+  if (!year) {
+    return NextResponse.json({error: 'Invalid year'}, {status: 400});
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: {user}
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({error: 'Unauthorized'}, {status: 401});
+  }
+
+  const workspaceId = await getWorkspaceIdForUser(supabase, user.id);
+
+  if (!workspaceId) {
+    return NextResponse.json({error: 'Workspace not found'}, {status: 404});
+  }
+
+  const exportData = await fetchTaxExportData({supabase, workspaceId, year});
+
+  if (exportData.error || !exportData.data) {
+    return NextResponse.json({error: exportData.error ?? 'Export failed'}, {status: 500});
+  }
+
+  const zip = new JSZip();
+  const csv = buildTaxCsv(exportData.data);
+  const pdf = await buildTaxPdf(exportData.data);
+  const manifest = {
+    generatedAt: new Date().toISOString(),
+    includedDocuments: [] as Array<{fileName: string; filePath: string}>,
+    year
+  };
+
+  zip.file(`petit-bailleur-tax-${year}.csv`, csv);
+  zip.file(`petit-bailleur-summary-${year}.pdf`, pdf);
+
+  const documentFolder = zip.folder('documents');
+  const seenPaths = new Set<string>();
+
+  for (const expense of exportData.data.expenses) {
+    const document = expense.documents;
+
+    if (!document?.file_path || seenPaths.has(document.file_path)) {
+      continue;
+    }
+
+    seenPaths.add(document.file_path);
+    const {data, error} = await supabase.storage.from('documents').download(document.file_path);
+
+    if (error || !data) {
+      continue;
+    }
+
+    const buffer = Buffer.from(await data.arrayBuffer());
+    const fileName = `${seenPaths.size.toString().padStart(3, '0')}-${safeZipName(document.file_name)}`;
+
+    documentFolder?.file(fileName, buffer);
+    manifest.includedDocuments.push({
+      fileName,
+      filePath: document.file_path
+    });
+  }
+
+  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+  zip.file('README.txt', 'This ZIP is a tax preparation package. It does not replace tax or accounting advice.\n');
+
+  const zipBuffer = await zip.generateAsync({
+    compression: 'DEFLATE',
+    type: 'nodebuffer'
+  });
+
+  await supabase.from('tax_exports').insert({
+    country_code: 'FR',
+    status: 'ready',
+    tax_regime: 'LMNP',
+    workspace_id: workspaceId,
+    year
+  });
+
+  const body = new Uint8Array(zipBuffer).buffer;
+
+  return new NextResponse(body, {
+    headers: {
+      'Content-Disposition': `attachment; filename="petit-bailleur-tax-package-${year}.zip"`,
+      'Content-Type': 'application/zip'
+    }
+  });
+}
