@@ -7,7 +7,7 @@ import {FREE_PLAN_LIMITS, hasPaidAccess} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {createBillingPortalSessionAction, createCheckoutSessionAction} from './actions';
+import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction} from './actions';
 
 type SettingsPageProps = {
   searchParams: Promise<{
@@ -19,6 +19,8 @@ type SettingsPageProps = {
 const errorMessages: Record<string, string> = {
   billing_customer_missing: 'Aucun client Stripe n est encore associe a cet espace.',
   checkout_failed: 'Impossible de creer la session Stripe. Reessayez dans un instant.',
+  delete_confirmation: 'Saisissez SUPPRIMER pour confirmer la suppression du compte.',
+  delete_failed: 'Impossible de supprimer le compte. Reessayez dans un instant.',
   stripe_price_missing: 'Les Price IDs Stripe ne sont pas configures.'
 };
 
@@ -96,9 +98,9 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <form action={createCheckoutSessionAction} className="rounded-md border border-[var(--line)] p-4">
                 <input name="locale" type="hidden" value={locale} />
-                <input name="plan" type="hidden" value="monthly" />
-                <h3 className="font-semibold">Pro mensuel</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Debloque les biens, locataires et documents au-dela des limites gratuites.</p>
+                <input name="plan" type="hidden" value="subscription" />
+                <h3 className="font-semibold">Pro annuel</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Debloque les biens, locataires, documents et exports fiscaux au-dela du plan gratuit.</p>
                 <button className="focus-ring mt-4 min-h-11 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white" type="submit">
                   Passer a Pro
                 </button>
@@ -111,6 +113,32 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Un paiement unique pour garder l acces Pro sur cet espace bailleur.</p>
                 <button className="focus-ring mt-4 min-h-11 w-full rounded-md border border-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent)] hover:bg-[#eef8f5]" type="submit">
                   Acheter lifetime
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-[var(--line)] bg-white p-5">
+            <h2 className="text-lg font-semibold">Donnees</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-md border border-[var(--line)] p-4">
+                <h3 className="font-semibold">Export du compte</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Telechargez les donnees structurees de votre espace en JSON.</p>
+                <Link className="focus-ring mt-4 inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f2f0ea]" href="/api/account/export">
+                  Exporter mes donnees
+                </Link>
+              </div>
+
+              <form action={deleteAccountAction} className="rounded-md border border-[#efd0ca] p-4">
+                <input name="locale" type="hidden" value={locale} />
+                <h3 className="font-semibold text-[#9d2f1f]">Supprimer le compte</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Cette action supprime le compte, l espace bailleur et les donnees associees.</p>
+                <label className="mt-4 grid gap-2 text-sm font-medium">
+                  Tapez SUPPRIMER
+                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="confirmation" placeholder="SUPPRIMER" />
+                </label>
+                <button className="focus-ring mt-4 min-h-11 rounded-md border border-[#efd0ca] px-4 text-sm font-semibold text-[#9d2f1f] hover:bg-[#fff4f1]" type="submit">
+                  Supprimer definitivement
                 </button>
               </form>
             </div>

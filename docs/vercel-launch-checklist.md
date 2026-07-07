@@ -29,7 +29,7 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 
 ## Stripe
 
-- Create the monthly recurring Price and lifetime one-time Price.
+- Create the recurring subscription Price (monthly or yearly) and lifetime one-time Price.
 - Copy both Price IDs into Vercel.
 - Add a webhook endpoint:
   - URL: `https://your-domain.example/api/stripe/webhook`
@@ -42,10 +42,12 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 - Sign up and confirm a new workspace is created.
 - Create 1 property, 3 tenants, and 10 documents on the free plan.
 - Confirm the next property, tenant, or document redirects with `plan_limit`.
-- Buy monthly Pro in Stripe test mode and confirm the settings page shows Pro after webhook delivery.
+- Buy Pro in Stripe test mode and confirm the settings page shows Pro after webhook delivery.
 - Open Stripe Customer Portal from settings.
 - Cancel the subscription and confirm limits return after the webhook updates billing.
 - Visit `/privacy` and `/terms` while logged out.
+- Confirm a free user sees the Pro prompt on `/tax` and cannot download `/api/tax/export.zip` directly.
+- Confirm a paid user can download the CSV and ZIP tax preparation package.
 
 ## Build
 

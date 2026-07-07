@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 import {NextResponse, type NextRequest} from 'next/server';
 
+import {hasPaidAccess} from '@/lib/billing/config';
+import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 import {buildTaxCsv, buildTaxPdf, fetchTaxExportData, getWorkspaceIdForUser, parseExportYear} from '@/lib/tax/export';
 
@@ -30,6 +32,12 @@ export async function GET(request: NextRequest) {
 
   if (!workspaceId) {
     return NextResponse.json({error: 'Workspace not found'}, {status: 404});
+  }
+
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+
+  if (!hasPaidAccess(billing)) {
+    return NextResponse.redirect(new URL('/tax?error=billing_required', request.url));
   }
 
   const exportData = await fetchTaxExportData({supabase, workspaceId, year});

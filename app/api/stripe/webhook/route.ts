@@ -48,7 +48,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     });
   } else {
     await updateBillingByWorkspace(workspaceId, {
-      plan: session.metadata?.plan ?? 'monthly',
+      plan: session.metadata?.plan ?? 'subscription',
       stripe_customer_id: customerId
     });
   }
@@ -60,7 +60,7 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
   const values = {
     current_period_end: subscriptionPeriodEnd(subscription),
     lifetime_access: false,
-    plan: subscription.metadata?.plan ?? 'monthly',
+    plan: subscription.metadata?.plan ?? 'subscription',
     status: subscription.status,
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id

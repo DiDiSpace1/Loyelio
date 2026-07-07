@@ -53,7 +53,7 @@ async function ensureStripeCustomer(locale: string) {
 
 export async function createCheckoutSessionAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
-  const plan = value(formData, 'plan') === 'lifetime' ? 'lifetime' : 'monthly';
+  const plan = value(formData, 'plan') === 'lifetime' ? 'lifetime' : 'subscription';
   const priceId = getStripePriceId(plan);
 
   if (!priceId) {
@@ -80,7 +80,7 @@ export async function createCheckoutSessionAction(formData: FormData) {
     },
     mode: plan === 'lifetime' ? 'payment' : 'subscription',
     subscription_data:
-      plan === 'monthly'
+      plan === 'subscription'
         ? {
             metadata: {
               plan,
@@ -114,4 +114,32 @@ export async function createBillingPortalSessionAction(formData: FormData) {
   });
 
   redirect(session.url);
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const confirmation = value(formData, 'confirmation');
+
+  if (confirmation !== 'SUPPRIMER') {
+    redirect(`${localizedPath(locale, '/settings')}?error=delete_confirmation`);
+  }
+
+  const {supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: documents} = await supabase.from('documents').select('file_path').eq('workspace_id', workspaceId);
+  const filePaths = (documents ?? [])
+    .map((document) => document.file_path)
+    .filter((filePath): filePath is string => typeof filePath === 'string' && filePath.length > 0);
+
+  if (filePaths.length) {
+    await supabase.storage.from('documents').remove(filePaths);
+  }
+
+  const admin = createSupabaseAdminClient();
+  const {error} = await admin.auth.admin.deleteUser(user.id);
+
+  if (error) {
+    redirect(`${localizedPath(locale, '/settings')}?error=delete_failed`);
+  }
+
+  redirect(localizedPath(locale, '/'));
 }
