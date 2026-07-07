@@ -6,6 +6,7 @@ import {PageHeader} from '@/components/app/page-header';
 import {StatCard} from '@/components/app/stat-card';
 import {hasPaidAccess} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
+import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createCheckoutSessionAction} from '../settings/actions';
@@ -101,6 +102,8 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
     exportQuery.set('property_id', propertyId);
   }
 
+  const taxReturnPath = `${localizedPath(locale, '/tax')}?${exportQuery.toString()}`;
+
   return (
     <AppShell>
       <PageHeader
@@ -121,6 +124,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
               <form action={createCheckoutSessionAction}>
                 <input name="locale" type="hidden" value={locale} />
                 <input name="plan" type="hidden" value="subscription" />
+                <input name="return_path" type="hidden" value={taxReturnPath} />
                 <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
                   Debloquer l export
                 </button>
@@ -132,6 +136,11 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
       {params.error === 'billing_required' ? (
         <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
           L export fiscal est inclus dans Pro. Debloquez l export pour telecharger le CSV ou le ZIP.
+        </div>
+      ) : null}
+      {params.error === 'checkout_failed' ? (
+        <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
+          Impossible d ouvrir Stripe Checkout. Verifiez la configuration Stripe et reessayez.
         </div>
       ) : null}
       {!paid ? (
