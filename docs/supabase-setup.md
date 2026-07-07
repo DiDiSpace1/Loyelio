@@ -44,6 +44,7 @@ Site URL: http://localhost:3000
 Redirect URLs:
 http://localhost:3000/auth/callback
 http://localhost:3000/reset-password
+http://localhost:3000/**
 http://localhost:3000/zh/auth/callback
 http://localhost:3000/en/auth/callback
 ```

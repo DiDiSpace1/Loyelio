@@ -74,7 +74,7 @@ export async function requestPasswordResetAction(formData: FormData) {
   const locale = getOptionalValue(formData, 'locale') || 'fr';
   const supabase = await createSupabaseServerClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  const redirectTo = `${appUrl}${localizedPath(locale, '/auth/callback')}?next=${encodeURIComponent(localizedPath(locale, '/reset-password'))}`;
+  const redirectTo = `${appUrl}${localizedPath(locale, '/reset-password')}`;
 
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo
