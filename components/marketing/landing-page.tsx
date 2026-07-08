@@ -162,10 +162,10 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="ui-card rounded-xl border-none bg-[#008378] p-8 !text-white md:col-span-5">
-              <Symbol light>LOYERS</Symbol>
-              <h3 className="mb-2 text-xl font-semibold leading-7">{t('featureRent')}</h3>
-              <p className="mb-8 text-sm leading-5 text-white/90">{t('featureRentCopy')}</p>
+            <div className="rent-feature-card rounded-xl border border-[#6bd8cb]/40 p-8 md:col-span-5">
+              <span className="mb-4 block text-xs font-bold tracking-[0.12em] text-[#d6fff7]">LOYERS</span>
+              <h3 className="mb-2 text-xl font-semibold leading-7 text-white">{t('featureRent')}</h3>
+              <p className="mb-8 text-sm leading-5 text-[#d6fff7]">{t('featureRentCopy')}</p>
               <div className="space-y-3">
                 <RentStatus name="M. Lambert" status={t('paid')} />
                 <RentStatus overdue name="Mme. Simon" status={t('overdue')} />
@@ -308,9 +308,9 @@ function PropertyTile({image, title}: {image: string; title: string}) {
 
 function RentStatus({name, overdue = false, status}: {name: string; overdue?: boolean; status: string}) {
   return (
-    <div className="flex items-center justify-between rounded bg-white/10 p-3">
-      <span className="text-xs font-medium">{name}</span>
-      <span className={overdue ? 'rounded bg-[#ba1a1a] px-2 py-1 text-[10px] font-bold uppercase !text-white' : 'rounded bg-white/20 px-2 py-1 text-[10px] font-bold uppercase !text-white'}>
+    <div className="flex items-center justify-between rounded border border-white/20 bg-white/10 p-3 text-white">
+      <span className="text-xs font-semibold text-white">{name}</span>
+      <span className={overdue ? 'rounded bg-[#ba1a1a] px-2 py-1 text-[10px] font-bold uppercase text-white' : 'rounded bg-[#d6fff7] px-2 py-1 text-[10px] font-bold uppercase text-[#004c45]'}>
         {status}
       </span>
     </div>
