@@ -86,6 +86,16 @@ async function checkStripe() {
       record(name, false, error instanceof Error ? error.message : String(error));
     }
   }
+
+  const endpoints = await stripe.webhookEndpoints.list({limit: 10});
+  const webhook = endpoints.data.find((endpoint) => endpoint.url === `${appUrl}/api/stripe/webhook`);
+  record('Stripe webhook endpoint URL', Boolean(webhook), webhook ? webhook.status : 'missing /api/stripe/webhook endpoint');
+
+  if (webhook) {
+    const requiredEvents = ['checkout.session.completed', 'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'];
+    const missingEvents = requiredEvents.filter((event) => !webhook.enabled_events.includes(event) && !webhook.enabled_events.includes('*'));
+    record('Stripe webhook events', missingEvents.length === 0, missingEvents.length ? `missing ${missingEvents.join(', ')}` : 'all required events enabled');
+  }
 }
 
 async function checkSupabase() {

@@ -29,6 +29,17 @@ async function updateBillingByCustomer(customerId: string, values: Record<string
   await supabase.from('workspace_billing').update(values).eq('stripe_customer_id', customerId);
 }
 
+async function getBillingByCustomer(customerId: string) {
+  const supabase = createSupabaseAdminClient();
+  const {data} = await supabase
+    .from('workspace_billing')
+    .select('stripe_subscription_id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle<{stripe_subscription_id: string | null}>();
+
+  return data ?? null;
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const workspaceId = session.metadata?.workspace_id;
 
@@ -76,6 +87,11 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+  const billing = await getBillingByCustomer(customerId);
+
+  if (billing?.stripe_subscription_id !== subscription.id) {
+    return;
+  }
 
   await updateBillingByCustomer(customerId, {
     current_period_end: subscriptionPeriodEnd(subscription),
