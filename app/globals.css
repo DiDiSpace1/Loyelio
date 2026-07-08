@@ -2,13 +2,17 @@
 
 :root {
   color-scheme: light;
-  --background: #f7f6f2;
-  --foreground: #20201d;
-  --muted: #747167;
+  --background: #f5faf8;
+  --foreground: #171d1c;
+  --muted: #3d4947;
   --panel: #ffffff;
-  --line: #dedbd2;
-  --accent: #0d6b5f;
-  --accent-strong: #094a42;
+  --panel-muted: #f0f5f2;
+  --line: #bcc9c6;
+  --line-soft: #dee4e1;
+  --accent: #00685f;
+  --accent-strong: #005049;
+  --accent-soft: #dff7f2;
+  --secondary: #3755c3;
   --warning: #b35a09;
 }
 
@@ -21,7 +25,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -37,6 +41,6 @@ textarea {
 }
 
 .focus-ring:focus-visible {
-  outline: 3px solid rgb(13 107 95 / 35%);
+  outline: 3px solid rgb(0 104 95 / 28%);
   outline-offset: 2px;
 }

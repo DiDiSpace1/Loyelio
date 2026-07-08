@@ -1,11 +1,11 @@
 {
   "common": {
-    "appName": "Petit Bailleur",
+    "appName": "HabitatLog",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "soon": "Bientôt",
     "start": "Commencer",
-    "logout": "Deconnexion"
+    "logout": "Déconnexion"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -16,34 +16,90 @@
     "settings": "Paramètres"
   },
   "landing": {
-    "eyebrow": "Pour les petits bailleurs LMNP",
-    "heroTitle": "Vos loyers, reçus et travaux prêts pour la déclaration",
-    "heroCopy": "Un espace simple pour classer les loyers, dépôts, réparations, factures et contrats par bien, chambre, locataire et mois.",
-    "primaryCta": "Organiser mes locations",
+    "navFeatures": "Fonctionnalités",
+    "navPricing": "Tarifs",
+    "navLogin": "Connexion",
+    "navCta": "Essayer gratuitement",
+    "eyebrow": "Gestion locative et préparation fiscale",
+    "heroTitle": "Gardez vos locations claires, prêtes pour la saison fiscale",
+    "heroCopy": "HabitatLog aide les petits bailleurs en France à suivre loyers, locataires, documents, charges et exports fiscaux dans un espace simple et fiable.",
+    "primaryCta": "Démarrer mon essai",
     "secondaryCta": "Voir le tableau de bord",
-    "proof": "Pensé pour 1 à 5 biens, colocations et locations meublées.",
+    "proof": "Pensé pour les propriétaires de 1 à 20 lots, LMNP, colocations et locations meublées.",
     "painTitle": "Remplacez le chaos Excel + Drive + boîte mail",
     "painCopy": "Retrouvez les justificatifs manquants avant la saison fiscale, pas pendant.",
-    "featureRent": "Suivi mensuel des loyers",
-    "featureReceipts": "Factures et reçus classés",
-    "featureTax": "Export annuel pour votre comptable"
+    "previewStatus": "À jour",
+    "previewRentStatus": "Reçu ce mois-ci",
+    "previewDocsStatus": "Fichiers classés",
+    "previewTaxStatus": "Prêt à exporter",
+    "featuresTitle": "Tout ce dont un propriétaire a besoin",
+    "featuresCopy": "Concentrez-vous sur l'essentiel. L'interface est pensée pour être efficace, pas décorative.",
+    "featureProperties": "Gestion des biens",
+    "featurePropertiesCopy": "Visualisez vos biens, chambres et unités louées avec leurs loyers, baux et documents associés.",
+    "featureRent": "Suivi des loyers",
+    "featureRentCopy": "Marquez les paiements reçus, repérez les retards et gardez une trace claire par mois et par locataire.",
+    "featureReceipts": "Documents et quittances",
+    "featureReceiptsCopy": "Classez contrats, factures, assurances, quittances et justificatifs au même endroit.",
+    "featureTax": "Export fiscal",
+    "featureTaxCopy": "Préparez un dossier annuel CSV, PDF ou ZIP à partager avec votre comptable.",
+    "pricingTitle": "Un tarif simple pour chaque portefeuille",
+    "pricingCopy": "Commencez gratuitement, puis choisissez le volume qui correspond à votre parc locatif.",
+    "popular": "Populaire",
+    "startCta": "Commencer",
+    "contactCta": "Nous contacter",
+    "pricing": {
+      "free": {
+        "name": "Free",
+        "price": "0 €",
+        "units": "1 lot",
+        "description": "Pour tester HabitatLog ou suivre une seule chambre."
+      },
+      "solo": {
+        "name": "Solo",
+        "price": "49 €/an",
+        "units": "1-5 lots",
+        "description": "Pour les petits bailleurs, LMNP et propriétaires en colocation."
+      },
+      "plus": {
+        "name": "Plus",
+        "price": "89 €/an",
+        "units": "6-10 lots",
+        "description": "Pour les bailleurs avec plusieurs chambres ou plusieurs biens."
+      },
+      "portfolio": {
+        "name": "Portfolio",
+        "price": "149 €/an",
+        "units": "11-20 lots",
+        "description": "Pour les bailleurs semi-professionnels et petits investisseurs."
+      },
+      "custom": {
+        "name": "Custom",
+        "price": "Contact",
+        "units": "20+ lots",
+        "description": "Pour les grands portefeuilles ou les besoins spécifiques."
+      }
+    },
+    "finalTitle": "Prêt à simplifier votre gestion ?",
+    "finalCopy": "Rejoignez les propriétaires qui choisissent la clarté plutôt que la complexité.",
+    "privacy": "Confidentialité",
+    "terms": "CGU"
   },
   "auth": {
     "title": "Connexion",
-    "subtitle": "L'authentification Supabase sera branchée dans la prochaine étape.",
+    "subtitle": "Utilisez votre email et votre mot de passe pour accéder à votre espace locatif.",
     "email": "Email",
     "password": "Mot de passe",
     "country": "Pays",
     "countryFrance": "France",
     "submit": "Continuer",
     "signIn": "Se connecter",
-    "signUp": "Creer un compte",
+    "signUp": "Créer un compte",
     "errors": {
       "invalid_credentials": "Email ou mot de passe incorrect.",
-      "signup_failed": "Inscription impossible. Verifiez l'email et le mot de passe."
+      "signup_failed": "Inscription impossible. Vérifiez l'email et le mot de passe."
     },
     "registered": {
-      "check_email": "Inscription envoyee. Verifiez votre email pour confirmer le compte."
+      "check_email": "Inscription envoyée. Vérifiez votre email pour confirmer le compte."
     }
   },
   "dashboard": {

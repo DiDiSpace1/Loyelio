@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Petit Bailleur",
+    "appName": "HabitatLog",
     "cancel": "Cancel",
     "save": "Save",
     "soon": "Soon",
@@ -16,21 +16,77 @@
     "settings": "Settings"
   },
   "landing": {
-    "eyebrow": "For small LMNP landlords",
-    "heroTitle": "Your rents, receipts and repairs ready before tax season",
-    "heroCopy": "A simple workspace to file rent, deposits, repairs, invoices, receipts and leases by property, room, tenant and month.",
-    "primaryCta": "Organize my rentals",
+    "navFeatures": "Features",
+    "navPricing": "Pricing",
+    "navLogin": "Login",
+    "navCta": "Try for free",
+    "eyebrow": "Rental management and tax preparation",
+    "heroTitle": "Keep your rentals clear and ready for tax season",
+    "heroCopy": "HabitatLog helps small landlords in France track rent, tenants, documents, expenses and tax exports in one simple workspace.",
+    "primaryCta": "Start my trial",
     "secondaryCta": "View dashboard",
-    "proof": "Built for 1 to 5 properties, shared flats and furnished rentals.",
+    "proof": "Built for owners with 1 to 20 units, LMNP, shared flats and furnished rentals.",
     "painTitle": "Replace the Excel + Drive + inbox chaos",
     "painCopy": "Find missing receipts before tax season, not during it.",
-    "featureRent": "Monthly rent tracking",
-    "featureReceipts": "Receipts and invoices filed",
-    "featureTax": "Annual export for your accountant"
+    "previewStatus": "Up to date",
+    "previewRentStatus": "Received this month",
+    "previewDocsStatus": "Files organized",
+    "previewTaxStatus": "Ready to export",
+    "featuresTitle": "Everything a landlord needs",
+    "featuresCopy": "Focus on the essentials. The interface is designed to be efficient, not decorative.",
+    "featureProperties": "Property management",
+    "featurePropertiesCopy": "See properties, rooms and rented units with their rent, leases and documents.",
+    "featureRent": "Rent tracking",
+    "featureRentCopy": "Mark payments as received, spot delays and keep a clear monthly record per tenant.",
+    "featureReceipts": "Documents and receipts",
+    "featureReceiptsCopy": "File leases, invoices, insurance documents, receipts and supporting evidence in one place.",
+    "featureTax": "Tax export",
+    "featureTaxCopy": "Prepare an annual CSV, PDF or ZIP package to share with your accountant.",
+    "pricingTitle": "Simple pricing for every portfolio",
+    "pricingCopy": "Start free, then choose the volume that matches your rental portfolio.",
+    "popular": "Popular",
+    "startCta": "Start",
+    "contactCta": "Contact us",
+    "pricing": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "units": "1 unit",
+        "description": "For trials or users managing one room."
+      },
+      "solo": {
+        "name": "Solo",
+        "price": "€49/year",
+        "units": "1-5 units",
+        "description": "For small landlords, LMNP owners and shared-flat landlords."
+      },
+      "plus": {
+        "name": "Plus",
+        "price": "€89/year",
+        "units": "6-10 units",
+        "description": "For owners with multiple rooms or several small properties."
+      },
+      "portfolio": {
+        "name": "Portfolio",
+        "price": "€149/year",
+        "units": "11-20 units",
+        "description": "For semi-professional landlords and small investors."
+      },
+      "custom": {
+        "name": "Custom",
+        "price": "Contact",
+        "units": "20+ units",
+        "description": "For larger portfolios or special requirements."
+      }
+    },
+    "finalTitle": "Ready to simplify your rentals?",
+    "finalCopy": "Join landlords who choose clarity over complexity.",
+    "privacy": "Privacy",
+    "terms": "Terms"
   },
   "auth": {
     "title": "Login",
-    "subtitle": "Supabase authentication is now wired through server actions.",
+    "subtitle": "Use your email and password to access your rental workspace.",
     "email": "Email",
     "password": "Password",
     "country": "Country",

@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   openGraph: {
     description: 'Classez vos loyers, factures et contrats, puis exportez un dossier fiscal clair.',
     locale: 'fr_FR',
-    siteName: 'Petit Bailleur',
-    title: 'Petit Bailleur',
+    siteName: 'HabitatLog',
+    title: 'HabitatLog',
     type: 'website'
   },
   robots: {
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
     index: true
   },
   title: {
-    default: 'Petit Bailleur',
-    template: '%s | Petit Bailleur'
+    default: 'HabitatLog',
+    template: '%s | HabitatLog'
   }
 };
 

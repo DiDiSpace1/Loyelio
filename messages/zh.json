@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Petit Bailleur",
+    "appName": "HabitatLog",
     "cancel": "取消",
     "save": "保存",
     "soon": "即将推出",
@@ -16,17 +16,73 @@
     "settings": "设置"
   },
   "landing": {
-    "eyebrow": "为法国 LMNP 小房东设计",
-    "heroTitle": "把房租、票据和维修记录整理到报税前就绪",
-    "heroCopy": "一个简单的工作台，按房源、房间、租客和月份归档房租、押金、维修、发票、收据和合同。",
-    "primaryCta": "开始整理出租记录",
-    "secondaryCta": "查看后台",
-    "proof": "适合 1 到 5 套房源、合租房和带家具出租。",
+    "navFeatures": "功能",
+    "navPricing": "价格",
+    "navLogin": "登录",
+    "navCta": "免费试用",
+    "eyebrow": "租赁管理与报税准备",
+    "heroTitle": "让你的出租资料清晰可查，报税季前准备好",
+    "heroCopy": "HabitatLog 帮助法国小房东在一个简单可靠的空间里管理租金、租客、文件、费用和税务导出。",
+    "primaryCta": "开始试用",
+    "secondaryCta": "查看仪表盘",
+    "proof": "适合 1 到 20 个出租单元、LMNP、合租房和带家具出租。",
     "painTitle": "告别 Excel、网盘和邮箱里的混乱",
-    "painCopy": "在报税季之前发现缺失票据，而不是报税时才崩溃。",
-    "featureRent": "月度租金跟踪",
-    "featureReceipts": "票据和发票归档",
-    "featureTax": "年度税务资料导出"
+    "painCopy": "在报税季之前找齐缺失凭证，而不是到最后一刻才手忙脚乱。",
+    "previewStatus": "已更新",
+    "previewRentStatus": "本月已收到",
+    "previewDocsStatus": "文件已归档",
+    "previewTaxStatus": "可导出",
+    "featuresTitle": "小房东真正需要的工具",
+    "featuresCopy": "专注核心流程。界面追求高效、清晰，而不是装饰感。",
+    "featureProperties": "房源管理",
+    "featurePropertiesCopy": "查看房源、房间和出租单元，以及对应租金、租约和文件。",
+    "featureRent": "租金跟踪",
+    "featureRentCopy": "记录已收款、发现逾期，并按月份和租客保留清晰流水。",
+    "featureReceipts": "文件和收据",
+    "featureReceiptsCopy": "把合同、发票、保险、收据和其他凭证集中归档。",
+    "featureTax": "税务导出",
+    "featureTaxCopy": "准备年度 CSV、PDF 或 ZIP 资料包，方便交给会计。",
+    "pricingTitle": "适合不同规模房东的简单价格",
+    "pricingCopy": "先免费开始，再按你的出租单元数量选择方案。",
+    "popular": "热门",
+    "startCta": "开始",
+    "contactCta": "联系我们",
+    "pricing": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "units": "1 个单元",
+        "description": "适合试用或只管理一个房间的用户。"
+      },
+      "solo": {
+        "name": "Solo",
+        "price": "€49/年",
+        "units": "1-5 个单元",
+        "description": "适合小房东、LMNP 和合租房东。"
+      },
+      "plus": {
+        "name": "Plus",
+        "price": "€89/年",
+        "units": "6-10 个单元",
+        "description": "适合多房间或多套房的小房东。"
+      },
+      "portfolio": {
+        "name": "Portfolio",
+        "price": "€149/年",
+        "units": "11-20 个单元",
+        "description": "适合半职业房东和小型投资者。"
+      },
+      "custom": {
+        "name": "Custom",
+        "price": "联系我们",
+        "units": "20+ 个单元",
+        "description": "适合大户或有特殊需求的房东。"
+      }
+    },
+    "finalTitle": "准备简化你的出租管理了吗？",
+    "finalCopy": "和更多房东一样，用清晰流程替代复杂表格。",
+    "privacy": "隐私政策",
+    "terms": "服务条款"
   },
   "auth": {
     "title": "登录",
@@ -37,10 +93,10 @@
     "countryFrance": "法国",
     "submit": "继续",
     "signIn": "登录",
-    "signUp": "创建账号",
+    "signUp": "创建账户",
     "errors": {
       "invalid_credentials": "邮箱或密码不正确。",
-      "signup_failed": "无法创建账号，请检查邮箱和密码后重试。"
+      "signup_failed": "无法创建账户，请检查邮箱和密码后重试。"
     },
     "registered": {
       "check_email": "注册已提交，请检查邮箱并完成确认。"
@@ -50,13 +106,13 @@
     "title": "仪表盘",
     "subtitle": "清晰查看你的租金、文件和税务准备事项。",
     "monthlyRent": "本月租金",
-    "missingReceipts": "缺失票据",
+    "missingReceipts": "缺失凭证",
     "yearlyIncome": "年度收入",
     "recentDocuments": "最近文件",
     "quickActions": "快捷操作",
     "addRent": "添加租金",
     "addExpense": "添加费用",
-    "uploadDocument": "上传票据"
+    "uploadDocument": "上传凭证"
   },
   "properties": {
     "title": "房源",
@@ -73,13 +129,13 @@
   },
   "tax": {
     "title": "税务包",
-    "subtitle": "准备一份清晰的年度导出资料，方便交给会计师。",
+    "subtitle": "准备一份清晰的年度导出资料，方便交给会计。",
     "disclaimer": "这些分类仅供整理参考，不能替代税务建议。"
   },
   "settings": {
     "title": "设置",
     "subtitle": "管理国家、语言、账单和数据导出。",
-    "country": "账号国家",
+    "country": "账户国家",
     "locale": "语言",
     "billing": "账单"
   }
