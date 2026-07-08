@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 import {redirect} from 'next/navigation';
 
+import {type BillingStatus} from '@/lib/billing/config';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
@@ -16,11 +17,29 @@ const navItems = [
   {href: '/settings', key: 'settings'}
 ] as const;
 
+function forfaitLabel(billing: BillingStatus | null) {
+  if (!billing) {
+    return 'Free';
+  }
+
+  if (billing.lifetime_access || billing.plan === 'lifetime') {
+    return 'Lifetime';
+  }
+
+  if (billing.plan === 'subscription') {
+    return 'Solo';
+  }
+
+  const plan = billing.plan || 'free';
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
 export async function AppShell({children}: {children: React.ReactNode}) {
   const t = await getTranslations('nav');
   const common = await getTranslations('common');
   const locale = await getLocale();
   let userEmail: string | null = null;
+  let userForfait = 'Free';
 
   try {
     const supabase = await createSupabaseServerClient();
@@ -33,6 +52,18 @@ export async function AppShell({children}: {children: React.ReactNode}) {
     }
 
     userEmail = user.email ?? null;
+
+    const {data: profile} = await supabase.from('profiles').select('default_workspace_id').eq('id', user.id).maybeSingle<{default_workspace_id: string | null}>();
+
+    if (profile?.default_workspace_id) {
+      const {data: billing} = await supabase
+        .from('workspace_billing')
+        .select('current_period_end, lifetime_access, plan, status, stripe_customer_id, stripe_subscription_id')
+        .eq('workspace_id', profile.default_workspace_id)
+        .maybeSingle<BillingStatus>();
+
+      userForfait = forfaitLabel(billing ?? null);
+    }
   } catch (error) {
     if (!(error instanceof Error) || error.message !== 'Missing Supabase environment variables.') {
       throw error;
@@ -45,7 +76,14 @@ export async function AppShell({children}: {children: React.ReactNode}) {
         <Link href="/dashboard" className="block px-2 text-lg font-bold text-[#12201e]">
           {common('appName')}
         </Link>
-        {userEmail ? <p className="mt-2 truncate px-2 text-xs text-[var(--muted)]">{userEmail}</p> : null}
+        {userEmail ? (
+          <div className="mt-2 px-2">
+            <p className="truncate text-xs text-[var(--muted)]">{userEmail}</p>
+            <div className="mt-2 inline-flex rounded-md border border-[var(--line-soft)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--accent)]">
+              {userForfait}
+            </div>
+          </div>
+        ) : null}
         {userEmail ? (
           <SidebarNav
             helpLabel="Aide"
