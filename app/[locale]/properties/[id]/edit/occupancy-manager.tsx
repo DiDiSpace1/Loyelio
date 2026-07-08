@@ -101,7 +101,7 @@ export function OccupancyManager({
   );
 }
 
-export function LeaseTerminationManager({leases, locale, propertyId}: {leases: ActiveLease[]; locale: string; propertyId: string}) {
+export function LeaseTerminationManager({leases, locale, propertyId, returnTo}: {leases: ActiveLease[]; locale: string; propertyId: string; returnTo?: string}) {
   if (!leases.length) {
     return null;
   }
@@ -123,6 +123,7 @@ export function LeaseTerminationManager({leases, locale, propertyId}: {leases: A
           <input name="locale" type="hidden" value={locale} />
           <input name="property_id" type="hidden" value={propertyId} />
           <input name="lease_id" type="hidden" value={lease.id} />
+          {returnTo ? <input name="return_to" type="hidden" value={returnTo} /> : null}
           <div>
             <p className="font-medium">{lease.tenants?.full_name ?? 'Locataire'}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">Depuis {lease.start_date}</p>

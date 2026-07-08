@@ -6,8 +6,6 @@ import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {updatePropertyAction} from '../../actions';
-import {LeaseTerminationManager, OccupancyManager} from './occupancy-manager';
-
 type EditPropertyPageProps = {
   params: Promise<{
     id: string;
@@ -27,20 +25,6 @@ type EditableProperty = {
   charges_estimate: number | null;
   deposit_estimate: number | null;
   occupancy_status: string;
-  leases: {
-    id: string;
-    end_date: string | null;
-    start_date: string;
-    status: string;
-    tenants: {
-      full_name: string;
-    } | null;
-  }[];
-};
-
-type TenantOption = {
-  id: string;
-  full_name: string;
 };
 
 export default async function EditPropertyPage({params}: EditPropertyPageProps) {
@@ -49,7 +33,7 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: property, error} = await supabase
     .from('properties')
-    .select('id, name, address_line1, postal_code, city, property_type, rental_mode, surface_area, monthly_rent_estimate, charges_estimate, deposit_estimate, occupancy_status, leases(id, status, start_date, end_date, tenants(full_name))')
+    .select('id, name, address_line1, postal_code, city, property_type, rental_mode, surface_area, monthly_rent_estimate, charges_estimate, deposit_estimate, occupancy_status')
     .eq('workspace_id', workspaceId)
     .eq('id', id)
     .single<EditableProperty>();
@@ -58,13 +42,6 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
     notFound();
   }
 
-  const {data: tenants} = await supabase
-    .from('tenants')
-    .select('id, full_name')
-    .eq('workspace_id', workspaceId)
-    .order('full_name', {ascending: true})
-    .returns<TenantOption[]>();
-  const activeLeases = property.leases.filter((lease) => lease.status === 'active');
 
   return (
     <AppShell>
@@ -146,7 +123,25 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
         </SectionCard>
 
         <SectionCard icon="key" title="3. Etat d'occupation">
-          <OccupancyManager initialStatus={activeLeases.length ? 'rented' : property.occupancy_status} tenants={tenants ?? []} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--accent)] bg-[#f5faf8] px-4">
+              <span>
+                <span className="block font-semibold text-[var(--accent)]">Vacant</span>
+                <span className="text-sm text-[var(--muted)]">Pret a etre loue</span>
+              </span>
+              <input className="h-4 w-4 accent-[var(--accent)]" defaultChecked={property.occupancy_status !== 'rented'} name="occupancy_status" type="radio" value="vacant" />
+            </label>
+            <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--line-soft)] px-4">
+              <span>
+                <span className="block font-semibold">Loue</span>
+                <span className="text-sm text-[var(--muted)]">Occupe par un locataire</span>
+              </span>
+              <input className="h-4 w-4 accent-[var(--accent)]" defaultChecked={property.occupancy_status === 'rented'} name="occupancy_status" type="radio" value="rented" />
+            </label>
+          </div>
+          <Link className="mt-4 inline-flex text-sm font-semibold text-[var(--accent)]" href={`/properties/${property.id}/tenants`}>
+            Gerer les locataires de ce bien
+          </Link>
         </SectionCard>
 
         <SectionCard icon="camera" title="4. Photos & Documents">
@@ -162,14 +157,6 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
           </button>
         </div>
       </form>
-      <section className="mt-5 rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
-        <h2 className="mb-5 flex items-center gap-3 text-base font-semibold">
-          <SmallIcon name="key" />
-          Gestion des contrats existants
-        </h2>
-        <LeaseTerminationManager leases={activeLeases} locale={locale} propertyId={property.id} />
-        {!activeLeases.length ? <p className="text-sm text-[var(--muted)]">Aucun contrat actif pour ce bien.</p> : null}
-      </section>
     </AppShell>
   );
 }

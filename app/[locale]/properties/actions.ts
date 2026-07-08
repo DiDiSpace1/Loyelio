@@ -257,8 +257,11 @@ export async function terminateLeaseAction(formData: FormData) {
   const leaseId = value(formData, 'lease_id');
   const endDate = value(formData, 'end_date');
 
+  const returnTo = value(formData, 'return_to');
+  const returnPath = (returnTo === 'tenant_management' ? `/properties/${propertyId}/tenants` : `/properties/${propertyId}/edit`) as `/${string}`;
+
   if (!propertyId || !leaseId || !endDate) {
-    redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=missing_termination`);
+    redirect(`${localizedPath(locale, returnPath)}?error=missing_termination`);
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -273,7 +276,7 @@ export async function terminateLeaseAction(formData: FormData) {
     .eq('workspace_id', workspaceId);
 
   if (error) {
-    redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=termination_failed`);
+    redirect(`${localizedPath(locale, returnPath)}?error=termination_failed`);
   }
 
   const {count} = await supabase
@@ -290,8 +293,89 @@ export async function terminateLeaseAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/properties'));
   revalidatePath(localizedPath(locale, `/properties/${propertyId}`));
   revalidatePath(localizedPath(locale, `/properties/${propertyId}/edit`));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}/tenants`));
   revalidatePath(localizedPath(locale, '/tenants'));
-  redirect(localizedPath(locale, `/properties/${propertyId}/edit`));
+  redirect(localizedPath(locale, returnPath));
+}
+
+export async function assignPropertyTenantsAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const propertyId = value(formData, 'property_id');
+  const chargesAmount = moneyValue(formData, 'charges_amount');
+  const monthlyRent = moneyValue(formData, 'monthly_rent');
+  const depositAmount = moneyValue(formData, 'deposit_amount');
+  const tenantIds = values(formData, 'assignment_tenant_id');
+  const startDates = values(formData, 'assignment_start_date');
+  const endDates = values(formData, 'assignment_end_date');
+
+  if (!propertyId) {
+    redirect(`${localizedPath(locale, '/properties')}?error=missing_property`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: existingLeases} = await supabase
+    .from('leases')
+    .select('tenant_id')
+    .eq('property_id', propertyId)
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'active');
+  const existingTenantIds = new Set((existingLeases ?? []).map((lease: {tenant_id: string}) => lease.tenant_id));
+
+  for (let index = 0; index < tenantIds.length; index += 1) {
+    const tenantId = tenantIds[index];
+    const startDate = startDates[index];
+
+    if (!tenantId || !startDate || existingTenantIds.has(tenantId)) {
+      continue;
+    }
+
+    const {data: lease, error: leaseError} = await supabase
+      .from('leases')
+      .insert({
+        charges_amount: chargesAmount,
+        deposit_amount: depositAmount,
+        end_date: endDates[index] || null,
+        monthly_rent: monthlyRent,
+        property_id: propertyId,
+        start_date: startDate,
+        status: 'active',
+        tenant_id: tenantId,
+        unit_id: null,
+        workspace_id: workspaceId
+      })
+      .select('id')
+      .single();
+
+    if (leaseError || !lease) {
+      redirect(`${localizedPath(locale, `/properties/${propertyId}/tenants`)}?error=lease_failed`);
+    }
+
+    const rentCharges = buildRentChargesForLease({
+      chargesAmount,
+      endDate: endDates[index] || null,
+      leaseId: lease.id,
+      monthlyRent,
+      startDate,
+      workspaceId
+    });
+
+    if (rentCharges.length) {
+      const {error: chargeError} = await supabase.from('rent_charges').insert(rentCharges);
+
+      if (chargeError) {
+        redirect(`${localizedPath(locale, `/properties/${propertyId}/tenants`)}?error=charges_failed`);
+      }
+    }
+  }
+
+  await supabase.from('properties').update({occupancy_status: 'rented'}).eq('id', propertyId).eq('workspace_id', workspaceId);
+
+  revalidatePath(localizedPath(locale, '/properties'));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}`));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}/edit`));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}/tenants`));
+  revalidatePath(localizedPath(locale, '/tenants'));
+  redirect(localizedPath(locale, `/properties/${propertyId}/tenants`));
 }
 
 export async function deletePropertyAction(formData: FormData) {

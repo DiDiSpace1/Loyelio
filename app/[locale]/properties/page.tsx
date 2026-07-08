@@ -6,7 +6,8 @@ import {getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {createPropertyAction, deletePropertyAction} from './actions';
+import {createPropertyAction} from './actions';
+import {PropertyActionsMenu} from './property-actions-menu';
 
 type PropertyRow = {
   id: string;
@@ -162,6 +163,12 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
         </div>
       ) : null}
 
+      {params.error === 'delete_failed' ? (
+        <div className="mt-6 rounded-lg border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
+          Suppression impossible. Verifiez que la policy Supabase de suppression des biens est appliquee.
+        </div>
+      ) : null}
+
       {showCreate ? (
         <CreatePropertyView locale={locale} photoLimit={photoLimit} />
       ) : (
@@ -238,26 +245,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
                             <span className={`inline-flex rounded px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
                           </td>
                           <td className="px-5 py-4 text-right">
-                            <details className="relative inline-block">
-                              <summary className="focus-ring flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md text-xl text-[var(--muted)] hover:bg-[#eaefed]">
-                                ...
-                              </summary>
-                              <div className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-lg">
-                                <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/properties/${property.id}`}>
-                                  Voir
-                                </Link>
-                                <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/properties/${property.id}/edit`}>
-                                  Modifier
-                                </Link>
-                                <form action={deletePropertyAction}>
-                                  <input name="locale" type="hidden" value={locale} />
-                                  <input name="property_id" type="hidden" value={property.id} />
-                                  <button className="block w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff1f1]" type="submit">
-                                    Supprimer
-                                  </button>
-                                </form>
-                              </div>
-                            </details>
+                            <PropertyActionsMenu locale={locale} propertyId={property.id} />
                           </td>
                         </tr>
                       );
