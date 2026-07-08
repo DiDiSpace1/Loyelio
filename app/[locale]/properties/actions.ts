@@ -21,6 +21,12 @@ function moneyValue(formData: FormData, key: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function numericValue(formData: FormData, key: string) {
+  const raw = value(formData, key).replace(',', '.');
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function imageFiles(formData: FormData) {
   return formData.getAll('photos').filter((entry): entry is File => entry instanceof File && entry.size > 0 && entry.type.startsWith('image/'));
 }
@@ -97,9 +103,15 @@ export async function createPropertyAction(formData: FormData) {
       address_line1: value(formData, 'address_line1') || null,
       city: value(formData, 'city') || null,
       country_code: 'FR',
+      charges_estimate: moneyValue(formData, 'charges_estimate') || null,
+      deposit_estimate: moneyValue(formData, 'deposit_estimate') || null,
+      monthly_rent_estimate: moneyValue(formData, 'monthly_rent_estimate') || null,
       name,
+      occupancy_status: value(formData, 'occupancy_status') || 'vacant',
       postal_code: value(formData, 'postal_code') || null,
+      property_type: value(formData, 'property_type') || 'apartment',
       rental_mode: rentalMode,
+      surface_area: numericValue(formData, 'surface_area'),
       tax_regime: 'LMNP',
       workspace_id: workspaceId
     })
@@ -148,7 +160,9 @@ export async function updatePropertyAction(formData: FormData) {
       address_line1: value(formData, 'address_line1') || null,
       city: value(formData, 'city') || null,
       name,
+      occupancy_status: value(formData, 'occupancy_status') || 'vacant',
       postal_code: value(formData, 'postal_code') || null,
+      property_type: value(formData, 'property_type') || 'apartment',
       rental_mode: rentalMode
     })
     .eq('id', propertyId)

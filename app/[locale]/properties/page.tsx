@@ -15,6 +15,8 @@ type PropertyRow = {
   city: string | null;
   postal_code: string | null;
   rental_mode: string;
+  occupancy_status: string;
+  monthly_rent_estimate: number | null;
   tax_regime: string;
   property_photos: {file_path: string; is_cover: boolean}[];
   units: {id: string}[];
@@ -30,6 +32,7 @@ type PropertiesPageProps = {
   searchParams: Promise<{
     error?: string;
     mode?: string;
+    new?: string;
     q?: string;
   }>;
 };
@@ -54,7 +57,7 @@ function formatAddress(property: Pick<PropertyRow, 'address_line1' | 'postal_cod
 function statusFor(property: PropertyRow) {
   const activeLeases = property.leases.filter((lease) => lease.status === 'active');
 
-  if (activeLeases.length > 0) {
+  if (activeLeases.length > 0 || property.occupancy_status === 'rented') {
     return {
       className: 'bg-[#ecfdf5] text-[#047857]',
       label: 'Loue'
@@ -76,10 +79,13 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   const photoLimit = getPropertyPhotoLimit(billing?.plan);
   const queryText = (params.q ?? '').trim();
   const selectedMode = params.mode ?? '';
+  const showCreate = params.new === '1';
 
   let query = supabase
     .from('properties')
-    .select('id, name, address_line1, city, postal_code, rental_mode, tax_regime, property_photos(file_path, is_cover), units(id), leases(id, status, monthly_rent, tenants(full_name))')
+    .select(
+      'id, name, address_line1, city, postal_code, rental_mode, occupancy_status, monthly_rent_estimate, tax_regime, property_photos(file_path, is_cover), units(id), leases(id, status, monthly_rent, tenants(full_name))'
+    )
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
 
@@ -96,7 +102,10 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   const activeLeaseCount = rows.reduce((sum, property) => sum + property.leases.filter((lease) => lease.status === 'active').length, 0);
   const unitCount = rows.reduce((sum, property) => sum + property.units.length, 0);
   const monthlyRent = rows.reduce(
-    (sum, property) => sum + property.leases.filter((lease) => lease.status === 'active').reduce((leaseSum, lease) => leaseSum + Number(lease.monthly_rent), 0),
+    (sum, property) => {
+      const leaseTotal = property.leases.filter((lease) => lease.status === 'active').reduce((leaseSum, lease) => leaseSum + Number(lease.monthly_rent), 0);
+      return sum + (leaseTotal || Number(property.monthly_rent_estimate ?? 0));
+    },
     0
   );
   const signedPhotos = new Map<string, string>();
@@ -124,9 +133,15 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
-        <a className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white" href="#new-property">
-          + {t('newProperty')}
-        </a>
+        {showCreate ? (
+          <Link className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--line)] px-5 text-sm font-semibold text-[#171d1c]" href="/properties">
+            Retour
+          </Link>
+        ) : (
+          <Link className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white" href="/properties?new=1">
+            + {t('newProperty')}
+          </Link>
+        )}
       </div>
 
       {error ? (
@@ -147,14 +162,17 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
         </div>
       ) : null}
 
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        <SummaryCard label="Total biens" note="Patrimoine actif" value={rows.length.toString()} />
-        <SummaryCard label="Unites suivies" note={`${activeLeaseCount} bail actif(s)`} value={unitCount.toString()} />
-        <SummaryCard label="Loyers mensuels" note="Baux actifs" value={`${monthlyRent.toLocaleString('fr-FR')} EUR`} />
-      </section>
+      {showCreate ? (
+        <CreatePropertyView locale={locale} photoLimit={photoLimit} />
+      ) : (
+        <>
+          <section className="mt-8 grid gap-4 md:grid-cols-3">
+            <SummaryCard label="Total biens" note="Patrimoine actif" value={rows.length.toString()} />
+            <SummaryCard label="Unites suivies" note={`${activeLeaseCount} bail actif(s)`} value={unitCount.toString()} />
+            <SummaryCard label="Loyers mensuels" note="Baux actifs" value={`${monthlyRent.toLocaleString('fr-FR')} EUR`} />
+          </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div className="min-w-0">
+          <section className="mt-6">
           <form className="mb-4 flex flex-col gap-3 rounded-lg border border-[var(--line-soft)] bg-white p-4 md:flex-row">
             <input
               className="focus-ring min-h-11 flex-1 rounded-lg border border-[var(--line)] bg-[#f0f5f2] px-3 text-sm"
@@ -193,6 +211,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
                       const activeLease = property.leases.find((lease) => lease.status === 'active');
                       const status = statusFor(property);
                       const photoUrl = signedPhotos.get(property.id);
+                      const displayedRent = activeLease?.monthly_rent ?? property.monthly_rent_estimate;
 
                       return (
                         <tr className="transition hover:bg-[#f0f5f2]" key={property.id}>
@@ -214,7 +233,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
                           </td>
                           <td className="px-5 py-4 text-sm">{modeLabels[property.rental_mode] ?? property.rental_mode}</td>
                           <td className="px-5 py-4 text-sm text-[var(--muted)]">{activeLease?.tenants?.full_name ?? '-'}</td>
-                          <td className="px-5 py-4 text-sm tabular-nums">{activeLease ? `${Number(activeLease.monthly_rent).toFixed(0)} EUR` : '-'}</td>
+                          <td className="px-5 py-4 text-sm tabular-nums">{displayedRent ? `${Number(displayedRent).toFixed(0)} EUR` : '-'}</td>
                           <td className="px-5 py-4">
                             <span className={`inline-flex rounded px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
                           </td>
@@ -257,51 +276,9 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
               Affichage {rows.length ? `1-${rows.length}` : '0'} sur {rows.length} bien(s)
             </div>
           </div>
-        </div>
-
-        <form action={createPropertyAction} className="rounded-lg border border-[var(--line-soft)] bg-white p-5" encType="multipart/form-data" id="new-property">
-          <input name="locale" type="hidden" value={locale} />
-          <h2 className="text-lg font-semibold">{t('newProperty')}</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            Photos: {photoLimit === 0 ? 'non incluses dans le plan Free' : `${photoLimit} maximum par bien`}
-          </p>
-          <div className="mt-5 grid gap-4">
-            <label className="grid gap-2 text-sm font-medium">
-              Nom du bien
-              <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="name" placeholder="Appartement Lyon" required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              Adresse
-              <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="address_line1" placeholder="12 rue ..." />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
-              <label className="grid gap-2 text-sm font-medium">
-                Code postal
-                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="postal_code" placeholder="69001" />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Ville
-                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="city" placeholder="Lyon" />
-              </label>
-            </div>
-            <label className="grid gap-2 text-sm font-medium">
-              Mode de location
-              <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="rental_mode" defaultValue="shared_rooms">
-                <option value="shared_rooms">colocation</option>
-                <option value="entire_place">entier</option>
-                <option value="mixed">mixte</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              Photos
-              <input className="focus-ring rounded-md border border-dashed border-[var(--line)] px-3 py-3 text-sm" disabled={photoLimit === 0} multiple name="photos" type="file" accept="image/*" />
-            </label>
-            <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
-              Creer le bien
-            </button>
-          </div>
-        </form>
-      </section>
+          </section>
+        </>
+      )}
     </AppShell>
   );
 }
@@ -313,5 +290,145 @@ function SummaryCard({label, note, value}: {label: string; note: string; value: 
       <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-1 text-sm text-[var(--muted)]">{note}</p>
     </div>
+  );
+}
+
+function CreatePropertyView({locale, photoLimit}: {locale: string; photoLimit: number}) {
+  return (
+    <form action={createPropertyAction} className="mt-8 grid gap-5" encType="multipart/form-data">
+      <input name="locale" type="hidden" value={locale} />
+      <SectionCard icon="pin" title={`1. Informations Generales`}>
+        <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+          Nom du bien
+          <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="name" placeholder="Appartement Lyon" required />
+        </label>
+        <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+          Adresse complete
+          <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="address_line1" placeholder="12 rue de la Paix" />
+        </label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Code postal
+            <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="postal_code" placeholder="75002" />
+          </label>
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Ville
+            <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="city" placeholder="Paris" />
+          </label>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Type de bien
+            <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="property_type" defaultValue="studio">
+              <option value="studio">Studio</option>
+              <option value="t1">T1</option>
+              <option value="t2">T2</option>
+              <option value="t3">T3</option>
+              <option value="room">Chambre</option>
+              <option value="house">Maison</option>
+              <option value="apartment">Appartement</option>
+              <option value="other">Autre</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Mode de location
+            <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="rental_mode" defaultValue="shared_rooms">
+              <option value="shared_rooms">colocation</option>
+              <option value="entire_place">entier</option>
+              <option value="mixed">mixte</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Surface habitable (m2)
+            <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" min="0" name="surface_area" placeholder="35" step="0.01" type="number" />
+          </label>
+        </div>
+      </SectionCard>
+
+      <SectionCard icon="money" title="2. Aspects Financiers">
+        <div className="grid gap-4 md:grid-cols-3">
+          <MoneyInput label="Loyer mensuel HC" name="monthly_rent_estimate" placeholder="850" />
+          <MoneyInput label="Charges provisionnelles" name="charges_estimate" placeholder="60" />
+          <MoneyInput label="Depot de garantie" name="deposit_estimate" placeholder="1700" />
+        </div>
+      </SectionCard>
+
+      <SectionCard icon="key" title="3. Etat d'occupation">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--accent)] bg-[#f5faf8] px-4">
+            <span>
+              <span className="block font-semibold text-[var(--accent)]">Vacant</span>
+              <span className="text-sm text-[var(--muted)]">Pret a etre loue</span>
+            </span>
+            <input className="h-4 w-4 accent-[var(--accent)]" name="occupancy_status" type="radio" value="vacant" defaultChecked />
+          </label>
+          <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--line-soft)] px-4">
+            <span>
+              <span className="block font-semibold">Loue</span>
+              <span className="text-sm text-[var(--muted)]">Occupe par un locataire</span>
+            </span>
+            <input className="h-4 w-4 accent-[var(--accent)]" name="occupancy_status" type="radio" value="rented" />
+          </label>
+        </div>
+      </SectionCard>
+
+      <SectionCard icon="camera" title="4. Photos & Documents">
+        <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-6 text-center">
+          <p className="text-sm font-semibold">Photos du bien</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{photoLimit === 0 ? 'Les photos ne sont pas incluses dans le plan Free.' : `${photoLimit} photo(s) maximum par bien.`}</p>
+          <input className="focus-ring mt-4 w-full rounded-md border border-[var(--line-soft)] bg-white px-3 py-3 text-sm" disabled={photoLimit === 0} multiple name="photos" type="file" accept="image/*" />
+        </div>
+      </SectionCard>
+
+      <div className="flex justify-end gap-3">
+        <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold" href="/properties">
+          Annuler
+        </Link>
+        <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
+          Creer le bien
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function SectionCard({children, icon, title}: {children: React.ReactNode; icon: string; title: string}) {
+  return (
+    <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+      <h2 className="mb-5 flex items-center gap-3 text-base font-semibold">
+        <SmallIcon name={icon} />
+        {title}
+      </h2>
+      <div className="grid gap-4">{children}</div>
+    </section>
+  );
+}
+
+function MoneyInput({label, name, placeholder}: {label: string; name: string; placeholder: string}) {
+  return (
+    <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+      {label}
+      <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
+        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm font-normal outline-none" min="0" name={name} placeholder={placeholder} step="0.01" type="number" />
+        <span className="text-sm font-semibold">EUR</span>
+      </span>
+    </label>
+  );
+}
+
+function SmallIcon({name}: {name: string}) {
+  const path =
+    name === 'money'
+      ? 'M4 7h16v10H4z M7 10h2 M15 14h2 M12 12a2 2 0 1 0 0 .01'
+      : name === 'key'
+        ? 'M7 14a4 4 0 1 1 3.5-2.1H21v3h-3v2h-3v-2h-4.5A4 4 0 0 1 7 14z'
+        : name === 'camera'
+          ? 'M5 7h3l1.5-2h5L16 7h3v12H5z M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'
+          : 'M12 21s7-5.1 7-11a7 7 0 0 0-14 0c0 5.9 7 11 7 11z M12 10h.01';
+
+  return (
+    <svg aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--accent)]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+      <path d={path} />
+    </svg>
   );
 }
