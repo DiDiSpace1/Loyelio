@@ -2,6 +2,26 @@
 
 Run this on the production Vercel URL with Stripe test mode before inviting real users.
 
+## Automated Preflight
+
+Run:
+
+```bash
+pnpm smoke:prod
+```
+
+This checks:
+
+- public pages
+- protected route redirects
+- unsigned Stripe webhook rejection
+- Stripe Price IDs
+- Supabase core tables
+- Supabase `documents` bucket
+- support email environment value
+
+It does not create a user, submit payments or delete data. Continue with the manual flow below after it passes.
+
 ## Fresh User
 
 1. Open `/login`.
