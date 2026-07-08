@@ -59,7 +59,13 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`${localizedPath(locale, '/login')}?error=signup_failed`);
+    console.error('Supabase signup failed', {
+      code: error.code,
+      message: error.message,
+      status: error.status
+    });
+    const reason = encodeURIComponent(error.code ?? error.message);
+    redirect(`${localizedPath(locale, '/login')}?error=signup_failed&reason=${reason}`);
   }
 
   if (!data.session) {

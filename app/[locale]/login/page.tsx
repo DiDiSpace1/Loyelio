@@ -10,6 +10,15 @@ const registeredMessages: Record<(typeof registeredKeys)[number], string> = {
   password_updated: 'Mot de passe mis a jour. Vous pouvez vous connecter.',
   reset_sent: 'Si ce compte existe, un email de reinitialisation vient d etre envoye.'
 };
+const signupReasonMessages: Record<string, string> = {
+  database_error: 'La creation du compte a echoue pendant la preparation de votre espace. Contactez le support si cela se reproduit.',
+  email_address_invalid: 'Cette adresse email n est pas acceptee.',
+  email_exists: 'Un compte existe deja pour cet email. Essayez de vous connecter ou de reinitialiser le mot de passe.',
+  over_email_send_rate_limit: 'Trop d emails ont ete envoyes recemment. Attendez quelques minutes puis reessayez.',
+  signup_disabled: 'Les nouvelles inscriptions sont desactivees dans Supabase.',
+  user_already_exists: 'Un compte existe deja pour cet email. Essayez de vous connecter ou de reinitialiser le mot de passe.',
+  weak_password: 'Le mot de passe ne respecte pas la politique de securite.'
+};
 
 type LoginPageProps = {
   params: Promise<{
@@ -17,13 +26,14 @@ type LoginPageProps = {
   }>;
   searchParams: Promise<{
     error?: string;
+    reason?: string;
     registered?: string;
   }>;
 };
 
 export default async function LoginPage({params, searchParams}: LoginPageProps) {
   const {locale} = await params;
-  const {error, registered} = await searchParams;
+  const {error, reason, registered} = await searchParams;
   const t = await getTranslations('auth');
   const common = await getTranslations('common');
   const authError = authErrorKeys.find((key) => key === error);
@@ -41,6 +51,9 @@ export default async function LoginPage({params, searchParams}: LoginPageProps) 
         {authError ? (
           <p className="mt-4 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-3 text-sm text-[#7a4a11]">
             {t(`errors.${authError}`)}
+            {authError === 'signup_failed' && reason ? (
+              <span className="mt-2 block">{signupReasonMessages[reason] ?? `Detail technique: ${reason}`}</span>
+            ) : null}
           </p>
         ) : null}
 
