@@ -158,12 +158,16 @@ export async function updatePropertyAction(formData: FormData) {
     .from('properties')
     .update({
       address_line1: value(formData, 'address_line1') || null,
+      charges_estimate: moneyValue(formData, 'charges_estimate') || null,
       city: value(formData, 'city') || null,
+      deposit_estimate: moneyValue(formData, 'deposit_estimate') || null,
+      monthly_rent_estimate: moneyValue(formData, 'monthly_rent_estimate') || null,
       name,
       occupancy_status: value(formData, 'occupancy_status') || 'vacant',
       postal_code: value(formData, 'postal_code') || null,
       property_type: value(formData, 'property_type') || 'apartment',
-      rental_mode: rentalMode
+      rental_mode: rentalMode,
+      surface_area: numericValue(formData, 'surface_area')
     })
     .eq('id', propertyId)
     .eq('workspace_id', workspaceId);

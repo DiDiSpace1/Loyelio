@@ -1,11 +1,9 @@
+import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
-import {PageHeader} from '@/components/app/page-header';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
-
-import {addRentPaymentAction, createLeaseAction, createUnitAction, updatePropertyAction} from '../actions';
 
 type PropertyDetailPageProps = {
   params: Promise<{
@@ -19,7 +17,13 @@ type PropertyDetail = {
   address_line1: string | null;
   postal_code: string | null;
   city: string | null;
+  property_type: string;
   rental_mode: string;
+  surface_area: number | null;
+  monthly_rent_estimate: number | null;
+  charges_estimate: number | null;
+  deposit_estimate: number | null;
+  occupancy_status: string;
   tax_regime: string;
   property_photos: {
     file_path: string;
@@ -44,39 +48,30 @@ type PropertyDetail = {
     units: {
       name: string;
     } | null;
-    rent_charges: {
-      id: string;
-      status: string;
-    }[];
   }[];
 };
 
-type TenantOption = {
-  id: string;
-  full_name: string;
+const modeLabels: Record<string, string> = {
+  entire_place: 'entier',
+  mixed: 'mixte',
+  shared_rooms: 'colocation'
 };
 
-type RentChargeRow = {
-  id: string;
-  period_month: string;
-  rent_amount: number;
-  charges_amount: number;
-  total_due: number;
-  status: string;
-  due_date: string | null;
-  leases: {
-    id: string;
-    tenants: {
-      full_name: string;
-    } | null;
-    units: {
-      name: string;
-    } | null;
-  } | null;
-  rent_payments: {
-    amount: number;
-  }[];
+const propertyTypeLabels: Record<string, string> = {
+  apartment: 'Appartement',
+  house: 'Maison',
+  other: 'Autre',
+  room: 'Chambre',
+  studio: 'Studio',
+  t1: 'T1',
+  t2: 'T2',
+  t3: 'T3',
+  t4: 'T4'
 };
+
+function money(value: number | null | undefined) {
+  return value || value === 0 ? `${Number(value).toLocaleString('fr-FR')} EUR` : '-';
+}
 
 export default async function PropertyDetailPage({params}: PropertyDetailPageProps) {
   const {id} = await params;
@@ -85,7 +80,7 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
   const {data, error} = await supabase
     .from('properties')
     .select(
-      'id, name, address_line1, postal_code, city, rental_mode, tax_regime, property_photos(file_path, is_cover), units(id, name, unit_type), leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(full_name), units(name), rent_charges(id, status))'
+      'id, name, address_line1, postal_code, city, property_type, rental_mode, surface_area, monthly_rent_estimate, charges_estimate, deposit_estimate, occupancy_status, tax_regime, property_photos(file_path, is_cover), units(id, name, unit_type), leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(full_name), units(name))'
     )
     .eq('workspace_id', workspaceId)
     .eq('id', id)
@@ -96,266 +91,132 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
   }
 
   const property = data;
-
-  const {data: tenants} = await supabase
-    .from('tenants')
-    .select('id, full_name')
-    .eq('workspace_id', workspaceId)
-    .order('full_name', {ascending: true})
-    .returns<TenantOption[]>();
-  const {data: rentCharges} = await supabase
-    .from('rent_charges')
-    .select('id, period_month, rent_amount, charges_amount, total_due, status, due_date, leases!inner(id, property_id, tenants(full_name), units(name)), rent_payments(amount)')
-    .eq('workspace_id', workspaceId)
-    .eq('leases.property_id', property.id)
-    .order('period_month', {ascending: true})
-    .limit(12)
-    .returns<RentChargeRow[]>();
-
   const address = [property.address_line1, property.postal_code, property.city].filter(Boolean).join(', ');
+  const activeLease = property.leases.find((lease) => lease.status === 'active');
   const signedPhotos = await Promise.all(
-    property.property_photos.slice(0, 6).map(async (photo) => {
-      const {data} = await supabase.storage.from('property-photos').createSignedUrl(photo.file_path, 60 * 5);
-      return data?.signedUrl ?? null;
+    property.property_photos.slice(0, 8).map(async (photo) => {
+      const {data: signed} = await supabase.storage.from('property-photos').createSignedUrl(photo.file_path, 60 * 5);
+      return signed?.signedUrl ?? null;
     })
   );
 
   return (
     <AppShell>
-      <PageHeader title={property.name} subtitle={address || 'Adresse a completer'} />
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <Link className="text-sm font-semibold text-[var(--accent)]" href="/properties">
+            Retour aux biens
+          </Link>
+          <h1 className="mt-3 text-3xl font-semibold tracking-normal text-[#171d1c]">{property.name}</h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{address || 'Adresse a completer'}</p>
+        </div>
+        <Link className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white" href={`/properties/${property.id}/edit`}>
+          Modifier
+        </Link>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <section className="mt-8 grid gap-4 md:grid-cols-4">
+        <InfoCard label="Mode" value={modeLabels[property.rental_mode] ?? property.rental_mode} />
+        <InfoCard label="Type" value={propertyTypeLabels[property.property_type] ?? property.property_type} />
+        <InfoCard label="Surface" value={property.surface_area ? `${Number(property.surface_area).toLocaleString('fr-FR')} m2` : '-'} />
+        <InfoCard label="Statut" value={activeLease || property.occupancy_status === 'rented' ? 'Loue' : 'Vacant'} />
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="grid gap-6">
-          <section className="rounded-lg border border-[var(--line)] bg-white">
-            <div className="border-b border-[var(--line)] p-5">
-              <h2 className="text-lg font-semibold">Chambres et unites</h2>
+          <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold">Informations generales</h2>
+            <dl className="mt-5 grid gap-4 md:grid-cols-2">
+              <DataRow label="Adresse" value={property.address_line1 ?? '-'} />
+              <DataRow label="Ville" value={[property.postal_code, property.city].filter(Boolean).join(' ') || '-'} />
+              <DataRow label="Regime fiscal" value={property.tax_regime} />
+              <DataRow label="Occupation" value={property.occupancy_status === 'rented' ? 'Loue' : 'Vacant'} />
+            </dl>
+          </section>
+
+          <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold">Aspects financiers</h2>
+            <dl className="mt-5 grid gap-4 md:grid-cols-3">
+              <DataRow label="Loyer mensuel HC" value={money(activeLease?.monthly_rent ?? property.monthly_rent_estimate)} />
+              <DataRow label="Charges" value={money(activeLease?.charges_amount ?? property.charges_estimate)} />
+              <DataRow label="Depot de garantie" value={money(activeLease?.deposit_amount ?? property.deposit_estimate)} />
+            </dl>
+          </section>
+
+          <section className="rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
+            <div className="border-b border-[var(--line-soft)] p-5">
+              <h2 className="text-lg font-semibold">Unites</h2>
             </div>
             {property.units.length ? (
-              <div className="divide-y divide-[var(--line)]">
+              <div className="divide-y divide-[var(--line-soft)]">
                 {property.units.map((unit) => (
                   <div className="flex items-center justify-between p-5" key={unit.id}>
-                    <div>
-                      <p className="font-medium">{unit.name}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{unit.unit_type}</p>
-                    </div>
+                    <p className="font-medium">{unit.name}</p>
+                    <span className="rounded bg-[#eef7f4] px-2.5 py-1 text-xs font-semibold text-[var(--accent)]">{unit.unit_type}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-6 text-sm text-[var(--muted)]">Aucune unite pour ce bien.</div>
+              <div className="p-5 text-sm text-[var(--muted)]">Aucune unite pour ce bien.</div>
             )}
           </section>
 
-          <section className="rounded-lg border border-[var(--line)] bg-white">
-            <div className="border-b border-[var(--line)] p-5">
-              <h2 className="text-lg font-semibold">Baux actifs</h2>
+          <section className="rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
+            <div className="border-b border-[var(--line-soft)] p-5">
+              <h2 className="text-lg font-semibold">Baux</h2>
             </div>
             {property.leases.length ? (
-              <div className="divide-y divide-[var(--line)]">
+              <div className="divide-y divide-[var(--line-soft)]">
                 {property.leases.map((lease) => (
-                  <div className="flex items-center justify-between p-5" key={lease.id}>
+                  <div className="grid gap-3 p-5 md:grid-cols-[1fr_auto]" key={lease.id}>
                     <div>
                       <p className="font-medium">{lease.tenants?.full_name ?? 'Locataire'}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
-                        {[lease.units?.name ?? 'Unite non precise', lease.start_date].filter(Boolean).join(' · ')}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">{lease.rent_charges.length} echeance(s) generee(s)</p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{[lease.units?.name ?? 'Unite non precise', lease.start_date, lease.end_date].filter(Boolean).join(' · ')}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">{lease.monthly_rent} EUR</p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">Charges {lease.charges_amount} EUR</p>
-                    </div>
+                    <div className="text-sm font-semibold tabular-nums">{money(lease.monthly_rent)}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-6 text-sm text-[var(--muted)]">Les baux seront ajoutes pendant la prochaine etape.</div>
-            )}
-          </section>
-
-          <section className="rounded-lg border border-[var(--line)] bg-white">
-            <div className="border-b border-[var(--line)] p-5">
-              <h2 className="text-lg font-semibold">Echeances de loyer</h2>
-            </div>
-            {rentCharges?.length ? (
-              <div className="divide-y divide-[var(--line)]">
-                {rentCharges.map((charge) => {
-                  const paidTotal = charge.rent_payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-                  return (
-                    <div className="grid gap-4 p-5 lg:grid-cols-[1fr_280px]" key={charge.id}>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{charge.period_month.slice(0, 7)}</p>
-                          <span className="rounded-full bg-[#f2f0ea] px-3 py-1 text-xs font-semibold text-[var(--muted)]">{charge.status}</span>
-                        </div>
-                        <p className="mt-1 text-sm text-[var(--muted)]">
-                          {[charge.leases?.tenants?.full_name, charge.leases?.units?.name].filter(Boolean).join(' · ') || 'Bail'}
-                        </p>
-                        <p className="mt-2 text-sm">
-                          Du {Number(charge.total_due).toFixed(2)} EUR · Paye {paidTotal.toFixed(2)} EUR
-                        </p>
-                      </div>
-                      <form action={addRentPaymentAction} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] lg:grid-cols-1">
-                        <input name="locale" type="hidden" value={locale} />
-                        <input name="property_id" type="hidden" value={property.id} />
-                        <input name="rent_charge_id" type="hidden" value={charge.id} />
-                        <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-2 text-sm" min="0" name="amount" placeholder="Montant" required step="0.01" type="number" />
-                        <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-2 text-sm" name="paid_at" type="date" />
-                        <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-2 text-sm" name="payment_method" defaultValue="bank_transfer">
-                          <option value="bank_transfer">Virement</option>
-                          <option value="cash">Especes</option>
-                          <option value="cheque">Cheque</option>
-                          <option value="card">Carte</option>
-                          <option value="other">Autre</option>
-                        </select>
-                        <button className="focus-ring min-h-10 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white" type="submit">
-                          Ajouter paiement
-                        </button>
-                      </form>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-6 text-sm text-[var(--muted)]">Creez un bail pour generer les echeances mensuelles.</div>
+              <div className="p-5 text-sm text-[var(--muted)]">Aucun bail enregistre.</div>
             )}
           </section>
         </div>
 
-        <div className="grid gap-6">
-          {signedPhotos.filter(Boolean).length ? (
-            <section className="rounded-lg border border-[var(--line)] bg-white p-5">
-              <h2 className="text-lg font-semibold">Photos</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <aside className="grid content-start gap-6">
+          <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold">Photos</h2>
+            {signedPhotos.filter(Boolean).length ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 {signedPhotos.filter(Boolean).map((url) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img alt="" className="aspect-[4/3] rounded-md object-cover" key={url} src={url ?? ''} />
                 ))}
               </div>
-            </section>
-          ) : null}
-
-          <form action={createUnitAction} className="rounded-lg border border-[var(--line)] bg-white p-5">
-            <input name="locale" type="hidden" value={locale} />
-            <input name="property_id" type="hidden" value={property.id} />
-            <h2 className="text-lg font-semibold">Ajouter une unite</h2>
-            <div className="mt-5 grid gap-4">
-              <label className="grid gap-2 text-sm font-medium">
-                Nom
-                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="name" placeholder="Chambre 1" required />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Type
-                <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="unit_type" defaultValue="room">
-                  <option value="room">Chambre</option>
-                  <option value="apartment">Appartement</option>
-                  <option value="other">Autre</option>
-                </select>
-              </label>
-              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
-                Ajouter
-              </button>
-            </div>
-          </form>
-
-          <form action={createLeaseAction} className="rounded-lg border border-[var(--line)] bg-white p-5">
-            <input name="locale" type="hidden" value={locale} />
-            <input name="property_id" type="hidden" value={property.id} />
-            <h2 className="text-lg font-semibold">Ajouter un bail</h2>
-            <div className="mt-5 grid gap-4">
-              <label className="grid gap-2 text-sm font-medium">
-                Locataire
-                <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="tenant_id" required>
-                  <option value="">Choisir un locataire</option>
-                  {(tenants ?? []).map((tenant) => (
-                    <option key={tenant.id} value={tenant.id}>
-                      {tenant.full_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Unite
-                <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="unit_id">
-                  <option value="">Non precise</option>
-                  {property.units.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium">
-                  Debut
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="start_date" required type="date" />
-                </label>
-                <label className="grid gap-2 text-sm font-medium">
-                  Fin
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" name="end_date" type="date" />
-                </label>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className="grid gap-2 text-sm font-medium">
-                  Loyer
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" min="0" name="monthly_rent" required step="0.01" type="number" />
-                </label>
-                <label className="grid gap-2 text-sm font-medium">
-                  Charges
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" min="0" name="charges_amount" step="0.01" type="number" />
-                </label>
-                <label className="grid gap-2 text-sm font-medium">
-                  Depot
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" min="0" name="deposit_amount" step="0.01" type="number" />
-                </label>
-              </div>
-              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
-                Creer le bail
-              </button>
-              {!(tenants ?? []).length ? (
-                <p className="text-sm leading-6 text-[var(--muted)]">Ajoutez au moins un locataire avant de creer un bail.</p>
-              ) : null}
-            </div>
-          </form>
-
-          <form action={updatePropertyAction} className="rounded-lg border border-[var(--line)] bg-white p-5" id="property-settings">
-            <input name="locale" type="hidden" value={locale} />
-            <input name="property_id" type="hidden" value={property.id} />
-            <h2 className="text-lg font-semibold">Modifier le bien</h2>
-            <div className="mt-5 grid gap-4">
-              <label className="grid gap-2 text-sm font-medium">
-                Nom
-                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.name} name="name" required />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Adresse
-                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.address_line1 ?? ''} name="address_line1" />
-              </label>
-              <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
-                <label className="grid gap-2 text-sm font-medium">
-                  Code postal
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.postal_code ?? ''} name="postal_code" />
-                </label>
-                <label className="grid gap-2 text-sm font-medium">
-                  Ville
-                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.city ?? ''} name="city" />
-                </label>
-              </div>
-              <label className="grid gap-2 text-sm font-medium">
-                Mode
-                <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.rental_mode} name="rental_mode">
-                  <option value="shared_rooms">colocation</option>
-                  <option value="entire_place">entier</option>
-                  <option value="mixed">mixte</option>
-                </select>
-              </label>
-              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
-                Enregistrer
-              </button>
-            </div>
-          </form>
-        </div>
+            ) : (
+              <p className="mt-4 text-sm text-[var(--muted)]">Aucune photo pour ce bien.</p>
+            )}
+          </section>
+        </aside>
       </section>
     </AppShell>
+  );
+}
+
+function InfoCard({label, value}: {label: string; value: string}) {
+  return (
+    <div className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+      <p className="text-xs font-semibold uppercase text-[var(--muted)]">{label}</p>
+      <p className="mt-3 text-xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function DataRow({label, value}: {label: string; value: string}) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase text-[var(--muted)]">{label}</dt>
+      <dd className="mt-1 text-sm font-medium">{value}</dd>
+    </div>
   );
 }

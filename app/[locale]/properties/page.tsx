@@ -246,7 +246,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
                                 <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/properties/${property.id}`}>
                                   Voir
                                 </Link>
-                                <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/properties/${property.id}#property-settings`}>
+                                <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/properties/${property.id}/edit`}>
                                   Modifier
                                 </Link>
                                 <form action={deletePropertyAction}>
