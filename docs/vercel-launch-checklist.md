@@ -20,7 +20,7 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 
 ## Supabase
 
-- Run all migrations through `20260707160000_workspace_billing.sql`.
+- Run all migrations through `20260707170000_document_storage_delete_policy.sql`.
 - Confirm the `documents` storage bucket exists.
 - Add production auth redirect URLs:
   - `https://your-domain.example/auth/callback`
@@ -55,6 +55,7 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 - Confirm password reset email opens `/reset-password` and updates the password.
 - Confirm account deletion cancels an active Stripe subscription before deleting the user.
 - Confirm the cookie notice appears for a fresh browser profile and links to `/privacy`.
+- Confirm `/robots.txt` and `/sitemap.xml` return `200`.
 - Replace `NEXT_PUBLIC_SUPPORT_EMAIL` with the real support address before inviting users.
 - Localize Supabase Auth email templates for signup confirmation and password reset.
 
