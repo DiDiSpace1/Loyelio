@@ -5,7 +5,7 @@ import {AppShell} from '@/components/app/app-shell';
 import {PageHeader} from '@/components/app/page-header';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {addRentPaymentAction, createLeaseAction, createUnitAction} from '../actions';
+import {addRentPaymentAction, createLeaseAction, createUnitAction, updatePropertyAction} from '../actions';
 
 type PropertyDetailPageProps = {
   params: Promise<{
@@ -21,6 +21,10 @@ type PropertyDetail = {
   city: string | null;
   rental_mode: string;
   tax_regime: string;
+  property_photos: {
+    file_path: string;
+    is_cover: boolean;
+  }[];
   units: {
     id: string;
     name: string;
@@ -81,7 +85,7 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
   const {data, error} = await supabase
     .from('properties')
     .select(
-      'id, name, address_line1, postal_code, city, rental_mode, tax_regime, units(id, name, unit_type), leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(full_name), units(name), rent_charges(id, status))'
+      'id, name, address_line1, postal_code, city, rental_mode, tax_regime, property_photos(file_path, is_cover), units(id, name, unit_type), leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(full_name), units(name), rent_charges(id, status))'
     )
     .eq('workspace_id', workspaceId)
     .eq('id', id)
@@ -109,6 +113,12 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
     .returns<RentChargeRow[]>();
 
   const address = [property.address_line1, property.postal_code, property.city].filter(Boolean).join(', ');
+  const signedPhotos = await Promise.all(
+    property.property_photos.slice(0, 6).map(async (photo) => {
+      const {data} = await supabase.storage.from('property-photos').createSignedUrl(photo.file_path, 60 * 5);
+      return data?.signedUrl ?? null;
+    })
+  );
 
   return (
     <AppShell>
@@ -213,6 +223,18 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
         </div>
 
         <div className="grid gap-6">
+          {signedPhotos.filter(Boolean).length ? (
+            <section className="rounded-lg border border-[var(--line)] bg-white p-5">
+              <h2 className="text-lg font-semibold">Photos</h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {signedPhotos.filter(Boolean).map((url) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt="" className="aspect-[4/3] rounded-md object-cover" key={url} src={url ?? ''} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <form action={createUnitAction} className="rounded-lg border border-[var(--line)] bg-white p-5">
             <input name="locale" type="hidden" value={locale} />
             <input name="property_id" type="hidden" value={property.id} />
@@ -293,6 +315,43 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
               {!(tenants ?? []).length ? (
                 <p className="text-sm leading-6 text-[var(--muted)]">Ajoutez au moins un locataire avant de creer un bail.</p>
               ) : null}
+            </div>
+          </form>
+
+          <form action={updatePropertyAction} className="rounded-lg border border-[var(--line)] bg-white p-5" id="property-settings">
+            <input name="locale" type="hidden" value={locale} />
+            <input name="property_id" type="hidden" value={property.id} />
+            <h2 className="text-lg font-semibold">Modifier le bien</h2>
+            <div className="mt-5 grid gap-4">
+              <label className="grid gap-2 text-sm font-medium">
+                Nom
+                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.name} name="name" required />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Adresse
+                <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.address_line1 ?? ''} name="address_line1" />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
+                <label className="grid gap-2 text-sm font-medium">
+                  Code postal
+                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.postal_code ?? ''} name="postal_code" />
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Ville
+                  <input className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.city ?? ''} name="city" />
+                </label>
+              </div>
+              <label className="grid gap-2 text-sm font-medium">
+                Mode
+                <select className="focus-ring rounded-md border border-[var(--line)] px-3 py-3" defaultValue={property.rental_mode} name="rental_mode">
+                  <option value="shared_rooms">colocation</option>
+                  <option value="entire_place">entier</option>
+                  <option value="mixed">mixte</option>
+                </select>
+              </label>
+              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
+                Enregistrer
+              </button>
             </div>
           </form>
         </div>

@@ -2,8 +2,10 @@
 
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
+import type {SupabaseClient} from '@supabase/supabase-js';
 
 import {localizedPath} from '@/lib/navigation';
+import {getPropertyPhotoLimit} from '@/lib/billing/config';
 import {canCreateResource} from '@/lib/billing/limits';
 import {buildRentChargesForLease} from '@/lib/rent/charges';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -19,10 +21,58 @@ function moneyValue(formData: FormData, key: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function imageFiles(formData: FormData) {
+  return formData.getAll('photos').filter((entry): entry is File => entry instanceof File && entry.size > 0 && entry.type.startsWith('image/'));
+}
+
+async function uploadPropertyPhotos({
+  files,
+  propertyId,
+  supabase,
+  workspaceId
+}: {
+  files: File[];
+  propertyId: string;
+  supabase: SupabaseClient;
+  workspaceId: string;
+}) {
+  for (const [index, file] of files.entries()) {
+    const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const filePath = `workspace/${workspaceId}/properties/${propertyId}/${crypto.randomUUID()}.${extension}`;
+    const {error: uploadError} = await supabase.storage.from('property-photos').upload(filePath, file, {
+      contentType: file.type || 'image/jpeg',
+      upsert: false
+    });
+
+    if (uploadError) {
+      return false;
+    }
+
+    const {error: photoError} = await supabase.from('property_photos').insert({
+      file_name: file.name,
+      file_path: filePath,
+      is_cover: index === 0,
+      mime_type: file.type || null,
+      property_id: propertyId,
+      size_bytes: file.size,
+      sort_order: index,
+      workspace_id: workspaceId
+    });
+
+    if (photoError) {
+      await supabase.storage.from('property-photos').remove([filePath]);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export async function createPropertyAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const name = value(formData, 'name');
   const rentalMode = value(formData, 'rental_mode') || 'shared_rooms';
+  const photos = imageFiles(formData);
 
   if (!name) {
     redirect(`${localizedPath(locale, '/properties')}?error=missing_name`);
@@ -33,6 +83,12 @@ export async function createPropertyAction(formData: FormData) {
 
   if (!planGate.allowed) {
     redirect(`${localizedPath(locale, '/properties')}?error=plan_limit`);
+  }
+
+  const photoLimit = getPropertyPhotoLimit(planGate.billing?.plan);
+
+  if (photos.length > photoLimit) {
+    redirect(`${localizedPath(locale, '/properties')}?error=photo_limit`);
   }
 
   const {data: property, error} = await supabase
@@ -63,8 +119,74 @@ export async function createPropertyAction(formData: FormData) {
     });
   }
 
+  if (photos.length) {
+    const uploaded = await uploadPropertyPhotos({files: photos, propertyId: property.id, supabase, workspaceId});
+
+    if (!uploaded) {
+      redirect(`${localizedPath(locale, `/properties/${property.id}`)}?error=photo_failed`);
+    }
+  }
+
   revalidatePath(localizedPath(locale, '/properties'));
   redirect(localizedPath(locale, `/properties/${property.id}`));
+}
+
+export async function updatePropertyAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const propertyId = value(formData, 'property_id');
+  const name = value(formData, 'name');
+  const rentalMode = value(formData, 'rental_mode') || 'shared_rooms';
+
+  if (!propertyId || !name) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=missing_property`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {error} = await supabase
+    .from('properties')
+    .update({
+      address_line1: value(formData, 'address_line1') || null,
+      city: value(formData, 'city') || null,
+      name,
+      postal_code: value(formData, 'postal_code') || null,
+      rental_mode: rentalMode
+    })
+    .eq('id', propertyId)
+    .eq('workspace_id', workspaceId);
+
+  if (error) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=update_failed`);
+  }
+
+  revalidatePath(localizedPath(locale, '/properties'));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}`));
+  redirect(localizedPath(locale, `/properties/${propertyId}`));
+}
+
+export async function deletePropertyAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const propertyId = value(formData, 'property_id');
+
+  if (!propertyId) {
+    redirect(`${localizedPath(locale, '/properties')}?error=missing_property`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: photos} = await supabase.from('property_photos').select('file_path').eq('property_id', propertyId).eq('workspace_id', workspaceId);
+  const {error} = await supabase.from('properties').delete().eq('id', propertyId).eq('workspace_id', workspaceId);
+
+  if (error) {
+    redirect(`${localizedPath(locale, '/properties')}?error=delete_failed`);
+  }
+
+  const paths = (photos ?? []).map((photo: {file_path: string}) => photo.file_path);
+
+  if (paths.length) {
+    await supabase.storage.from('property-photos').remove(paths);
+  }
+
+  revalidatePath(localizedPath(locale, '/properties'));
+  redirect(localizedPath(locale, '/properties'));
 }
 
 export async function createUnitAction(formData: FormData) {

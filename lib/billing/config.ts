@@ -4,6 +4,13 @@ export const FREE_PLAN_LIMITS = {
   tenants: 3
 } as const;
 
+export const PROPERTY_PHOTO_LIMITS = {
+  free: 0,
+  solo: 5,
+  plus: 10,
+  portfolio: 20
+} as const;
+
 export type BillableResource = keyof typeof FREE_PLAN_LIMITS;
 
 export type BillingStatus = {
@@ -25,6 +32,24 @@ export function hasPaidAccess(billing: BillingStatus | null | undefined) {
   }
 
   return ['active', 'trialing'].includes(billing.status);
+}
+
+export function getPropertyPhotoLimit(plan: string | null | undefined) {
+  const normalizedPlan = (plan ?? 'free').toLowerCase();
+
+  if (normalizedPlan in PROPERTY_PHOTO_LIMITS) {
+    return PROPERTY_PHOTO_LIMITS[normalizedPlan as keyof typeof PROPERTY_PHOTO_LIMITS];
+  }
+
+  if (normalizedPlan === 'subscription') {
+    return PROPERTY_PHOTO_LIMITS.solo;
+  }
+
+  if (normalizedPlan === 'lifetime') {
+    return PROPERTY_PHOTO_LIMITS.portfolio;
+  }
+
+  return PROPERTY_PHOTO_LIMITS.free;
 }
 
 export function getAppUrl() {
