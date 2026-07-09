@@ -27,40 +27,103 @@ type TenantRow = {
 type TenantsPageProps = {
   searchParams: Promise<{
     error?: string;
+    month?: string;
     new?: string;
     q?: string;
   }>;
 };
+
+const MONTH_PARAM_PATTERN = /^\d{4}-\d{2}$/;
 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
   return (parts[0]?.[0] ?? 'L') + (parts[1]?.[0] ?? parts[0]?.[1] ?? '');
 }
 
-function activeLease(tenant: TenantRow) {
-  return tenant.leases.find((lease) => lease.status === 'active') ?? tenant.leases[0] ?? null;
+function isoMonth(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-function paymentStatus(lease: TenantRow['leases'][number] | null) {
+function monthStart(month: string) {
+  return `${month}-01`;
+}
+
+function parseMonthParam(month?: string) {
+  if (month && MONTH_PARAM_PATTERN.test(month)) {
+    return month;
+  }
+
+  return isoMonth(new Date());
+}
+
+function addMonths(month: string, offset: number) {
+  const [year, monthIndex] = month.split('-').map(Number);
+  return isoMonth(new Date(Date.UTC(year, monthIndex - 1 + offset, 1)));
+}
+
+function formatMonthLabel(month: string, locale: string) {
+  const [year, monthIndex] = month.split('-').map(Number);
+  const formatted = new Intl.DateTimeFormat(locale, {month: 'long', year: 'numeric'}).format(new Date(Date.UTC(year, monthIndex - 1, 1)));
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+function monthHref(month: string, queryText: string) {
+  const params = new URLSearchParams({month});
+
+  if (queryText) {
+    params.set('q', queryText);
+  }
+
+  return `/tenants?${params.toString()}`;
+}
+
+function leaseCoversMonth(lease: TenantRow['leases'][number], month: string) {
+  const start = monthStart(month);
+  const nextMonth = monthStart(addMonths(month, 1));
+  return lease.start_date < nextMonth && (!lease.end_date || lease.end_date >= start);
+}
+
+function displayLease(tenant: TenantRow, month: string) {
+  const leasesInMonth = tenant.leases.filter((lease) => leaseCoversMonth(lease, month));
+  return leasesInMonth.find((lease) => lease.status === 'active') ?? leasesInMonth[0] ?? null;
+}
+
+function paymentStatus(lease: TenantRow['leases'][number] | null, month: string) {
   if (!lease) {
     return {className: 'bg-[#eef2ff] text-[#3755c3]', label: 'Sans bail'};
   }
 
-  const latestCharge = [...lease.rent_charges].sort((a, b) => b.period_month.localeCompare(a.period_month))[0];
+  const charge = lease.rent_charges.find((rentCharge) => rentCharge.period_month === monthStart(month));
 
-  if (!latestCharge) {
+  if (!charge) {
     return {className: 'bg-[#eef2ff] text-[#3755c3]', label: lease.status === 'active' ? 'Actif' : lease.status};
   }
 
-  if (latestCharge.status === 'paid') {
+  if (charge.status === 'paid') {
     return {className: 'bg-[#ecfdf5] text-[#047857]', label: 'Paye'};
   }
 
-  if (latestCharge.status === 'partial') {
+  if (charge.status === 'partial') {
     return {className: 'bg-[#fff7ed] text-[#b45309]', label: 'Partiel'};
   }
 
   return {className: 'bg-[#fee2e2] text-[#ba1a1a]', label: 'Non paye'};
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path d="m15 18-6-6 6-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path d="m9 18 6-6-6-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
 }
 
 export default async function TenantsPage({searchParams}: TenantsPageProps) {
@@ -69,6 +132,9 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   const params = await searchParams;
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const queryText = (params.q ?? '').trim();
+  const selectedMonth = parseMonthParam(params.month);
+  const previousMonth = addMonths(selectedMonth, -1);
+  const nextMonth = addMonths(selectedMonth, 1);
   const showCreate = params.new === '1';
 
   let query = supabase
@@ -84,10 +150,10 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   }
 
   const {data: tenants, error} = await query.returns<TenantRow[]>();
-  const rows = tenants ?? [];
-  const activeRows = rows.filter((tenant) => activeLease(tenant)?.status === 'active');
-  const overdueCount = rows.filter((tenant) => paymentStatus(activeLease(tenant)).label === 'Non paye').length;
-  const monthlyRent = activeRows.reduce((sum, tenant) => sum + Number(activeLease(tenant)?.monthly_rent ?? 0), 0);
+  const rows = (tenants ?? []).filter((tenant) => displayLease(tenant, selectedMonth));
+  const activeRows = rows.filter((tenant) => displayLease(tenant, selectedMonth)?.status === 'active');
+  const overdueCount = rows.filter((tenant) => paymentStatus(displayLease(tenant, selectedMonth), selectedMonth).label === 'Non paye').length;
+  const monthlyRent = activeRows.reduce((sum, tenant) => sum + Number(displayLease(tenant, selectedMonth)?.monthly_rent ?? 0), 0);
 
   return (
     <AppShell>
@@ -132,8 +198,25 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
 
           <section className="mt-6 overflow-hidden rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-[var(--line-soft)] p-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm font-semibold text-[#171d1c]">Juillet 2026</div>
+              <div className="flex items-center gap-2">
+                <Link
+                  aria-label="Mois precedent"
+                  className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md text-[#33413f] hover:bg-[#f0f5f2]"
+                  href={monthHref(previousMonth, queryText)}
+                >
+                  <ChevronLeftIcon />
+                </Link>
+                <div className="min-w-32 text-center text-sm font-semibold text-[#171d1c]">{formatMonthLabel(selectedMonth, locale)}</div>
+                <Link
+                  aria-label="Mois suivant"
+                  className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md text-[#33413f] hover:bg-[#f0f5f2]"
+                  href={monthHref(nextMonth, queryText)}
+                >
+                  <ChevronRightIcon />
+                </Link>
+              </div>
               <form className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                <input name="month" type="hidden" value={selectedMonth} />
                 <input
                   className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-[#f0f5f2] px-3 text-sm md:w-72"
                   defaultValue={queryText}
@@ -161,8 +244,8 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                 <tbody className="divide-y divide-[var(--line-soft)]">
                   {rows.length ? (
                     rows.map((tenant) => {
-                      const lease = activeLease(tenant);
-                      const status = paymentStatus(lease);
+                      const lease = displayLease(tenant, selectedMonth);
+                      const status = paymentStatus(lease, selectedMonth);
 
                       return (
                         <tr className="transition hover:bg-[#f0f5f2]" key={tenant.id}>
@@ -191,7 +274,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                               <summary className="focus-ring flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md text-xl text-[var(--muted)] hover:bg-[#eaefed]">
                                 ...
                               </summary>
-                              <div className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-lg">
+                              <div className="absolute right-full top-0 z-20 mr-2 w-36 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-lg">
                                 <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}`}>
                                   Voir
                                 </Link>
