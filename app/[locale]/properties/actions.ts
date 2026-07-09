@@ -31,6 +31,13 @@ function numericValue(formData: FormData, key: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function numericValues(formData: FormData, key: string) {
+  return values(formData, key).map((entry) => {
+    const parsed = Number.parseFloat(entry.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  });
+}
+
 function imageFiles(formData: FormData) {
   return formData.getAll('photos').filter((entry): entry is File => entry instanceof File && entry.size > 0 && entry.type.startsWith('image/'));
 }
@@ -81,7 +88,7 @@ async function uploadPropertyPhotos({
 export async function createPropertyAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const name = value(formData, 'name');
-  const rentalMode = value(formData, 'rental_mode') || 'shared_rooms';
+  const rentalMode = value(formData, 'rental_mode') === 'shared_rooms' ? 'shared_rooms' : 'entire_place';
   const photos = imageFiles(formData);
 
   if (!name) {
@@ -101,15 +108,25 @@ export async function createPropertyAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/properties')}?error=photo_limit`);
   }
 
+  const unitNames = values(formData, 'unit_name');
+  const unitRents = numericValues(formData, 'unit_monthly_rent_estimate');
+  const unitCharges = numericValues(formData, 'unit_charges_estimate');
+  const unitDeposits = numericValues(formData, 'unit_deposit_estimate');
+  const sharedRentTotal = unitRents.reduce((sum, amount) => sum + amount, 0);
+  const sharedChargesTotal = unitCharges.reduce((sum, amount) => sum + amount, 0);
+  const sharedDepositTotal = unitDeposits.reduce((sum, amount) => sum + amount, 0);
+  const monthlyRentEstimate = rentalMode === 'shared_rooms' ? sharedRentTotal : moneyValue(formData, 'monthly_rent_estimate');
+  const chargesEstimate = rentalMode === 'shared_rooms' ? sharedChargesTotal : moneyValue(formData, 'charges_estimate');
+  const depositEstimate = rentalMode === 'shared_rooms' ? sharedDepositTotal : moneyValue(formData, 'deposit_estimate');
   const {data: property, error} = await supabase
     .from('properties')
     .insert({
       address_line1: value(formData, 'address_line1') || null,
       city: value(formData, 'city') || null,
       country_code: 'FR',
-      charges_estimate: moneyValue(formData, 'charges_estimate') || null,
-      deposit_estimate: moneyValue(formData, 'deposit_estimate') || null,
-      monthly_rent_estimate: moneyValue(formData, 'monthly_rent_estimate') || null,
+      charges_estimate: chargesEstimate || null,
+      deposit_estimate: depositEstimate || null,
+      monthly_rent_estimate: monthlyRentEstimate || null,
       name,
       occupancy_status: value(formData, 'occupancy_status') || 'vacant',
       postal_code: value(formData, 'postal_code') || null,
@@ -127,12 +144,37 @@ export async function createPropertyAction(formData: FormData) {
   }
 
   if (rentalMode === 'entire_place') {
-    await supabase.from('units').insert({
+    const {error: unitError} = await supabase.from('units').insert({
+      charges_estimate: chargesEstimate || null,
+      deposit_estimate: depositEstimate || null,
+      monthly_rent_estimate: monthlyRentEstimate || null,
       name: 'Logement entier',
       property_id: property.id,
       unit_type: 'apartment',
       workspace_id: workspaceId
     });
+
+    if (unitError) {
+      redirect(`${localizedPath(locale, `/properties/${property.id}`)}?error=unit_failed`);
+    }
+  }
+
+  if (rentalMode === 'shared_rooms') {
+    const units = (unitNames.length ? unitNames : ['Chambre 1']).map((unitName, index) => ({
+      charges_estimate: unitCharges[index] || null,
+      deposit_estimate: unitDeposits[index] || null,
+      monthly_rent_estimate: unitRents[index] || null,
+      name: unitName || `Chambre ${index + 1}`,
+      property_id: property.id,
+      unit_type: 'room',
+      workspace_id: workspaceId
+    }));
+
+    const {error: unitError} = await supabase.from('units').insert(units);
+
+    if (unitError) {
+      redirect(`${localizedPath(locale, `/properties/${property.id}`)}?error=unit_failed`);
+    }
   }
 
   if (photos.length) {
