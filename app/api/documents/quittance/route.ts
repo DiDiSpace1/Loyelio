@@ -1,7 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {revalidatePath} from 'next/cache';
 import {NextResponse} from 'next/server';
-import PDFDocument from 'pdfkit';
 
 import {canCreateResource} from '@/lib/billing/limits';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
@@ -71,7 +70,42 @@ function propertyAddress(property: PropertyForReceipt) {
   return [property.address_line1, [property.postal_code, property.city].filter(Boolean).join(' ')].filter(Boolean).join('\n') || property.name;
 }
 
-async function buildQuittancePdf(input: {
+function escapePdfText(value: string) {
+  return pdfText(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/\r?\n/g, ' ');
+}
+
+function wrapPdfText(value: string, maxLength = 70) {
+  const words = pdfText(value).replace(/\s+/g, ' ').trim().split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+
+    if (next.length > maxLength && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines.length ? lines : ['-'];
+}
+
+function textCommand(text: string, x: number, y: number, size = 11, bold = false) {
+  return `BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${y} Td (${escapePdfText(text)}) Tj ET`;
+}
+
+function buildQuittancePdf(input: {
   amount: number;
   charges: number;
   ownerName: string;
@@ -81,57 +115,71 @@ async function buildQuittancePdf(input: {
   property: PropertyForReceipt;
   tenant: TenantForReceipt | null;
 }) {
-  const doc = new PDFDocument({margin: 56, size: 'A4'});
-  const chunks: Buffer[] = [];
   const total = input.amount + input.charges;
+  const lines: string[] = [];
+  let y = 770;
 
-  doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+  const add = (text: string, options?: {bold?: boolean; gap?: number; size?: number; x?: number}) => {
+    lines.push(textCommand(text, options?.x ?? 56, y, options?.size ?? 11, options?.bold));
+    y -= options?.gap ?? 18;
+  };
 
-  doc.fillColor('#171d1c').fontSize(23).text('Quittance de loyer', {align: 'center'});
-  doc.moveDown(0.5);
-  doc.fontSize(11).fillColor('#3d4947').text(`Periode: ${formatMonth(input.periodMonth)}`, {align: 'center'});
-  doc.moveDown(2);
+  add('Quittance de loyer', {bold: true, gap: 22, size: 22, x: 190});
+  add(`Periode: ${formatMonth(input.periodMonth)}`, {gap: 34, x: 218});
+  add('Proprietaire', {bold: true, gap: 16, size: 12});
+  add(input.ownerName, {gap: 26});
+  add('Locataire', {bold: true, gap: 16, size: 12});
+  add(input.tenant?.full_name ?? '-', {gap: 26});
+  add('Bien loue', {bold: true, gap: 16, size: 12});
 
-  doc.fillColor('#171d1c').fontSize(12).text('Proprietaire');
-  doc.fontSize(11).fillColor('#3d4947').text(pdfText(input.ownerName));
-  doc.moveDown();
+  for (const line of wrapPdfText(propertyAddress(input.property), 72)) {
+    add(line, {gap: 16});
+  }
 
-  doc.fillColor('#171d1c').fontSize(12).text('Locataire');
-  doc.fontSize(11).fillColor('#3d4947').text(pdfText(input.tenant?.full_name));
-  doc.moveDown();
+  y -= 10;
+  add('Detail du paiement', {bold: true, gap: 22, size: 13});
+  add(`Loyer hors charges: ${formatMoney(input.amount)}`);
+  add(`Charges: ${formatMoney(input.charges)}`);
+  add(`Total recu: ${formatMoney(total)}`, {bold: true, gap: 26, size: 12});
+  add(`Date de paiement: ${input.paidAt}`);
+  add(`Mode de paiement: ${paymentLabel(input.paymentMethod)}`, {gap: 28});
 
-  doc.fillColor('#171d1c').fontSize(12).text('Bien loue');
-  doc.fontSize(11).fillColor('#3d4947').text(pdfText(propertyAddress(input.property)));
-  doc.moveDown(1.5);
+  for (const line of wrapPdfText(`Je soussigne ${input.ownerName || 'le proprietaire'} reconnais avoir recu de ${input.tenant?.full_name ?? 'le locataire'} la somme de ${formatMoney(total)} au titre du loyer et des charges pour la periode ${formatMonth(input.periodMonth)}.`, 86)) {
+    add(line, {gap: 16});
+  }
 
-  doc.fillColor('#171d1c').fontSize(13).text('Detail du paiement');
-  doc.moveDown(0.5);
-  doc.fontSize(11);
-  doc.text(`Loyer hors charges: ${formatMoney(input.amount)}`);
-  doc.text(`Charges: ${formatMoney(input.charges)}`);
-  doc.fontSize(12).fillColor('#00685f').text(`Total recu: ${formatMoney(total)}`);
-  doc.fillColor('#3d4947').fontSize(11).text(`Date de paiement: ${input.paidAt}`);
-  doc.text(`Mode de paiement: ${paymentLabel(input.paymentMethod)}`);
-  doc.moveDown(1.5);
+  y -= 16;
+  add(`Fait a ${input.property.city ?? '-'}, le ${new Date().toLocaleDateString('fr-FR')}`, {gap: 34});
+  add('Signature du proprietaire', {gap: 22});
+  add(input.ownerName || '-', {bold: true, size: 13});
 
-  doc.fillColor('#171d1c').fontSize(11).text(
-    pdfText(`Je soussigne ${input.ownerName || 'le proprietaire'} reconnais avoir recu de ${input.tenant?.full_name ?? 'le locataire'} la somme de ${formatMoney(total)} au titre du loyer et des charges pour la periode ${formatMonth(input.periodMonth)}.`)
-  );
-  doc.moveDown(2);
-  doc.text(pdfText(`Fait a ${input.property.city ?? '-'}, le ${new Date().toLocaleDateString('fr-FR')}`));
-  doc.moveDown(1.5);
-  doc.text('Signature du proprietaire');
-  doc.moveDown(0.5);
-  doc.fontSize(13).fillColor('#171d1c').text(pdfText(input.ownerName || '-'));
+  const content = lines.join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
+    `<< /Length ${Buffer.byteLength(content, 'latin1')} >>\nstream\n${content}\nendstream`
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
 
-  doc.end();
-
-  await new Promise<void>((resolve, reject) => {
-    doc.on('end', resolve);
-    doc.on('error', reject);
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf, 'latin1'));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
   });
 
-  return Buffer.concat(chunks);
+  const xrefOffset = Buffer.byteLength(pdf, 'latin1');
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += '0000000000 65535 f \n';
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return Buffer.from(pdf, 'latin1');
 }
 
 export async function POST(request: Request) {
@@ -196,7 +244,7 @@ export async function POST(request: Request) {
       tenant = tenantData;
     }
 
-    const pdf = await buildQuittancePdf({amount, charges, ownerName, paidAt, paymentMethod, periodMonth, property, tenant});
+    const pdf = buildQuittancePdf({amount, charges, ownerName, paidAt, paymentMethod, periodMonth, property, tenant});
     const documentId = randomUUID();
     const fileName = safeFileName(`Quittance_${periodMonth}_${tenant?.full_name ?? property.name}.pdf`);
     const year = new Date().getUTCFullYear();
