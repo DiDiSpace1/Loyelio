@@ -247,18 +247,18 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
         </div>
       ) : null}
 
-      <form className="mb-8 grid gap-3 border-b border-[var(--line-soft)] pb-5 md:grid-cols-[minmax(220px,1fr)_170px_190px_minmax(190px,1fr)_auto]">
-        <label className="relative">
+      <form className="mb-8 flex flex-wrap gap-3 border-b border-[var(--line-soft)] pb-5">
+        <label className="relative min-w-0 flex-[1_1_240px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">
             <SearchIcon />
           </span>
           <input className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 pl-10 text-sm" defaultValue={query} name="q" placeholder="Rechercher un document..." />
         </label>
-        <label>
+        <label className="min-w-0 flex-[1_1_140px]">
           <span className="sr-only">Annee</span>
           <input className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm" defaultValue={selectedYear?.year ?? ''} max="2100" min="2000" name="year" placeholder="Annee" type="number" />
         </label>
-        <label>
+        <label className="min-w-0 flex-[1_1_170px]">
           <span className="sr-only">Type</span>
           <select className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm" defaultValue={selectedType} name="type">
             <option value="">Tous</option>
@@ -268,7 +268,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
             <option value="tax">Fiscal</option>
           </select>
         </label>
-        <label>
+        <label className="min-w-0 flex-[1_1_220px]">
           <span className="sr-only">Bien</span>
           <select className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm" defaultValue={selectedPropertyId} name="property_id">
             <option value="">Tous les biens</option>
@@ -279,7 +279,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
             ))}
           </select>
         </label>
-        <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold text-[#171d1c] hover:bg-[#f0f5f2]" type="submit">
+        <button className="focus-ring min-h-11 flex-[0_0_auto] rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold text-[#171d1c] hover:bg-[#f0f5f2]" type="submit">
           Filtrer
         </button>
       </form>

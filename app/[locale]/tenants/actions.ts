@@ -12,6 +12,11 @@ function value(formData: FormData, key: string) {
   return typeof raw === 'string' ? raw.trim() : '';
 }
 
+function moneyValue(formData: FormData, key: string) {
+  const parsed = Number.parseFloat(value(formData, key).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export async function createTenantAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const fullName = value(formData, 'full_name');
@@ -90,4 +95,68 @@ export async function deleteTenantAction(formData: FormData) {
 
   revalidatePath(localizedPath(locale, '/tenants'));
   redirect(localizedPath(locale, '/tenants'));
+}
+
+export async function updateRentStatusAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const leaseId = value(formData, 'lease_id');
+  const periodMonth = value(formData, 'period_month');
+  const status = value(formData, 'status');
+  const paidAmount = moneyValue(formData, 'paid_amount');
+
+  if (!leaseId || !/^\d{4}-\d{2}-\d{2}$/.test(periodMonth) || !['paid', 'partial', 'unpaid'].includes(status)) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=rent_status_missing`);
+  }
+
+  if (status === 'partial' && paidAmount <= 0) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=partial_amount_missing`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: lease, error: leaseError} = await supabase
+    .from('leases')
+    .select('id, monthly_rent, charges_amount')
+    .eq('id', leaseId)
+    .eq('workspace_id', workspaceId)
+    .single();
+
+  if (leaseError || !lease) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=lease_missing`);
+  }
+
+  const totalDue = Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0);
+  const {data: rentCharge, error} = await supabase
+    .from('rent_charges')
+    .upsert(
+      {
+        charges_amount: Number(lease.charges_amount ?? 0),
+        lease_id: leaseId,
+        period_month: periodMonth,
+        rent_amount: Number(lease.monthly_rent ?? 0),
+        status,
+        total_due: totalDue,
+        workspace_id: workspaceId
+      },
+      {onConflict: 'lease_id,period_month'}
+    )
+    .select('id')
+    .single();
+
+  if (error || !rentCharge) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=rent_status_failed`);
+  }
+
+  if (status === 'partial' || status === 'paid') {
+    const amount = status === 'paid' ? totalDue : paidAmount;
+    await supabase.from('rent_payments').insert({
+      amount,
+      paid_at: new Date().toISOString().slice(0, 10),
+      payment_method: 'bank_transfer',
+      rent_charge_id: rentCharge.id,
+      workspace_id: workspaceId
+    });
+  }
+
+  revalidatePath(localizedPath(locale, '/tenants'));
+  redirect(localizedPath(locale, `/tenants?month=${periodMonth.slice(0, 7)}`));
 }

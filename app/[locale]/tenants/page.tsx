@@ -4,7 +4,8 @@ import {getLocale, getTranslations} from 'next-intl/server';
 import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {createTenantAction, deleteTenantAction} from './actions';
+import {createTenantAction, deleteTenantAction, updateRentStatusAction} from './actions';
+import {DeleteTenantButton} from './delete-tenant-button';
 
 type TenantRow = {
   id: string;
@@ -17,6 +18,7 @@ type TenantRow = {
     status: string;
     start_date: string;
     end_date: string | null;
+    charges_amount: number;
     monthly_rent: number;
     properties: {name: string} | null;
     units: {name: string} | null;
@@ -30,10 +32,12 @@ type TenantsPageProps = {
     month?: string;
     new?: string;
     q?: string;
+    view?: string;
   }>;
 };
 
 const MONTH_PARAM_PATTERN = /^\d{4}-\d{2}$/;
+const TENANT_VIEWS = new Set(['all', 'active', 'unassigned', 'expiring', 'overdue']);
 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -67,8 +71,18 @@ function formatMonthLabel(month: string, locale: string) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-function monthHref(month: string, queryText: string) {
-  const params = new URLSearchParams({month});
+function monthHref(month: string, queryText: string, view: string) {
+  const params = new URLSearchParams({month, view});
+
+  if (queryText) {
+    params.set('q', queryText);
+  }
+
+  return `/tenants?${params.toString()}`;
+}
+
+function viewHref(view: string, month: string, queryText: string) {
+  const params = new URLSearchParams({month, view});
 
   if (queryText) {
     params.set('q', queryText);
@@ -86,6 +100,10 @@ function leaseCoversMonth(lease: TenantRow['leases'][number], month: string) {
 function displayLease(tenant: TenantRow, month: string) {
   const leasesInMonth = tenant.leases.filter((lease) => leaseCoversMonth(lease, month));
   return leasesInMonth.find((lease) => lease.status === 'active') ?? leasesInMonth[0] ?? null;
+}
+
+function activeLease(tenant: TenantRow, month: string) {
+  return tenant.leases.find((lease) => lease.status === 'active' && leaseCoversMonth(lease, month)) ?? null;
 }
 
 function paymentStatus(lease: TenantRow['leases'][number] | null, month: string) {
@@ -108,6 +126,26 @@ function paymentStatus(lease: TenantRow['leases'][number] | null, month: string)
   }
 
   return {className: 'bg-[#fee2e2] text-[#ba1a1a]', label: 'Non paye'};
+}
+
+function hasOverdueRent(tenant: TenantRow, month: string) {
+  const currentPeriod = monthStart(month);
+
+  return tenant.leases.some((lease) =>
+    lease.rent_charges.some((rentCharge) => rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status))
+  );
+}
+
+function leaseExpiresSoon(tenant: TenantRow, month: string) {
+  const lease = activeLease(tenant, month);
+
+  if (!lease?.end_date) {
+    return false;
+  }
+
+  const start = monthStart(month);
+  const limit = monthStart(addMonths(month, 3));
+  return lease.end_date >= start && lease.end_date < limit;
 }
 
 function ChevronLeftIcon() {
@@ -133,6 +171,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const queryText = (params.q ?? '').trim();
   const selectedMonth = parseMonthParam(params.month);
+  const selectedView = TENANT_VIEWS.has(params.view ?? '') ? params.view ?? 'active' : 'active';
   const previousMonth = addMonths(selectedMonth, -1);
   const nextMonth = addMonths(selectedMonth, 1);
   const showCreate = params.new === '1';
@@ -140,7 +179,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   let query = supabase
     .from('tenants')
     .select(
-      'id, full_name, email, phone, notes, leases(id, status, start_date, end_date, monthly_rent, properties(name), units(name), rent_charges(status, period_month))'
+      'id, full_name, email, phone, notes, leases(id, status, start_date, end_date, monthly_rent, charges_amount, properties(name), units(name), rent_charges(status, period_month))'
     )
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
@@ -150,10 +189,21 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   }
 
   const {data: tenants, error} = await query.returns<TenantRow[]>();
-  const rows = (tenants ?? []).filter((tenant) => displayLease(tenant, selectedMonth));
-  const activeRows = rows.filter((tenant) => displayLease(tenant, selectedMonth)?.status === 'active');
-  const overdueCount = rows.filter((tenant) => paymentStatus(displayLease(tenant, selectedMonth), selectedMonth).label === 'Non paye').length;
-  const monthlyRent = activeRows.reduce((sum, tenant) => sum + Number(displayLease(tenant, selectedMonth)?.monthly_rent ?? 0), 0);
+  const allRows = tenants ?? [];
+  const activeRows = allRows.filter((tenant) => activeLease(tenant, selectedMonth));
+  const unassignedRows = allRows.filter((tenant) => !activeLease(tenant, selectedMonth));
+  const expiringRows = allRows.filter((tenant) => leaseExpiresSoon(tenant, selectedMonth));
+  const overdueRows = allRows.filter((tenant) => hasOverdueRent(tenant, selectedMonth));
+  const rows =
+    selectedView === 'all'
+      ? allRows
+      : selectedView === 'unassigned'
+        ? unassignedRows
+        : selectedView === 'expiring'
+          ? expiringRows
+          : selectedView === 'overdue'
+            ? overdueRows
+            : activeRows;
 
   return (
     <AppShell>
@@ -189,20 +239,46 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
         <CreateTenantView locale={locale} />
       ) : (
         <>
-          <section className="mt-8 grid gap-4 md:grid-cols-4">
-            <SummaryCard label="Total locataires" note="Contacts suivis" value={rows.length.toString()} />
-            <SummaryCard label="Baux actifs" note="Occupation actuelle" value={activeRows.length.toString()} />
-            <SummaryCard label="Retards" note="Action requise" value={overdueCount.toString()} warning={overdueCount > 0} />
-            <SummaryCard label="Loyers mensuels" note="Baux actifs" value={`${monthlyRent.toLocaleString('fr-FR')} EUR`} />
+          <section className="mt-8 grid gap-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <SummaryCard
+                active={selectedView === 'unassigned'}
+                href={viewHref('unassigned', selectedMonth, queryText)}
+                label="Non assignes"
+                note="A rattacher a un bien"
+                tone="neutral"
+                value={unassignedRows.length.toString()}
+              />
+              <SummaryCard
+                active={selectedView === 'expiring'}
+                href={viewHref('expiring', selectedMonth, queryText)}
+                label="Baux < 3 mois"
+                note="A renouveler bientot"
+                tone="warning"
+                value={expiringRows.length.toString()}
+              />
+              <SummaryCard
+                active={selectedView === 'overdue'}
+                href={viewHref('overdue', selectedMonth, queryText)}
+                label="Retards"
+                note="Paiements a suivre"
+                tone="danger"
+                value={overdueRows.length.toString()}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <SummaryCard active={selectedView === 'all'} href={viewHref('all', selectedMonth, queryText)} label="Tous les locataires" note="Passes, futurs et non assignes" value={allRows.length.toString()} />
+              <SummaryCard active={selectedView === 'active'} href={viewHref('active', selectedMonth, queryText)} label="Baux actifs" note="Assignes et en periode" value={activeRows.length.toString()} />
+            </div>
           </section>
 
-          <section className="mt-6 overflow-hidden rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
+          <section className="mt-6 overflow-visible rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-[var(--line-soft)] p-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2">
                 <Link
                   aria-label="Mois precedent"
                   className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md text-[#33413f] hover:bg-[#f0f5f2]"
-                  href={monthHref(previousMonth, queryText)}
+                  href={monthHref(previousMonth, queryText, selectedView)}
                 >
                   <ChevronLeftIcon />
                 </Link>
@@ -210,13 +286,14 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                 <Link
                   aria-label="Mois suivant"
                   className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md text-[#33413f] hover:bg-[#f0f5f2]"
-                  href={monthHref(nextMonth, queryText)}
+                  href={monthHref(nextMonth, queryText, selectedView)}
                 >
                   <ChevronRightIcon />
                 </Link>
               </div>
               <form className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
                 <input name="month" type="hidden" value={selectedMonth} />
+                <input name="view" type="hidden" value={selectedView} />
                 <input
                   className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-[#f0f5f2] px-3 text-sm md:w-72"
                   defaultValue={queryText}
@@ -229,7 +306,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
               </form>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full min-w-[920px] border-collapse text-left">
                 <thead className="border-b border-[var(--line-soft)] bg-[#eaefed] text-[11px] font-semibold uppercase text-[var(--muted)]">
                   <tr>
@@ -274,19 +351,58 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                               <summary className="focus-ring flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md text-xl text-[var(--muted)] hover:bg-[#eaefed]">
                                 ...
                               </summary>
-                              <div className="absolute right-full top-0 z-20 mr-2 w-36 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-lg">
+                              <div className="absolute bottom-0 right-full z-50 mr-2 w-48 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-xl">
                                 <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}`}>
                                   Voir
                                 </Link>
                                 <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}/edit`}>
                                   Modifier
                                 </Link>
+                                {lease ? (
+                                  <details className="group rounded-md">
+                                    <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 hover:bg-[#f0f5f2]">
+                                      Changer statut
+                                      <span className="text-xs text-[var(--muted)]">›</span>
+                                    </summary>
+                                    <div className="mt-1 grid gap-1 border-t border-[var(--line-soft)] pt-1">
+                                      <form action={updateRentStatusAction}>
+                                        <input name="locale" type="hidden" value={locale} />
+                                        <input name="lease_id" type="hidden" value={lease.id} />
+                                        <input name="period_month" type="hidden" value={monthStart(selectedMonth)} />
+                                        <input name="status" type="hidden" value="paid" />
+                                        <button className="block w-full rounded-md px-3 py-2 text-left text-[#047857] hover:bg-[#ecfdf5]" type="submit">
+                                          Paye
+                                        </button>
+                                      </form>
+                                      <form action={updateRentStatusAction} className="rounded-md px-3 py-2 hover:bg-[#fff7ed]">
+                                        <input name="locale" type="hidden" value={locale} />
+                                        <input name="lease_id" type="hidden" value={lease.id} />
+                                        <input name="period_month" type="hidden" value={monthStart(selectedMonth)} />
+                                        <input name="status" type="hidden" value="partial" />
+                                        <label className="grid gap-1 text-xs font-semibold text-[#7a4a11]">
+                                          Paye partiel
+                                          <input className="focus-ring min-h-9 rounded-md border border-[var(--line)] px-2 text-sm font-normal text-[#171d1c]" min="0" name="paid_amount" placeholder="Montant" step="0.01" type="number" />
+                                        </label>
+                                        <button className="mt-2 text-xs font-semibold text-[#b45309]" type="submit">
+                                          Valider
+                                        </button>
+                                      </form>
+                                      <form action={updateRentStatusAction}>
+                                        <input name="locale" type="hidden" value={locale} />
+                                        <input name="lease_id" type="hidden" value={lease.id} />
+                                        <input name="period_month" type="hidden" value={monthStart(selectedMonth)} />
+                                        <input name="status" type="hidden" value="unpaid" />
+                                        <button className="block w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff1f1]" type="submit">
+                                          Non paye
+                                        </button>
+                                      </form>
+                                    </div>
+                                  </details>
+                                ) : null}
                                 <form action={deleteTenantAction}>
                                   <input name="locale" type="hidden" value={locale} />
                                   <input name="tenant_id" type="hidden" value={tenant.id} />
-                                  <button className="block w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff1f1]" type="submit">
-                                    Supprimer
-                                  </button>
+                                  <DeleteTenantButton />
                                 </form>
                               </div>
                             </details>
@@ -314,13 +430,34 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   );
 }
 
-function SummaryCard({label, note, value, warning = false}: {label: string; note: string; value: string; warning?: boolean}) {
+function SummaryCard({
+  active = false,
+  href,
+  label,
+  note,
+  tone = 'neutral',
+  value
+}: {
+  active?: boolean;
+  href: string;
+  label: string;
+  note: string;
+  tone?: 'danger' | 'neutral' | 'warning';
+  value: string;
+}) {
+  const toneClass =
+    tone === 'danger'
+      ? 'border-[#fecaca] text-[#ba1a1a]'
+      : tone === 'warning'
+        ? 'border-[#fed7aa] text-[#b45309]'
+        : 'border-[var(--line-soft)] text-[var(--muted)]';
+
   return (
-    <div className={['rounded-lg border bg-white p-5 shadow-sm', warning ? 'border-[#fecaca]' : 'border-[var(--line-soft)]'].join(' ')}>
-      <p className={['text-xs font-semibold uppercase', warning ? 'text-[#ba1a1a]' : 'text-[var(--muted)]'].join(' ')}>{label}</p>
+    <Link className={['focus-ring rounded-lg border bg-white p-5 shadow-sm transition hover:bg-[#f8fbfa]', toneClass, active ? 'ring-2 ring-[var(--accent)]' : ''].join(' ')} href={href}>
+      <p className="text-xs font-semibold uppercase">{label}</p>
       <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-1 text-sm text-[var(--muted)]">{note}</p>
-    </div>
+    </Link>
   );
 }
 
