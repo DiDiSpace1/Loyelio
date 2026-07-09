@@ -4,7 +4,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {createTenantAction, deleteTenantAction, updateRentStatusAction} from './actions';
+import {createTenantAction, deleteTenantAction, updateRentStatusAction, updateTenantActiveAction} from './actions';
 import {DeleteTenantButton} from './delete-tenant-button';
 import {TenantActionDetails} from './tenant-action-details';
 
@@ -12,6 +12,7 @@ type TenantRow = {
   id: string;
   full_name: string;
   email: string | null;
+  is_active: boolean;
   phone: string | null;
   notes: string | null;
   leases: {
@@ -193,7 +194,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   let query = supabase
     .from('tenants')
     .select(
-      'id, full_name, email, phone, notes, leases(id, status, start_date, end_date, monthly_rent, charges_amount, properties(name), units(name), rent_charges(status, period_month))'
+      'id, full_name, email, is_active, phone, notes, leases(id, status, start_date, end_date, monthly_rent, charges_amount, properties(name), units(name), rent_charges(status, period_month))'
     )
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
@@ -204,11 +205,17 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
 
   const {data: tenants, error} = await query.returns<TenantRow[]>();
   const allRows = tenants ?? [];
-  const activeRows = allRows.filter((tenant) => activeLease(tenant, selectedMonth));
-  const unassignedRows = allRows.filter((tenant) => !activeLease(tenant, selectedMonth));
-  const expiringRows = allRows.filter((tenant) => leaseExpiresSoon(tenant, selectedMonth));
-  const overdueRows = allRows.filter((tenant) => hasOverdueRent(tenant, selectedMonth));
-  const overdueMonth = earliestOverdueMonth(allRows, selectedMonth);
+  const activeTenantRows = allRows.filter((tenant) => tenant.is_active);
+  const summaryMonth = isoMonth(new Date());
+  const summaryActiveRows = activeTenantRows.filter((tenant) => activeLease(tenant, summaryMonth));
+  const summaryUnassignedRows = activeTenantRows.filter((tenant) => !activeLease(tenant, summaryMonth));
+  const summaryExpiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, summaryMonth));
+  const summaryOverdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, summaryMonth));
+  const summaryOverdueMonth = earliestOverdueMonth(activeTenantRows, summaryMonth);
+  const activeRows = activeTenantRows.filter((tenant) => activeLease(tenant, selectedMonth));
+  const unassignedRows = activeTenantRows.filter((tenant) => !activeLease(tenant, selectedMonth));
+  const expiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, selectedMonth));
+  const overdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, selectedMonth));
   const rows =
     selectedView === 'all'
       ? allRows
@@ -258,32 +265,32 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
             <div className="grid gap-3 md:grid-cols-3">
               <SummaryCard
                 active={selectedView === 'unassigned'}
-                href={viewHref('unassigned', selectedMonth, queryText)}
+                href={viewHref('unassigned', summaryMonth, queryText)}
                 label="Non assignes"
                 note="A rattacher a un bien"
                 tone="neutral"
-                value={unassignedRows.length.toString()}
+                value={summaryUnassignedRows.length.toString()}
               />
               <SummaryCard
                 active={selectedView === 'expiring'}
-                href={viewHref('expiring', selectedMonth, queryText)}
+                href={viewHref('expiring', summaryMonth, queryText)}
                 label="Baux < 3 mois"
                 note="A renouveler bientot"
                 tone="warning"
-                value={expiringRows.length.toString()}
+                value={summaryExpiringRows.length.toString()}
               />
               <SummaryCard
                 active={selectedView === 'overdue'}
-                href={viewHref('overdue', overdueMonth, queryText)}
+                href={viewHref('overdue', summaryOverdueMonth, queryText)}
                 label="Retards"
                 note="Paiements a suivre"
                 tone="danger"
-                value={overdueRows.length.toString()}
+                value={summaryOverdueRows.length.toString()}
               />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <SummaryCard active={selectedView === 'all'} href={viewHref('all', selectedMonth, queryText)} label="Tous les locataires" note="Passes, futurs et non assignes" value={allRows.length.toString()} />
-              <SummaryCard active={selectedView === 'active'} href={viewHref('active', selectedMonth, queryText)} label="Baux actifs" note="Assignes et en periode" value={activeRows.length.toString()} />
+              <SummaryCard active={selectedView === 'all'} href={viewHref('all', summaryMonth, queryText)} label="Tous les locataires" note="Passes, futurs et non assignes" value={allRows.length.toString()} />
+              <SummaryCard active={selectedView === 'active'} href={viewHref('active', summaryMonth, queryText)} label="Baux actifs" note="Assignes et en periode" value={summaryActiveRows.length.toString()} />
             </div>
           </section>
 
@@ -337,7 +344,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                   {rows.length ? (
                     rows.map((tenant) => {
                       const lease = displayLease(tenant, selectedMonth);
-                      const status = paymentStatus(lease, selectedMonth);
+                      const status = tenant.is_active ? paymentStatus(lease, selectedMonth) : {className: 'bg-[#e5e7eb] text-[#4b5563]', label: 'Desactive'};
 
                       return (
                         <tr className="transition hover:bg-[#f0f5f2]" key={tenant.id}>
@@ -369,7 +376,18 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
                                 <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}/edit`}>
                                   Modifier
                                 </Link>
-                                {lease ? (
+                                <form action={updateTenantActiveAction}>
+                                  <input name="locale" type="hidden" value={locale} />
+                                  <input name="tenant_id" type="hidden" value={tenant.id} />
+                                  <input name="is_active" type="hidden" value={tenant.is_active ? 'false' : 'true'} />
+                                  <input name="month" type="hidden" value={selectedMonth} />
+                                  <input name="view" type="hidden" value={selectedView} />
+                                  <input name="q" type="hidden" value={queryText} />
+                                  <button className="block w-full rounded-md px-3 py-2 text-left hover:bg-[#f0f5f2]" type="submit">
+                                    {tenant.is_active ? 'Desactiver' : 'Activer'}
+                                  </button>
+                                </form>
+                                {tenant.is_active && lease ? (
                                   <details className="group rounded-md">
                                     <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 hover:bg-[#f0f5f2]">
                                       Changer statut

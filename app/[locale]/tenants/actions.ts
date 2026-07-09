@@ -17,6 +17,28 @@ function moneyValue(formData: FormData, key: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function tenantsHref(locale: string, formData: FormData) {
+  const params = new URLSearchParams();
+  const month = value(formData, 'month');
+  const view = value(formData, 'view');
+  const query = value(formData, 'q');
+
+  if (month) {
+    params.set('month', month);
+  }
+
+  if (view) {
+    params.set('view', view);
+  }
+
+  if (query) {
+    params.set('q', query);
+  }
+
+  const suffix = params.toString();
+  return `${localizedPath(locale, '/tenants')}${suffix ? `?${suffix}` : ''}`;
+}
+
 export async function createTenantAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const fullName = value(formData, 'full_name');
@@ -35,6 +57,7 @@ export async function createTenantAction(formData: FormData) {
   const {error} = await supabase.from('tenants').insert({
     email: value(formData, 'email') || null,
     full_name: fullName,
+    is_active: true,
     notes: value(formData, 'notes') || null,
     phone: value(formData, 'phone') || null,
     workspace_id: workspaceId
@@ -95,6 +118,26 @@ export async function deleteTenantAction(formData: FormData) {
 
   revalidatePath(localizedPath(locale, '/tenants'));
   redirect(localizedPath(locale, '/tenants'));
+}
+
+export async function updateTenantActiveAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const tenantId = value(formData, 'tenant_id');
+  const isActive = value(formData, 'is_active') === 'true';
+
+  if (!tenantId) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=missing_tenant`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {error} = await supabase.from('tenants').update({is_active: isActive}).eq('id', tenantId).eq('workspace_id', workspaceId);
+
+  if (error) {
+    redirect(`${localizedPath(locale, '/tenants')}?error=tenant_status_failed`);
+  }
+
+  revalidatePath(localizedPath(locale, '/tenants'));
+  redirect(tenantsHref(locale, formData));
 }
 
 export async function updateRentStatusAction(formData: FormData) {
