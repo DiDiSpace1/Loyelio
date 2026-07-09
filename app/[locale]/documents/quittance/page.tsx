@@ -5,6 +5,8 @@ import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {QuittanceForm, type QuittancePropertyOption, type QuittanceTenantOption, type RecentReceipt} from './quittance-form';
 
+export const runtime = 'nodejs';
+
 export default async function QuittancePage() {
   const locale = await getLocale();
   const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);

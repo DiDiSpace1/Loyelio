@@ -83,6 +83,10 @@ function paymentLabel(method: string) {
   return 'Virement bancaire';
 }
 
+function propertyAddress(property: PropertyForReceipt) {
+  return [property.address_line1, [property.postal_code, property.city].filter(Boolean).join(' ')].filter(Boolean).join('\n') || property.name;
+}
+
 async function buildQuittancePdf(input: {
   amount: number;
   charges: number;
@@ -96,9 +100,7 @@ async function buildQuittancePdf(input: {
   const doc = new PDFDocument({margin: 56, size: 'A4'});
   const chunks: Buffer[] = [];
   const total = input.amount + input.charges;
-  const propertyLines = [input.property.name, input.property.address_line1, [input.property.postal_code, input.property.city].filter(Boolean).join(' ')]
-    .filter(Boolean)
-    .join('\n');
+  const propertyLines = propertyAddress(input.property);
 
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
@@ -133,9 +135,11 @@ async function buildQuittancePdf(input: {
     pdfText(`Je soussigne ${input.ownerName || 'le proprietaire'} reconnais avoir recu de ${input.tenant?.full_name ?? 'le locataire'} la somme de ${formatMoney(total)} au titre du loyer et des charges pour la periode ${formatMonth(input.periodMonth)}.`)
   );
   doc.moveDown(2);
-  doc.text(`Fait le ${new Date().toLocaleDateString('fr-FR')}`);
-  doc.moveDown(2);
+  doc.text(pdfText(`Fait a ${input.property.city ?? '-'}, le ${new Date().toLocaleDateString('fr-FR')}`));
+  doc.moveDown(1.5);
   doc.text('Signature du proprietaire');
+  doc.moveDown(0.5);
+  doc.fontSize(13).fillColor('#171d1c').text(pdfText(input.ownerName || '-'));
 
   doc.end();
 
@@ -196,7 +200,8 @@ export async function generateQuittanceAction(formData: FormData): Promise<Gener
 
   try {
     pdf = await buildQuittancePdf({amount, charges, ownerName, paidAt, paymentMethod, periodMonth, property, tenant});
-  } catch {
+  } catch (error) {
+    console.error('Quittance PDF generation failed', error);
     return {error: 'Impossible de generer le PDF avec ces informations.', ok: false};
   }
   const documentId = randomUUID();

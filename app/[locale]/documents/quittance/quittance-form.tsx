@@ -74,14 +74,22 @@ function propertyAddress(property: QuittancePropertyOption | null) {
     return '-';
   }
 
-  return [property.name, property.address_line1, [property.postal_code, property.city].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
+  return [property.address_line1, [property.postal_code, property.city].filter(Boolean).join(' ')].filter(Boolean).join(' - ') || property.name;
+}
+
+function propertyOptionLabel(property: QuittancePropertyOption) {
+  return propertyAddress(property);
+}
+
+function todayLabel() {
+  return new Date().toLocaleDateString('fr-FR');
 }
 
 function ReceiptPreview({property, state, tenant}: {property: QuittancePropertyOption | null; state: FormState; tenant: QuittanceTenantOption | null}) {
   const total = Number.parseFloat(state.amount.replace(',', '.')) + Number.parseFloat((state.charges || '0').replace(',', '.'));
 
   return (
-    <div className="mx-auto aspect-[0.72] w-full max-w-[320px] rounded-sm bg-white p-7 text-left shadow-sm ring-1 ring-[var(--line-soft)]">
+    <div className="mx-auto min-h-[440px] w-full max-w-[320px] rounded-sm bg-white p-7 text-left shadow-sm ring-1 ring-[var(--line-soft)]">
       <p className="text-center text-lg font-semibold text-[#171d1c]">Quittance de loyer</p>
       <p className="mt-1 text-center text-xs text-[var(--muted)]">{monthLabel(state.periodMonth)}</p>
       <div className="mt-7 grid gap-4 text-xs leading-5 text-[#33413f]">
@@ -113,6 +121,11 @@ function ReceiptPreview({property, state, tenant}: {property: QuittancePropertyO
         </div>
       </div>
       <p className="mt-7 text-xs leading-5 text-[var(--muted)]">Paiement recu le {state.paidAt || '-'} par {state.paymentMethod === 'cash' ? 'especes' : state.paymentMethod === 'cheque' ? 'cheque' : 'virement bancaire'}.</p>
+      <div className="mt-7 border-t border-[var(--line-soft)] pt-5 text-xs leading-5 text-[#33413f]">
+        <p>Fait a {property?.city ?? '-'}, le {todayLabel()}</p>
+        <p className="mt-5 text-[var(--muted)]">Signature du proprietaire</p>
+        <p className="mt-2 text-sm font-semibold text-[#171d1c]">{state.ownerName || '-'}</p>
+      </div>
     </div>
   );
 }
@@ -235,7 +248,7 @@ export function QuittanceForm({
                 {properties.length ? null : <option value="">Aucun bien enregistre</option>}
                 {properties.map((property) => (
                   <option key={property.id} value={property.id}>
-                    {propertyAddress(property)}
+                    {propertyOptionLabel(property)}
                   </option>
                 ))}
               </select>
