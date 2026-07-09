@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 import {redirect} from 'next/navigation';
 
-import {type BillingStatus} from '@/lib/billing/config';
+import {type BillingStatus, normalizeBillingPlan} from '@/lib/billing/config';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
@@ -22,15 +22,7 @@ function forfaitLabel(billing: BillingStatus | null) {
     return 'Free';
   }
 
-  if (billing.lifetime_access || billing.plan === 'lifetime') {
-    return 'Lifetime';
-  }
-
-  if (billing.plan === 'subscription') {
-    return 'Solo';
-  }
-
-  const plan = billing.plan || 'free';
+  const plan = normalizeBillingPlan(billing.plan);
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 

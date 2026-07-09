@@ -14,10 +14,16 @@ function value(formData: FormData, key: string) {
   return typeof raw === 'string' ? raw.trim() : '';
 }
 
+function planValue(formData: FormData) {
+  const plan = value(formData, 'plan');
+  return ['solo', 'plus', 'portfolio'].includes(plan) ? plan : 'solo';
+}
+
 export async function updateAccountSettingsAction(formData: FormData) {
   const currentLocale = value(formData, 'current_locale') || 'fr';
   const nextLocale = ['fr', 'en', 'zh'].includes(value(formData, 'locale')) ? value(formData, 'locale') : currentLocale;
   const countryCode = value(formData, 'country_code') === 'FR' ? 'FR' : 'FR';
+  const fullName = value(formData, 'full_name');
   const taxRegime = value(formData, 'tax_regime') === 'LMNP' ? 'LMNP' : 'LMNP';
   const {supabase, user, workspaceId} = await getCurrentUserWorkspace(currentLocale);
 
@@ -25,6 +31,7 @@ export async function updateAccountSettingsAction(formData: FormData) {
     .from('profiles')
     .update({
       country_code: countryCode,
+      full_name: fullName || null,
       locale: nextLocale
     })
     .eq('id', user.id);
@@ -91,7 +98,7 @@ async function ensureStripeCustomer(locale: string) {
 
 export async function createCheckoutSessionAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
-  const plan = value(formData, 'plan') === 'lifetime' ? 'lifetime' : 'subscription';
+  const plan = planValue(formData);
   const returnPath = value(formData, 'return_path');
   const safeReturnPath = returnPath.startsWith('/') && !returnPath.startsWith('//') ? returnPath : localizedPath(locale, '/settings');
   const priceId = getStripePriceId(plan);
@@ -121,16 +128,13 @@ export async function createCheckoutSessionAction(formData: FormData) {
         user_id: user.id,
         workspace_id: workspaceId
       },
-      mode: plan === 'lifetime' ? 'payment' : 'subscription',
-      subscription_data:
-        plan === 'subscription'
-          ? {
-              metadata: {
-                plan,
-                workspace_id: workspaceId
-              }
-            }
-          : undefined,
+      mode: 'subscription',
+      subscription_data: {
+        metadata: {
+          plan,
+          workspace_id: workspaceId
+        }
+      },
       success_url: `${returnUrl}${safeReturnPath.includes('?') ? '&' : '?'}checkout=success`
     });
   } catch (error) {

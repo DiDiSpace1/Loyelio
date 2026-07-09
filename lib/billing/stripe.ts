@@ -11,9 +11,13 @@ export function getStripe() {
 }
 
 export function getStripePriceId(plan: string) {
-  if (plan === 'lifetime') {
-    return process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LIFETIME;
+  if (plan === 'portfolio') {
+    return process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PORTFOLIO;
   }
 
-  return process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
+  if (plan === 'plus') {
+    return process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS;
+  }
+
+  return process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SOLO;
 }

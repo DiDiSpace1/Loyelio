@@ -123,7 +123,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
             ) : (
               <form action={createCheckoutSessionAction}>
                 <input name="locale" type="hidden" value={locale} />
-                <input name="plan" type="hidden" value="subscription" />
+                <input name="plan" type="hidden" value="solo" />
                 <input name="return_path" type="hidden" value={taxReturnPath} />
                 <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
                   Debloquer l export

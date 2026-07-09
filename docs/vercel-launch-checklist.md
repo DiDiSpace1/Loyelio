@@ -11,8 +11,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=
-NEXT_PUBLIC_STRIPE_PRICE_ID_LIFETIME=
+NEXT_PUBLIC_STRIPE_PRICE_ID_SOLO=
+NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS=
+NEXT_PUBLIC_STRIPE_PRICE_ID_PORTFOLIO=
 NEXT_PUBLIC_SUPPORT_EMAIL=support@your-domain.example
 ```
 
@@ -33,8 +34,8 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 
 ## Stripe
 
-- Create the recurring subscription Price (monthly or yearly) and lifetime one-time Price.
-- Copy both Price IDs into Vercel.
+- Create the recurring Prices for Solo, Plus, and Portfolio.
+- Copy all three Price IDs into Vercel.
 - Add a webhook endpoint:
   - URL: `https://your-domain.example/api/stripe/webhook`
   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
@@ -46,7 +47,7 @@ Use the deployed URL for previews if you test Stripe Checkout on a preview deplo
 - Sign up and confirm a new workspace is created.
 - Create 1 property, 3 tenants, and 10 documents on the free plan.
 - Confirm the next property, tenant, or document redirects with `plan_limit`.
-- Buy Pro in Stripe test mode and confirm the settings page shows Pro after webhook delivery.
+- Buy Solo, Plus, or Portfolio in Stripe test mode and confirm the settings page shows the selected plan after webhook delivery.
 - Open Stripe Customer Portal from settings.
 - Cancel the subscription and confirm limits return after the webhook updates billing.
 - Visit `/privacy` and `/terms` while logged out.

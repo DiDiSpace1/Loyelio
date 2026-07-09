@@ -11,6 +11,10 @@ function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
 
+function planValue(plan: string | null | undefined) {
+  return ['solo', 'plus', 'portfolio'].includes(plan ?? '') ? plan : 'solo';
+}
+
 async function updateBillingByWorkspace(workspaceId: string, values: Record<string, unknown>) {
   const supabase = createSupabaseAdminClient();
 
@@ -59,7 +63,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     });
   } else {
     await updateBillingByWorkspace(workspaceId, {
-      plan: session.metadata?.plan ?? 'subscription',
+      plan: planValue(session.metadata?.plan),
       stripe_customer_id: customerId
     });
   }
@@ -71,7 +75,7 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
   const values = {
     current_period_end: subscriptionPeriodEnd(subscription),
     lifetime_access: false,
-    plan: subscription.metadata?.plan ?? 'subscription',
+    plan: planValue(subscription.metadata?.plan),
     status: subscription.status,
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id

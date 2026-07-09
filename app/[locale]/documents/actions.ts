@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 
-import {canCreateResource} from '@/lib/billing/limits';
+import {canCreateResource, canStoreDocument} from '@/lib/billing/limits';
 import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
@@ -24,8 +24,6 @@ function safeFileName(name: string) {
 }
 
 const ALLOWED_DOCUMENT_TYPES = new Set(['lease', 'rent_receipt', 'invoice', 'tax']);
-const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
-
 export async function uploadDocumentAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const file = formData.get('file');
@@ -35,15 +33,17 @@ export async function uploadDocumentAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/documents')}?error=file_missing`);
   }
 
-  if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
-    redirect(`${localizedPath(locale, '/documents')}?error=file_too_large`);
-  }
-
   if (!ALLOWED_DOCUMENT_TYPES.has(documentType)) {
     redirect(`${localizedPath(locale, '/documents')}?error=document_type`);
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const storageGate = await canStoreDocument(supabase, workspaceId, file.size);
+
+  if (!storageGate.allowed) {
+    redirect(`${localizedPath(locale, '/documents')}?error=${storageGate.reason === 'file_size' ? 'file_too_large' : 'storage_limit'}`);
+  }
+
   const planGate = await canCreateResource(supabase, workspaceId, 'documents');
 
   if (!planGate.allowed) {

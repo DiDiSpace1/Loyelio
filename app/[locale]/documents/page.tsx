@@ -243,7 +243,13 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
 
       {params.error === 'plan_limit' ? (
         <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
-          Le plan gratuit inclut 10 documents. Passez a Pro depuis les parametres pour televerser plus de fichiers.
+          Votre forfait ne permet pas de televerser plus de documents. Passez a un forfait superieur depuis les parametres.
+        </div>
+      ) : null}
+
+      {params.error === 'storage_limit' ? (
+        <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
+          Le stockage documents de votre forfait est atteint.
         </div>
       ) : null}
 

@@ -69,8 +69,9 @@ async function checkStripe() {
 
   const stripe = new Stripe(secretKey);
   const prices = [
-    ['subscription price', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY, 'recurring'],
-    ['lifetime price', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LIFETIME, 'one_time']
+    ['solo price', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SOLO, 'recurring'],
+    ['plus price', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS, 'recurring'],
+    ['portfolio price', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PORTFOLIO, 'recurring']
   ];
 
   for (const [name, priceId, expectedType] of prices) {

@@ -14,20 +14,21 @@ When this file changes, update the app code to match it, especially:
 
 These values are what the app currently enforces in code.
 
-| Area | Free | Paid subscription | Lifetime |
-| --- | ---: | ---: | ---: |
-| Properties | 1 | Unlimited by current code | Unlimited by current code |
-| Tenants | 3 | Unlimited by current code | Unlimited by current code |
-| Documents | 10 | Unlimited by current code | Unlimited by current code |
-| Photos per property | 0 | 5 | 20 |
-| Tax exports | Available | Available | Available |
+| Area | Free | Solo | Plus | Portfolio |
+| --- | ---: | ---: | ---: | ---: |
+| Properties | 1 | 5 | 10 | 20 |
+| Tenants | 3 | 20 | 40 | 80 |
+| Documents | 10 | 150 | 400 | 1000 |
+| Storage limit | 50 MB | 500 MB | 1.5 GB | 4 GB |
+| Max file size | 5 MB | 10 MB | 15 MB | 15 MB |
+| Photos per property | 0 | 5 | 10 | 20 |
+| Tax exports | Available | Available | Available | Available |
 
 Notes:
 
 - Paid access is currently granted when `workspace_billing.status` is `active` or `trialing`.
-- Lifetime access is currently granted when `workspace_billing.lifetime_access` is true.
-- The current app treats Stripe plan value `subscription` like `solo` for photo limits.
-- The current app treats Stripe plan value `lifetime` like `portfolio` for photo limits.
+- The app stores the selected Stripe plan key in `workspace_billing.plan` as `solo`, `plus`, or `portfolio`.
+- Legacy plan value `subscription` is treated as `solo`; legacy `lifetime` is treated as `portfolio`.
 - Free plan users keep access to existing data and tax exports.
 
 ## Planned tier structure
@@ -54,10 +55,10 @@ Use this table to decide which features are included in each tier.
 | Rent charge tracking | Included | Included | Included | Included | Included |
 | Rent payment status | Included | Included | Included | Included | Included |
 | Document upload | 10 docs / 50 MB storage / 5 MB per file | 150 docs / 500 MB storage / 10 MB per file | 400 docs / 1.5 GB storage / 15 MB per file | 1000 docs / 4 GB storage / 15 MB per file | Custom |
-| Quittance generation | TBD | TBD | TBD | TBD | TBD |
+| Quittance generation | Not included | Included | Included | Included | Included |
 | Tax export package | Included | Included | Included | Included | Included |
 | Property photos | Not included | Included | Included | Included | Included |
-| Priority support | No | TBD | TBD | TBD | TBD |
+| Priority support | No | Included | Included | Included | Included |
 
 ## Stripe Mapping
 
@@ -66,11 +67,9 @@ Fill these values when Stripe products and prices are finalized.
 | App plan key | Stripe mode | Stripe price env var | Current meaning |
 | --- | --- | --- | --- |
 | `free` | None | None | Default workspace plan. |
-| `subscription` | subscription | `STRIPE_SUBSCRIPTION_PRICE_ID` | Current paid yearly/monthly subscription entry. |
-| `lifetime` | payment | `STRIPE_LIFETIME_PRICE_ID` | Current one-time payment entry. |
-| `solo` | TBD | TBD | Planned explicit tier. |
-| `plus` | TBD | TBD | Planned explicit tier. |
-| `portfolio` | TBD | TBD | Planned explicit tier. |
+| `solo` | subscription | `NEXT_PUBLIC_STRIPE_PRICE_ID_SOLO` | Solo yearly subscription. |
+| `plus` | subscription | `NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS` | Plus yearly subscription. |
+| `portfolio` | subscription | `NEXT_PUBLIC_STRIPE_PRICE_ID_PORTFOLIO` | Portfolio yearly subscription. |
 | `custom` | Manual | TBD | Planned contact-us tier. |
 
 ## Implementation Checklist For Future Changes

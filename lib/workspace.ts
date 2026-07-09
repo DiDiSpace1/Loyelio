@@ -15,7 +15,7 @@ export async function getCurrentUserWorkspace(locale: string) {
 
   const {data: profile, error} = await supabase
     .from('profiles')
-    .select('id, email, default_workspace_id, country_code, locale')
+    .select('id, email, full_name, default_workspace_id, country_code, locale')
     .eq('id', user.id)
     .single();
 

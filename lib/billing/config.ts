@@ -4,6 +4,40 @@ export const FREE_PLAN_LIMITS = {
   tenants: 3
 } as const;
 
+export const BILLING_PLANS = ['free', 'solo', 'plus', 'portfolio'] as const;
+export type BillingPlanKey = (typeof BILLING_PLANS)[number];
+
+export const PLAN_LIMITS = {
+  free: {
+    documents: 10,
+    maxDocumentSizeBytes: 5 * 1024 * 1024,
+    properties: 1,
+    storageBytes: 50 * 1024 * 1024,
+    tenants: 3
+  },
+  solo: {
+    documents: 150,
+    maxDocumentSizeBytes: 10 * 1024 * 1024,
+    properties: 5,
+    storageBytes: 500 * 1024 * 1024,
+    tenants: 20
+  },
+  plus: {
+    documents: 400,
+    maxDocumentSizeBytes: 15 * 1024 * 1024,
+    properties: 10,
+    storageBytes: 1536 * 1024 * 1024,
+    tenants: 40
+  },
+  portfolio: {
+    documents: 1000,
+    maxDocumentSizeBytes: 15 * 1024 * 1024,
+    properties: 20,
+    storageBytes: 4 * 1024 * 1024 * 1024,
+    tenants: 80
+  }
+} as const;
+
 export const PROPERTY_PHOTO_LIMITS = {
   free: 0,
   solo: 5,
@@ -34,22 +68,26 @@ export function hasPaidAccess(billing: BillingStatus | null | undefined) {
   return ['active', 'trialing'].includes(billing.status);
 }
 
-export function getPropertyPhotoLimit(plan: string | null | undefined) {
+export function normalizeBillingPlan(plan: string | null | undefined): BillingPlanKey {
   const normalizedPlan = (plan ?? 'free').toLowerCase();
 
-  if (normalizedPlan in PROPERTY_PHOTO_LIMITS) {
-    return PROPERTY_PHOTO_LIMITS[normalizedPlan as keyof typeof PROPERTY_PHOTO_LIMITS];
-  }
-
   if (normalizedPlan === 'subscription') {
-    return PROPERTY_PHOTO_LIMITS.solo;
+    return 'solo';
   }
 
   if (normalizedPlan === 'lifetime') {
-    return PROPERTY_PHOTO_LIMITS.portfolio;
+    return 'portfolio';
   }
 
-  return PROPERTY_PHOTO_LIMITS.free;
+  return BILLING_PLANS.includes(normalizedPlan as BillingPlanKey) ? (normalizedPlan as BillingPlanKey) : 'free';
+}
+
+export function getPlanLimits(plan: string | null | undefined) {
+  return PLAN_LIMITS[normalizeBillingPlan(plan)];
+}
+
+export function getPropertyPhotoLimit(plan: string | null | undefined) {
+  return PROPERTY_PHOTO_LIMITS[normalizeBillingPlan(plan)];
 }
 
 export function getAppUrl() {

@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {revalidatePath} from 'next/cache';
 import {NextResponse} from 'next/server';
 
-import {canCreateResource} from '@/lib/billing/limits';
+import {canCreateResource, canStoreDocument} from '@/lib/billing/limits';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -245,6 +245,12 @@ export async function POST(request: Request) {
     }
 
     const pdf = buildQuittancePdf({amount, charges, ownerName, paidAt, paymentMethod, periodMonth, property, tenant});
+    const storageGate = await canStoreDocument(supabase, workspaceId, pdf.byteLength);
+
+    if (!storageGate.allowed) {
+      return NextResponse.json({error: storageGate.reason === 'file_size' ? 'Le fichier PDF depasse la limite du forfait.' : 'Le stockage documents du forfait est atteint.'}, {status: 403});
+    }
+
     const documentId = randomUUID();
     const fileName = safeFileName(`Quittance_${periodMonth}_${tenant?.full_name ?? property.name}.pdf`);
     const year = new Date().getUTCFullYear();
