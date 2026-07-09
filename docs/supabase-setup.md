@@ -64,11 +64,6 @@ supabase/migrations/20260707140000_documents_expenses.sql
 supabase/migrations/20260707150000_tax_exports.sql
 supabase/migrations/20260707160000_workspace_billing.sql
 supabase/migrations/20260707170000_document_storage_delete_policy.sql
-supabase/migrations/20260708100000_property_photos.sql
-supabase/migrations/20260708110000_property_create_fields.sql
-supabase/migrations/20260708120000_property_delete_policy.sql
-supabase/migrations/20260709130000_tenant_active_status.sql
-supabase/migrations/20260709140000_unit_financial_estimates.sql
 ```
 
 The first migration creates:
@@ -121,14 +116,6 @@ The sixth migration creates:
 The seventh migration creates:
 
 - Storage delete policy for workspace document files
-
-Later property polish migrations add:
-
-- property photos
-- extended property creation fields
-- property delete policy
-- tenant active status
-- unit-level rent, charges, and deposit estimates
 
 ## 5. Local Test
 

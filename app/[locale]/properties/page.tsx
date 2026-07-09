@@ -7,7 +7,6 @@ import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createPropertyAction} from './actions';
-import {PropertyCreateFields} from './property-create-fields';
 import {PropertyActionsMenu} from './property-actions-menu';
 
 type PropertyRow = {
@@ -40,14 +39,16 @@ type PropertiesPageProps = {
 };
 
 const modeLabels: Record<string, string> = {
-  entire_place: 'Entier',
-  shared_rooms: 'Colocation'
+  entire_place: 'entier',
+  mixed: 'mixte',
+  shared_rooms: 'colocation'
 };
 
 const modeOptions = [
   {label: 'Tous les modes', value: ''},
-  {label: 'Entier', value: 'entire_place'},
-  {label: 'Colocation', value: 'shared_rooms'}
+  {label: 'colocation', value: 'shared_rooms'},
+  {label: 'entier', value: 'entire_place'},
+  {label: 'mixte', value: 'mixed'}
 ];
 
 function formatAddress(property: Pick<PropertyRow, 'address_line1' | 'postal_code' | 'city'>) {
@@ -303,9 +304,42 @@ function CreatePropertyView({locale, photoLimit}: {locale: string; photoLimit: n
             <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="city" placeholder="Paris" />
           </label>
         </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Type de bien
+            <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="property_type" defaultValue="studio">
+              <option value="studio">Studio</option>
+              <option value="t1">T1</option>
+              <option value="t2">T2</option>
+              <option value="t3">T3</option>
+              <option value="room">Chambre</option>
+              <option value="house">Maison</option>
+              <option value="apartment">Appartement</option>
+              <option value="other">Autre</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Mode de location
+            <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="rental_mode" defaultValue="shared_rooms">
+              <option value="shared_rooms">colocation</option>
+              <option value="entire_place">entier</option>
+              <option value="mixed">mixte</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+            Surface habitable (m2)
+            <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" min="0" name="surface_area" placeholder="35" step="0.01" type="number" />
+          </label>
+        </div>
       </SectionCard>
 
-      <PropertyCreateFields />
+      <SectionCard icon="money" title="2. Aspects Financiers">
+        <div className="grid gap-4 md:grid-cols-3">
+          <MoneyInput label="Loyer mensuel HC" name="monthly_rent_estimate" placeholder="850" />
+          <MoneyInput label="Charges provisionnelles" name="charges_estimate" placeholder="60" />
+          <MoneyInput label="Depot de garantie" name="deposit_estimate" placeholder="1700" />
+        </div>
+      </SectionCard>
 
       <SectionCard icon="key" title="3. Etat d'occupation">
         <div className="grid gap-4 md:grid-cols-2">
@@ -355,6 +389,18 @@ function SectionCard({children, icon, title}: {children: React.ReactNode; icon: 
       </h2>
       <div className="grid gap-4">{children}</div>
     </section>
+  );
+}
+
+function MoneyInput({label, name, placeholder}: {label: string; name: string; placeholder: string}) {
+  return (
+    <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+      {label}
+      <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
+        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm font-normal outline-none" min="0" name={name} placeholder={placeholder} step="0.01" type="number" />
+        <span className="text-sm font-semibold">EUR</span>
+      </span>
+    </label>
   );
 }
 
