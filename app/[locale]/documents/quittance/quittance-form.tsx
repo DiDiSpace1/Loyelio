@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import {useMemo, useState, useTransition} from 'react';
 
-import {generateQuittanceAction} from './actions';
-
 export type QuittancePropertyOption = {
   address_line1: string | null;
   charges_estimate: number | null;
@@ -175,23 +173,28 @@ export function QuittanceForm({
   }
 
   function generatePdf() {
-    const formData = new FormData();
-    formData.set('locale', locale);
-    formData.set('owner_name', state.ownerName);
-    formData.set('property_id', state.propertyId);
-    formData.set('tenant_id', state.tenantId);
-    formData.set('period_month', state.periodMonth);
-    formData.set('paid_at', state.paidAt);
-    formData.set('payment_method', state.paymentMethod);
-    formData.set('amount', state.amount);
-    formData.set('charges', state.charges || '0');
     setMessage('');
 
     startTransition(async () => {
-      const result = await generateQuittanceAction(formData);
+      const response = await fetch('/api/documents/quittance', {
+        body: JSON.stringify({
+          amount: state.amount,
+          charges: state.charges || '0',
+          locale,
+          ownerName: state.ownerName,
+          paidAt: state.paidAt,
+          paymentMethod: state.paymentMethod,
+          periodMonth: state.periodMonth,
+          propertyId: state.propertyId,
+          tenantId: state.tenantId
+        }),
+        headers: {'Content-Type': 'application/json'},
+        method: 'POST'
+      });
+      const result = (await response.json()) as {downloadUrl?: string | null; error?: string};
 
-      if (!result.ok) {
-        setMessage(result.error);
+      if (!response.ok) {
+        setMessage(result.error ?? 'Impossible de generer la quittance.');
         return;
       }
 
