@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts');
 export default withNextIntl({
   experimental: {
     serverActions: {
-      bodySizeLimit: '20mb'
+      bodySizeLimit: '80mb'
     }
   },
   turbopack: {

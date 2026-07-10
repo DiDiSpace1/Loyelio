@@ -3,11 +3,12 @@ import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
-import {getPropertyPhotoLimit} from '@/lib/billing/config';
+import {getPlanLimits, getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {deletePropertyPhotoAction, updatePropertyAction} from '../../actions';
+import {PropertyPhotoPicker} from '../../property-photo-picker';
 type EditPropertyPageProps = {
   params: Promise<{
     id: string;
@@ -57,6 +58,7 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
 
   const billing = await getWorkspaceBilling(supabase, workspaceId);
   const photoLimit = getPropertyPhotoLimit(billing?.plan);
+  const planLimits = getPlanLimits(billing?.plan);
   const signedPhotos = await Promise.all(
     property.property_photos.map(async (photo) => {
       const {data: signed} = await supabase.storage.from('property-photos').createSignedUrl(photo.file_path, 60 * 5);
@@ -184,7 +186,12 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
           <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-6 text-center">
             <p className="text-sm font-semibold">Ajouter des photos</p>
             <p className="mt-1 text-sm text-[var(--muted)]">{photoLimit === 0 ? 'Les photos ne sont pas incluses dans le plan Free.' : `${property.property_photos.length}/${photoLimit} photo(s) utilisee(s).`}</p>
-            <input className="focus-ring mt-4 w-full rounded-md border border-[var(--line-soft)] bg-white px-3 py-3 text-sm" disabled={photoLimit === 0 || property.property_photos.length >= photoLimit} multiple name="photos" type="file" accept="image/*" />
+            <PropertyPhotoPicker
+              disabled={photoLimit === 0 || property.property_photos.length >= photoLimit}
+              existingCount={property.property_photos.length}
+              maxFiles={photoLimit}
+              maxSizeBytes={planLimits.maxDocumentSizeBytes}
+            />
           </div>
         </SectionCard>
 

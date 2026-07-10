@@ -2,12 +2,13 @@ import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
-import {getPropertyPhotoLimit} from '@/lib/billing/config';
+import {getPlanLimits, getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createPropertyAction} from './actions';
 import {PropertyActionsMenu} from './property-actions-menu';
+import {PropertyPhotoPicker} from './property-photo-picker';
 
 type PropertyRow = {
   id: string;
@@ -78,6 +79,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const billing = await getWorkspaceBilling(supabase, workspaceId);
   const photoLimit = getPropertyPhotoLimit(billing?.plan);
+  const planLimits = getPlanLimits(billing?.plan);
   const queryText = (params.q ?? '').trim();
   const selectedMode = params.mode ?? '';
   const showCreate = params.new === '1';
@@ -176,7 +178,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
       ) : null}
 
       {showCreate ? (
-        <CreatePropertyView locale={locale} photoLimit={photoLimit} />
+        <CreatePropertyView locale={locale} maxPhotoSizeBytes={planLimits.maxDocumentSizeBytes} photoLimit={photoLimit} />
       ) : (
         <>
           <section className="mt-8 grid gap-4 md:grid-cols-3">
@@ -287,7 +289,7 @@ function SummaryCard({label, note, value}: {label: string; note: string; value: 
   );
 }
 
-function CreatePropertyView({locale, photoLimit}: {locale: string; photoLimit: number}) {
+function CreatePropertyView({locale, maxPhotoSizeBytes, photoLimit}: {locale: string; maxPhotoSizeBytes: number; photoLimit: number}) {
   return (
     <form action={createPropertyAction} className="mt-8 grid gap-5" encType="multipart/form-data">
       <input name="locale" type="hidden" value={locale} />
@@ -343,7 +345,7 @@ function CreatePropertyView({locale, photoLimit}: {locale: string; photoLimit: n
         <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-6 text-center">
           <p className="text-sm font-semibold">Photos du bien</p>
           <p className="mt-1 text-sm text-[var(--muted)]">{photoLimit === 0 ? 'Les photos ne sont pas incluses dans le plan Free.' : `${photoLimit} photo(s) maximum par bien.`}</p>
-          <input className="focus-ring mt-4 w-full rounded-md border border-[var(--line-soft)] bg-white px-3 py-3 text-sm" disabled={photoLimit === 0} multiple name="photos" type="file" accept="image/*" />
+          <PropertyPhotoPicker disabled={photoLimit === 0} maxFiles={photoLimit} maxSizeBytes={maxPhotoSizeBytes} />
         </div>
       </SectionCard>
 
