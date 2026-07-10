@@ -333,34 +333,7 @@ function CreatePropertyView({locale, photoLimit}: {locale: string; photoLimit: n
         </div>
       </SectionCard>
 
-      <SectionCard icon="money" title="2. Aspects Financiers">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MoneyInput label="Loyer mensuel HC" name="monthly_rent_estimate" placeholder="850" />
-          <MoneyInput label="Charges provisionnelles" name="charges_estimate" placeholder="60" />
-          <MoneyInput label="Depot de garantie" name="deposit_estimate" placeholder="1700" />
-        </div>
-      </SectionCard>
-
-      <SectionCard icon="key" title="3. Etat d'occupation">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--accent)] bg-[#f5faf8] px-4">
-            <span>
-              <span className="block font-semibold text-[var(--accent)]">Vacant</span>
-              <span className="text-sm text-[var(--muted)]">Pret a etre loue</span>
-            </span>
-            <input className="h-4 w-4 accent-[var(--accent)]" name="occupancy_status" type="radio" value="vacant" defaultChecked />
-          </label>
-          <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--line-soft)] px-4">
-            <span>
-              <span className="block font-semibold">Loue</span>
-              <span className="text-sm text-[var(--muted)]">Occupe par un locataire</span>
-            </span>
-            <input className="h-4 w-4 accent-[var(--accent)]" name="occupancy_status" type="radio" value="rented" />
-          </label>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon="camera" title="4. Photos & Documents">
+      <SectionCard icon="camera" title="2. Photos & Documents">
         <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-6 text-center">
           <p className="text-sm font-semibold">Photos du bien</p>
           <p className="mt-1 text-sm text-[var(--muted)]">{photoLimit === 0 ? 'Les photos ne sont pas incluses dans le plan Free.' : `${photoLimit} photo(s) maximum par bien.`}</p>
@@ -392,27 +365,11 @@ function SectionCard({children, icon, title}: {children: React.ReactNode; icon: 
   );
 }
 
-function MoneyInput({label, name, placeholder}: {label: string; name: string; placeholder: string}) {
-  return (
-    <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
-      {label}
-      <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
-        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm font-normal outline-none" min="0" name={name} placeholder={placeholder} step="0.01" type="number" />
-        <span className="text-sm font-semibold">EUR</span>
-      </span>
-    </label>
-  );
-}
-
 function SmallIcon({name}: {name: string}) {
   const path =
-    name === 'money'
-      ? 'M4 7h16v10H4z M7 10h2 M15 14h2 M12 12a2 2 0 1 0 0 .01'
-      : name === 'key'
-        ? 'M7 14a4 4 0 1 1 3.5-2.1H21v3h-3v2h-3v-2h-4.5A4 4 0 0 1 7 14z'
-        : name === 'camera'
-          ? 'M5 7h3l1.5-2h5L16 7h3v12H5z M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'
-          : 'M12 21s7-5.1 7-11a7 7 0 0 0-14 0c0 5.9 7 11 7 11z M12 10h.01';
+    name === 'camera'
+      ? 'M5 7h3l1.5-2h5L16 7h3v12H5z M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'
+      : 'M12 21s7-5.1 7-11a7 7 0 0 0-14 0c0 5.9 7 11 7 11z M12 10h.01';
 
   return (
     <svg aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--accent)]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">

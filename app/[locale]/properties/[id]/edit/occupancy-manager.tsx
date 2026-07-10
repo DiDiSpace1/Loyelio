@@ -54,7 +54,7 @@ export function OccupancyManager({
             <p className="mt-1 text-sm text-[var(--muted)]">Selectionnez un ou plusieurs locataires et renseignez les dates du contrat.</p>
           </div>
           {assignmentRows.map((row, index) => (
-            <div className="grid gap-3 md:grid-cols-[1fr_160px_160px_auto]" key={row.id}>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_150px_150px_130px_130px_130px_auto]" key={row.id}>
               <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
                 Locataire
                 <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="assignment_tenant_id">
@@ -74,6 +74,9 @@ export function OccupancyManager({
                 Date sortie
                 <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="assignment_end_date" type="date" />
               </label>
+              <MoneyField label="Montant loyer" name="assignment_monthly_rent" required />
+              <MoneyField label="Charge" name="assignment_charges_amount" />
+              <MoneyField label="Caution" name="assignment_deposit_amount" />
               <button
                 className="focus-ring self-end rounded-md border border-[var(--line)] px-3 py-3 text-sm font-semibold disabled:opacity-40"
                 disabled={assignmentRows.length === 1}
@@ -84,7 +87,7 @@ export function OccupancyManager({
               </button>
               {index === assignmentRows.length - 1 ? (
                 <button
-                  className="focus-ring md:col-span-4 justify-self-start rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold"
+                  className="focus-ring justify-self-start rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold md:col-span-2 xl:col-span-7"
                   onClick={() => setAssignmentRows((rows) => [...rows, {id: crypto.randomUUID()}])}
                   type="button"
                 >
@@ -98,6 +101,18 @@ export function OccupancyManager({
       ) : null}
 
     </div>
+  );
+}
+
+function MoneyField({label, name, required = false}: {label: string; name: string; required?: boolean}) {
+  return (
+    <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
+      {label}
+      <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
+        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm font-normal outline-none" min="0" name={name} required={required} step="0.01" type="number" />
+        <span className="text-sm font-semibold">EUR</span>
+      </span>
+    </label>
   );
 }
 

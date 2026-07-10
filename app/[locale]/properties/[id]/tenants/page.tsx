@@ -78,9 +78,6 @@ export default async function PropertyTenantsPage({params}: PropertyTenantsPageP
       <form action={assignPropertyTenantsAction} className="mt-8 grid gap-5">
         <input name="locale" type="hidden" value={locale} />
         <input name="property_id" type="hidden" value={property.id} />
-        <input name="monthly_rent" type="hidden" value={property.monthly_rent_estimate ?? 0} />
-        <input name="charges_amount" type="hidden" value={property.charges_estimate ?? 0} />
-        <input name="deposit_amount" type="hidden" value={property.deposit_estimate ?? 0} />
         <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
           <h2 className="mb-5 text-base font-semibold">Ajouter des locataires</h2>
           <OccupancyManager initialStatus={activeLeases.length ? 'rented' : property.occupancy_status} tenants={tenants ?? []} />

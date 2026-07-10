@@ -35,12 +35,21 @@ function imageFiles(formData: FormData) {
   return formData.getAll('photos').filter((entry): entry is File => entry instanceof File && entry.size > 0 && entry.type.startsWith('image/'));
 }
 
+function moneyValues(formData: FormData, key: string) {
+  return values(formData, key).map((entry) => {
+    const parsed = Number.parseFloat(entry.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  });
+}
+
 async function uploadPropertyPhotos({
+  coverOffset = 0,
   files,
   propertyId,
   supabase,
   workspaceId
 }: {
+  coverOffset?: number;
   files: File[];
   propertyId: string;
   supabase: SupabaseClient;
@@ -61,7 +70,7 @@ async function uploadPropertyPhotos({
     const {error: photoError} = await supabase.from('property_photos').insert({
       file_name: file.name,
       file_path: filePath,
-      is_cover: index === 0,
+      is_cover: coverOffset + index === 0,
       mime_type: file.type || null,
       property_id: propertyId,
       size_bytes: file.size,
@@ -107,11 +116,11 @@ export async function createPropertyAction(formData: FormData) {
       address_line1: value(formData, 'address_line1') || null,
       city: value(formData, 'city') || null,
       country_code: 'FR',
-      charges_estimate: moneyValue(formData, 'charges_estimate') || null,
-      deposit_estimate: moneyValue(formData, 'deposit_estimate') || null,
-      monthly_rent_estimate: moneyValue(formData, 'monthly_rent_estimate') || null,
+      charges_estimate: null,
+      deposit_estimate: null,
+      monthly_rent_estimate: null,
       name,
-      occupancy_status: value(formData, 'occupancy_status') || 'vacant',
+      occupancy_status: 'vacant',
       postal_code: value(formData, 'postal_code') || null,
       property_type: value(formData, 'property_type') || 'apartment',
       rental_mode: rentalMode,
@@ -152,26 +161,35 @@ export async function updatePropertyAction(formData: FormData) {
   const propertyId = value(formData, 'property_id');
   const name = value(formData, 'name');
   const rentalMode = value(formData, 'rental_mode') || 'shared_rooms';
+  const photos = imageFiles(formData);
 
   if (!propertyId || !name) {
     redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=missing_property`);
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
-  const occupancyStatus = value(formData, 'occupancy_status') || 'vacant';
-  const chargesAmount = moneyValue(formData, 'charges_estimate');
-  const monthlyRent = moneyValue(formData, 'monthly_rent_estimate');
-  const depositAmount = moneyValue(formData, 'deposit_estimate');
+  let existingPhotoCount = 0;
+  if (photos.length) {
+    const {data: billing} = await supabase.from('workspace_billing').select('plan').eq('workspace_id', workspaceId).maybeSingle();
+    const photoLimit = getPropertyPhotoLimit(billing?.plan);
+    const {count} = await supabase
+      .from('property_photos')
+      .select('*', {count: 'exact', head: true})
+      .eq('property_id', propertyId)
+      .eq('workspace_id', workspaceId);
+    existingPhotoCount = count ?? 0;
+
+    if (existingPhotoCount + photos.length > photoLimit) {
+      redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=photo_limit`);
+    }
+  }
+
   const {error} = await supabase
     .from('properties')
     .update({
       address_line1: value(formData, 'address_line1') || null,
-      charges_estimate: chargesAmount || null,
       city: value(formData, 'city') || null,
-      deposit_estimate: depositAmount || null,
-      monthly_rent_estimate: monthlyRent || null,
       name,
-      occupancy_status: occupancyStatus,
       postal_code: value(formData, 'postal_code') || null,
       property_type: value(formData, 'property_type') || 'apartment',
       rental_mode: rentalMode,
@@ -184,63 +202,11 @@ export async function updatePropertyAction(formData: FormData) {
     redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=update_failed`);
   }
 
-  if (occupancyStatus === 'rented') {
-    const tenantIds = values(formData, 'assignment_tenant_id');
-    const startDates = values(formData, 'assignment_start_date');
-    const endDates = values(formData, 'assignment_end_date');
-    const {data: existingLeases} = await supabase
-      .from('leases')
-      .select('tenant_id')
-      .eq('property_id', propertyId)
-      .eq('workspace_id', workspaceId)
-      .eq('status', 'active');
-    const existingTenantIds = new Set((existingLeases ?? []).map((lease: {tenant_id: string}) => lease.tenant_id));
+  if (photos.length) {
+    const uploaded = await uploadPropertyPhotos({coverOffset: existingPhotoCount, files: photos, propertyId, supabase, workspaceId});
 
-    for (let index = 0; index < tenantIds.length; index += 1) {
-      const tenantId = tenantIds[index];
-      const startDate = startDates[index];
-
-      if (!tenantId || !startDate || existingTenantIds.has(tenantId)) {
-        continue;
-      }
-
-      const {data: lease, error: leaseError} = await supabase
-        .from('leases')
-        .insert({
-          charges_amount: chargesAmount,
-          deposit_amount: depositAmount,
-          end_date: endDates[index] || null,
-          monthly_rent: monthlyRent,
-          property_id: propertyId,
-          start_date: startDate,
-          status: 'active',
-          tenant_id: tenantId,
-          unit_id: null,
-          workspace_id: workspaceId
-        })
-        .select('id')
-        .single();
-
-      if (leaseError || !lease) {
-        redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=lease_failed`);
-      }
-
-      const rentCharges = buildRentChargesForLease({
-        chargesAmount,
-        endDate: endDates[index] || null,
-        leaseId: lease.id,
-        monthlyRent,
-        startDate,
-        workspaceId
-      });
-
-      if (rentCharges.length) {
-        const {error: chargeError} = await supabase.from('rent_charges').insert(rentCharges);
-
-        if (chargeError) {
-          redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=charges_failed`);
-        }
-      }
+    if (!uploaded) {
+      redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=photo_failed`);
     }
   }
 
@@ -249,6 +215,42 @@ export async function updatePropertyAction(formData: FormData) {
   revalidatePath(localizedPath(locale, `/properties/${propertyId}/edit`));
   revalidatePath(localizedPath(locale, '/tenants'));
   redirect(localizedPath(locale, `/properties/${propertyId}`));
+}
+
+export async function deletePropertyPhotoAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const propertyId = value(formData, 'property_id');
+  const photoId = value(formData, 'photo_id');
+
+  if (!propertyId || !photoId) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=missing_photo`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: photo, error: photoError} = await supabase
+    .from('property_photos')
+    .select('file_path')
+    .eq('id', photoId)
+    .eq('property_id', propertyId)
+    .eq('workspace_id', workspaceId)
+    .single();
+
+  if (photoError || !photo) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=photo_not_found`);
+  }
+
+  const {error: deleteError} = await supabase.from('property_photos').delete().eq('id', photoId).eq('property_id', propertyId).eq('workspace_id', workspaceId);
+
+  if (deleteError) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}/edit`)}?error=photo_delete_failed`);
+  }
+
+  await supabase.storage.from('property-photos').remove([photo.file_path]);
+
+  revalidatePath(localizedPath(locale, '/properties'));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}`));
+  revalidatePath(localizedPath(locale, `/properties/${propertyId}/edit`));
+  redirect(localizedPath(locale, `/properties/${propertyId}/edit`));
 }
 
 export async function terminateLeaseAction(formData: FormData) {
@@ -301,12 +303,12 @@ export async function terminateLeaseAction(formData: FormData) {
 export async function assignPropertyTenantsAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const propertyId = value(formData, 'property_id');
-  const chargesAmount = moneyValue(formData, 'charges_amount');
-  const monthlyRent = moneyValue(formData, 'monthly_rent');
-  const depositAmount = moneyValue(formData, 'deposit_amount');
   const tenantIds = values(formData, 'assignment_tenant_id');
   const startDates = values(formData, 'assignment_start_date');
   const endDates = values(formData, 'assignment_end_date');
+  const monthlyRents = moneyValues(formData, 'assignment_monthly_rent');
+  const chargesAmounts = moneyValues(formData, 'assignment_charges_amount');
+  const depositAmounts = moneyValues(formData, 'assignment_deposit_amount');
 
   if (!propertyId) {
     redirect(`${localizedPath(locale, '/properties')}?error=missing_property`);
@@ -324,8 +326,11 @@ export async function assignPropertyTenantsAction(formData: FormData) {
   for (let index = 0; index < tenantIds.length; index += 1) {
     const tenantId = tenantIds[index];
     const startDate = startDates[index];
+    const monthlyRent = monthlyRents[index] ?? 0;
+    const chargesAmount = chargesAmounts[index] ?? 0;
+    const depositAmount = depositAmounts[index] ?? 0;
 
-    if (!tenantId || !startDate || existingTenantIds.has(tenantId)) {
+    if (!tenantId || !startDate || monthlyRent <= 0 || existingTenantIds.has(tenantId)) {
       continue;
     }
 

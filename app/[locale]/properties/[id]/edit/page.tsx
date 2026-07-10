@@ -3,9 +3,11 @@ import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
+import {getPropertyPhotoLimit} from '@/lib/billing/config';
+import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {updatePropertyAction} from '../../actions';
+import {deletePropertyPhotoAction, updatePropertyAction} from '../../actions';
 type EditPropertyPageProps = {
   params: Promise<{
     id: string;
@@ -25,6 +27,13 @@ type EditableProperty = {
   charges_estimate: number | null;
   deposit_estimate: number | null;
   occupancy_status: string;
+  property_photos: {
+    file_name: string;
+    file_path: string;
+    id: string;
+    is_cover: boolean;
+    size_bytes: number | null;
+  }[];
 };
 
 export default async function EditPropertyPage({params}: EditPropertyPageProps) {
@@ -33,7 +42,7 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: property, error} = await supabase
     .from('properties')
-    .select('id, name, address_line1, postal_code, city, property_type, rental_mode, surface_area, monthly_rent_estimate, charges_estimate, deposit_estimate, occupancy_status')
+    .select('id, name, address_line1, postal_code, city, property_type, rental_mode, surface_area, monthly_rent_estimate, charges_estimate, deposit_estimate, occupancy_status, property_photos(id, file_name, file_path, is_cover, size_bytes)')
     .eq('workspace_id', workspaceId)
     .eq('id', id)
     .single<EditableProperty>();
@@ -42,6 +51,14 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
     notFound();
   }
 
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const photoLimit = getPropertyPhotoLimit(billing?.plan);
+  const signedPhotos = await Promise.all(
+    property.property_photos.map(async (photo) => {
+      const {data: signed} = await supabase.storage.from('property-photos').createSignedUrl(photo.file_path, 60 * 5);
+      return {...photo, signedUrl: signed?.signedUrl ?? null};
+    })
+  );
 
   return (
     <AppShell>
@@ -55,7 +72,7 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
         </div>
       </div>
 
-      <form action={updatePropertyAction} className="mt-8 grid gap-5">
+      <form action={updatePropertyAction} className="mt-8 grid gap-5" encType="multipart/form-data">
         <input name="locale" type="hidden" value={locale} />
         <input name="property_id" type="hidden" value={property.id} />
 
@@ -114,38 +131,39 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
           </div>
         </SectionCard>
 
-        <SectionCard icon="money" title="2. Aspects Financiers">
-          <div className="grid gap-4 md:grid-cols-3">
-            <MoneyInput defaultValue={property.monthly_rent_estimate} label="Loyer mensuel HC" name="monthly_rent_estimate" />
-            <MoneyInput defaultValue={property.charges_estimate} label="Charges provisionnelles" name="charges_estimate" />
-            <MoneyInput defaultValue={property.deposit_estimate} label="Depot de garantie" name="deposit_estimate" />
+        <SectionCard icon="camera" title="2. Photos & Documents">
+          {signedPhotos.length ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {signedPhotos.map((photo) => (
+                <div className="flex items-center gap-3 rounded-lg border border-[var(--line-soft)] bg-[#fbfdfc] p-3" key={photo.id}>
+                  {photo.signedUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt="" className="h-16 w-20 rounded-md object-cover" src={photo.signedUrl} />
+                  ) : (
+                    <div className="h-16 w-20 rounded-md bg-[#dee4e1]" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{photo.file_name}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{photo.size_bytes ? `${Math.round(photo.size_bytes / 1024)} KB` : 'Photo'}</p>
+                  </div>
+                  <button
+                    className="focus-ring rounded-md border border-[#f3b4b4] px-3 py-2 text-sm font-semibold text-[#ba1a1a]"
+                    form={`delete-photo-${photo.id}`}
+                    type="submit"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-6 text-[var(--muted)]">Aucune photo pour ce bien.</p>
+          )}
+          <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-6 text-center">
+            <p className="text-sm font-semibold">Ajouter des photos</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{photoLimit === 0 ? 'Les photos ne sont pas incluses dans le plan Free.' : `${property.property_photos.length}/${photoLimit} photo(s) utilisee(s).`}</p>
+            <input className="focus-ring mt-4 w-full rounded-md border border-[var(--line-soft)] bg-white px-3 py-3 text-sm" disabled={photoLimit === 0 || property.property_photos.length >= photoLimit} multiple name="photos" type="file" accept="image/*" />
           </div>
-        </SectionCard>
-
-        <SectionCard icon="key" title="3. Etat d'occupation">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--accent)] bg-[#f5faf8] px-4">
-              <span>
-                <span className="block font-semibold text-[var(--accent)]">Vacant</span>
-                <span className="text-sm text-[var(--muted)]">Pret a etre loue</span>
-              </span>
-              <input className="h-4 w-4 accent-[var(--accent)]" defaultChecked={property.occupancy_status !== 'rented'} name="occupancy_status" type="radio" value="vacant" />
-            </label>
-            <label className="flex min-h-20 cursor-pointer items-center justify-between rounded-lg border border-[var(--line-soft)] px-4">
-              <span>
-                <span className="block font-semibold">Loue</span>
-                <span className="text-sm text-[var(--muted)]">Occupe par un locataire</span>
-              </span>
-              <input className="h-4 w-4 accent-[var(--accent)]" defaultChecked={property.occupancy_status === 'rented'} name="occupancy_status" type="radio" value="rented" />
-            </label>
-          </div>
-          <Link className="mt-4 inline-flex text-sm font-semibold text-[var(--accent)]" href={`/properties/${property.id}/tenants`}>
-            Gerer les locataires de ce bien
-          </Link>
-        </SectionCard>
-
-        <SectionCard icon="camera" title="4. Photos & Documents">
-          <p className="text-sm leading-6 text-[var(--muted)]">La gestion des photos existantes sera ajoutee dans une etape separee. Les photos envoyees a la creation restent visibles sur la page de consultation.</p>
         </SectionCard>
 
         <div className="flex justify-end gap-3">
@@ -157,6 +175,13 @@ export default async function EditPropertyPage({params}: EditPropertyPageProps) 
           </button>
         </div>
       </form>
+      {signedPhotos.map((photo) => (
+        <form action={deletePropertyPhotoAction} id={`delete-photo-${photo.id}`} key={photo.id}>
+          <input name="locale" type="hidden" value={locale} />
+          <input name="property_id" type="hidden" value={property.id} />
+          <input name="photo_id" type="hidden" value={photo.id} />
+        </form>
+      ))}
     </AppShell>
   );
 }
@@ -173,27 +198,11 @@ function SectionCard({children, icon, title}: {children: React.ReactNode; icon: 
   );
 }
 
-function MoneyInput({defaultValue, label, name}: {defaultValue: number | null; label: string; name: string}) {
-  return (
-    <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
-      {label}
-      <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
-        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm font-normal outline-none" defaultValue={defaultValue ?? ''} min="0" name={name} step="0.01" type="number" />
-        <span className="text-sm font-semibold">EUR</span>
-      </span>
-    </label>
-  );
-}
-
 function SmallIcon({name}: {name: string}) {
   const path =
-    name === 'money'
-      ? 'M4 7h16v10H4z M7 10h2 M15 14h2 M12 12a2 2 0 1 0 0 .01'
-      : name === 'key'
-        ? 'M7 14a4 4 0 1 1 3.5-2.1H21v3h-3v2h-3v-2h-4.5A4 4 0 0 1 7 14z'
-        : name === 'camera'
-          ? 'M5 7h3l1.5-2h5L16 7h3v12H5z M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'
-          : 'M12 21s7-5.1 7-11a7 7 0 0 0-14 0c0 5.9 7 11 7 11z M12 10h.01';
+    name === 'camera'
+      ? 'M5 7h3l1.5-2h5L16 7h3v12H5z M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'
+      : 'M12 21s7-5.1 7-11a7 7 0 0 0-14 0c0 5.9 7 11 7 11z M12 10h.01';
 
   return (
     <svg aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--accent)]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
