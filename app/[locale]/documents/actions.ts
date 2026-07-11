@@ -28,6 +28,7 @@ export async function uploadDocumentAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const file = formData.get('file');
   const documentType = value(formData, 'document_type');
+  const invoiceAmount = documentType === 'invoice' ? moneyValue(formData, 'invoice_amount') : 0;
 
   if (!(file instanceof File) || file.size === 0) {
     redirect(`${localizedPath(locale, '/documents')}?error=file_missing`);
@@ -35,6 +36,10 @@ export async function uploadDocumentAction(formData: FormData) {
 
   if (!ALLOWED_DOCUMENT_TYPES.has(documentType)) {
     redirect(`${localizedPath(locale, '/documents')}?error=document_type`);
+  }
+
+  if (documentType === 'invoice' && invoiceAmount <= 0) {
+    redirect(`${localizedPath(locale, '/documents')}?error=invoice_amount`);
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -62,16 +67,20 @@ export async function uploadDocumentAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/documents')}?error=upload_failed`);
   }
 
+  const propertyId = value(formData, 'property_id') || null;
+  const tenantId = value(formData, 'tenant_id') || null;
+  const unitId = value(formData, 'unit_id') || null;
   const {error} = await supabase.from('documents').insert({
     document_type: documentType,
+    extracted_amount: documentType === 'invoice' ? invoiceAmount : null,
     file_name: file.name,
     file_path: filePath,
     id: documentId,
     mime_type: file.type || null,
     period_month: value(formData, 'period_month') || null,
-    property_id: value(formData, 'property_id') || null,
-    tenant_id: value(formData, 'tenant_id') || null,
-    unit_id: value(formData, 'unit_id') || null,
+    property_id: propertyId,
+    tenant_id: tenantId,
+    unit_id: unitId,
     size_bytes: file.size,
     workspace_id: workspaceId
   });
@@ -81,7 +90,38 @@ export async function uploadDocumentAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/documents')}?error=document_failed`);
   }
 
+  if (documentType === 'invoice') {
+    const today = new Date().toISOString().slice(0, 10);
+    const {data: taxCategory} = await supabase
+      .from('tax_categories')
+      .select('id')
+      .eq('country_code', 'FR')
+      .eq('tax_regime', 'LMNP')
+      .eq('code', 'repairs')
+      .maybeSingle();
+    const {error: expenseError} = await supabase.from('expenses').insert({
+      amount: invoiceAmount,
+      currency: 'EUR',
+      description: file.name,
+      document_id: documentId,
+      expense_date: today,
+      property_id: propertyId,
+      receipt_status: 'attached',
+      tax_category_id: taxCategory?.id ?? null,
+      unit_id: unitId,
+      workspace_id: workspaceId
+    });
+
+    if (expenseError) {
+      await supabase.from('documents').delete().eq('id', documentId).eq('workspace_id', workspaceId);
+      await supabase.storage.from('documents').remove([filePath]);
+      redirect(`${localizedPath(locale, '/documents')}?error=expense_failed`);
+    }
+  }
+
   revalidatePath(localizedPath(locale, '/documents'));
+  revalidatePath(localizedPath(locale, '/dashboard'));
+  revalidatePath(localizedPath(locale, '/tax'));
   redirect(localizedPath(locale, '/documents'));
 }
 

@@ -63,6 +63,8 @@ function FileArrowIcon() {
 
 export function UploadDocumentModal({locale, properties, tenants}: {locale: string; properties: PropertyOption[]; tenants: TenantOption[]}) {
   const [open, setOpen] = useState(false);
+  const [documentType, setDocumentType] = useState('');
+  const isInvoice = documentType === 'invoice';
 
   return (
     <>
@@ -120,7 +122,7 @@ export function UploadDocumentModal({locale, properties, tenants}: {locale: stri
               <div className="mt-5 grid gap-4">
                 <label className="grid gap-2 text-xs font-medium text-[#33413f]">
                   Type de document
-                  <select className="focus-ring min-h-10 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-normal" defaultValue="" name="document_type" required>
+                  <select className="focus-ring min-h-10 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-normal" name="document_type" onChange={(event) => setDocumentType(event.target.value)} required value={documentType}>
                     <option disabled value="">
                       Selectionner un type
                     </option>
@@ -131,6 +133,26 @@ export function UploadDocumentModal({locale, properties, tenants}: {locale: stri
                     ))}
                   </select>
                 </label>
+
+                {isInvoice ? (
+                  <label className="grid gap-2 text-xs font-medium text-[#33413f]">
+                    Montant de la facture
+                    <span className="relative">
+                      <input
+                        className="focus-ring min-h-10 w-full rounded-lg border border-[var(--line)] bg-white px-3 pr-12 text-sm font-normal tabular-nums"
+                        inputMode="decimal"
+                        min="0.01"
+                        name="invoice_amount"
+                        placeholder="0,00"
+                        required
+                        step="0.01"
+                        type="number"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#33413f]">EUR</span>
+                    </span>
+                    <span className="text-xs font-normal text-[var(--muted)]">Ce montant sera ajoute aux depenses.</span>
+                  </label>
+                ) : null}
 
                 <label className="grid gap-2 text-xs font-medium text-[#33413f]">
                   Bien immobilier associe

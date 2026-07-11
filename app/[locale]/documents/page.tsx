@@ -253,6 +253,12 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
         </div>
       ) : null}
 
+      {params.error === 'invoice_amount' ? (
+        <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
+          Ajoutez un montant valide pour enregistrer une facture travaux dans les depenses.
+        </div>
+      ) : null}
+
       <form className="mb-8 flex flex-wrap gap-3 border-b border-[var(--line-soft)] pb-5">
         <label className="relative min-w-0 flex-[1_1_240px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">
