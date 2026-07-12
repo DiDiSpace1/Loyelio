@@ -278,6 +278,9 @@ export function TenantTableClient({
                         <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}/edit`}>
                           Modifier
                         </Link>
+                        <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/bail/new?tenant_id=${tenant.id}`}>
+                          Creer un bail
+                        </Link>
                         <form action={updateTenantActiveAction}>
                           <input name="locale" type="hidden" value={locale} />
                           <input name="tenant_id" type="hidden" value={tenant.id} />

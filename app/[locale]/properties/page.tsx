@@ -28,6 +28,11 @@ type PropertyRow = {
   }[];
 };
 
+type RentChargeTotalRow = {
+  period_month: string;
+  total_due: number | null;
+};
+
 type PropertiesPageProps = {
   searchParams: Promise<{
     error?: string;
@@ -36,6 +41,15 @@ type PropertiesPageProps = {
     q?: string;
   }>;
 };
+
+function isoMonth(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function addMonths(month: string, offset: number) {
+  const [year, monthIndex] = month.split('-').map(Number);
+  return isoMonth(new Date(Date.UTC(year, monthIndex - 1 + offset, 1)));
+}
 
 export default async function PropertiesPage({searchParams}: PropertiesPageProps) {
   const t = await getTranslations('properties');
@@ -59,6 +73,14 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
 
   const {data: properties, error} = await query.returns<PropertyRow[]>();
   const rows = properties ?? [];
+  const currentMonth = isoMonth(new Date());
+  const previousMonth = addMonths(currentMonth, -1);
+  const {data: rentChargeTotals} = await supabase
+    .from('rent_charges')
+    .select('period_month, total_due')
+    .eq('workspace_id', workspaceId)
+    .in('period_month', [`${previousMonth}-01`, `${currentMonth}-01`])
+    .returns<RentChargeTotalRow[]>();
   const occupiedPropertyCount = rows.filter((property) => property.occupancy_status === 'rented' || property.leases.some((lease) => lease.status === 'active')).length;
   const occupancyRate = rows.length ? Math.round((occupiedPropertyCount / rows.length) * 100) : 0;
   const monthlyRent = rows.reduce(
@@ -68,6 +90,13 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
     },
     0
   );
+  const currentMonthRevenue = (rentChargeTotals ?? [])
+    .filter((charge) => charge.period_month.startsWith(currentMonth))
+    .reduce((sum, charge) => sum + Number(charge.total_due ?? 0), 0);
+  const previousMonthRevenue = (rentChargeTotals ?? [])
+    .filter((charge) => charge.period_month.startsWith(previousMonth))
+    .reduce((sum, charge) => sum + Number(charge.total_due ?? 0), 0);
+  const monthlyTrend = previousMonthRevenue > 0 ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : null;
   const signedPhotos = new Map<string, string>();
 
   await Promise.all(
@@ -153,7 +182,14 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
           <section className="mt-8 grid gap-4 md:grid-cols-3">
             <SummaryCard icon="domain" iconClassName="text-[var(--accent)]" label="Total Biens" note="Patrimoine actif" value={rows.length.toString()} />
             <SummaryCard icon="analytics" iconClassName="text-[var(--secondary)]" label="Taux d'occupation" progress={occupancyRate} value={`${occupancyRate}%`} />
-            <SummaryCard icon="payments" iconClassName="text-[var(--accent)]" label="Revenus Mensuels" note="+2.5% vs mois dernier" trend value={`${monthlyRent.toLocaleString('fr-FR')} €`} />
+            <SummaryCard
+              icon="payments"
+              iconClassName="text-[var(--accent)]"
+              label="Revenus Mensuels"
+              note={monthlyTrend === null ? undefined : `${monthlyTrend >= 0 ? '+' : ''}${monthlyTrend.toLocaleString('fr-FR', {maximumFractionDigits: 1})}% vs mois dernier`}
+              trend={monthlyTrend !== null}
+              value={`${monthlyRent.toLocaleString('fr-FR')} €`}
+            />
           </section>
 
           <PropertyListClient initialMode={selectedMode} initialQuery={queryText} locale={locale} rows={listRows} />

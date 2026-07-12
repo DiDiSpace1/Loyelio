@@ -12,11 +12,13 @@ type PropertyOption = {
 export function PropertySelector({
   locale,
   properties,
-  selectedPropertyId
+  selectedPropertyId,
+  selectedTenantId = ''
 }: {
   locale: string;
   properties: PropertyOption[];
   selectedPropertyId?: string;
+  selectedTenantId?: string;
 }) {
   const router = useRouter();
 
@@ -29,7 +31,17 @@ export function PropertySelector({
         name="property_picker"
         onChange={(event) => {
           const propertyId = event.target.value;
-          const path = propertyId ? `/bail?property_id=${propertyId}` : '/bail';
+          const params = new URLSearchParams();
+
+          if (propertyId) {
+            params.set('property_id', propertyId);
+          }
+
+          if (selectedTenantId) {
+            params.set('tenant_id', selectedTenantId);
+          }
+
+          const path = params.size ? `/bail?${params.toString()}` : '/bail';
           router.push(localizedPath(locale, path as `/${string}`));
         }}
       >

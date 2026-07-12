@@ -5,6 +5,7 @@ import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {deleteDocumentAction} from './actions';
+import {DocumentActionDetails} from './document-action-details';
 import {UploadDocumentModal} from './upload-document-modal';
 
 type PropertyOption = {
@@ -170,7 +171,8 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
   const query = params.q?.trim() ?? '';
   const selectedPropertyId = params.property_id ?? '';
   const selectedType = params.type ?? '';
-  const selectedYear = yearRange(params.year);
+  const currentYear = new Date().getFullYear();
+  const selectedYear = yearRange(params.year ?? String(currentYear));
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: properties} = await supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>();
   const {data: tenants} = await supabase.from('tenants').select('id, full_name').eq('workspace_id', workspaceId).order('full_name', {ascending: true}).returns<TenantOption[]>();
@@ -359,28 +361,25 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
                       <td className="px-5 py-4 text-sm tabular-nums text-[var(--muted)]">{formatDate(document.created_at, locale)}</td>
                       <td className="px-5 py-4 text-sm tabular-nums text-[var(--muted)]">{formatBytes(document.size_bytes)}</td>
                       <td className="px-5 py-4 text-right">
-                        <details className="relative inline-block">
-                          <summary className="focus-ring flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md text-xl text-[var(--muted)] hover:bg-[#eaefed]">...</summary>
-                          <div className="absolute right-full top-0 z-20 mr-2 w-40 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-lg">
-                            {document.viewUrl ? (
-                              <a className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={document.viewUrl} rel="noreferrer" target="_blank">
-                                Voir
-                              </a>
-                            ) : null}
-                            {document.downloadUrl ? (
-                              <a className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={document.downloadUrl}>
-                                Telecharger
-                              </a>
-                            ) : null}
-                            <form action={deleteDocumentAction}>
-                              <input name="locale" type="hidden" value={locale} />
-                              <input name="document_id" type="hidden" value={document.id} />
-                              <button className="block w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff1f1]" type="submit">
-                                Supprimer
-                              </button>
-                            </form>
-                          </div>
-                        </details>
+                        <DocumentActionDetails>
+                          {document.viewUrl ? (
+                            <a className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={document.viewUrl} rel="noreferrer" target="_blank">
+                              Voir
+                            </a>
+                          ) : null}
+                          {document.downloadUrl ? (
+                            <a className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={document.downloadUrl}>
+                              Telecharger
+                            </a>
+                          ) : null}
+                          <form action={deleteDocumentAction}>
+                            <input name="locale" type="hidden" value={locale} />
+                            <input name="document_id" type="hidden" value={document.id} />
+                            <button className="block w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff1f1]" type="submit">
+                              Supprimer
+                            </button>
+                          </form>
+                        </DocumentActionDetails>
                       </td>
                     </tr>
                   );

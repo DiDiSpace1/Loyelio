@@ -11,6 +11,7 @@ import {PropertySelector} from './property-selector';
 
 type BailManagerViewProps = {
   selectedPropertyId?: string;
+  selectedTenantId?: string;
   source?: 'bail' | 'property';
 };
 
@@ -39,7 +40,7 @@ type TenantOption = {
   full_name: string;
 };
 
-export async function BailManagerView({selectedPropertyId, source = 'bail'}: BailManagerViewProps) {
+export async function BailManagerView({selectedPropertyId, selectedTenantId = '', source = 'bail'}: BailManagerViewProps) {
   const locale = await getLocale();
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: properties} = await supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('created_at', {ascending: false}).returns<PropertyOption[]>();
@@ -90,12 +91,12 @@ export async function BailManagerView({selectedPropertyId, source = 'bail'}: Bai
         <input name="return_to" type="hidden" value={source === 'bail' ? 'bail' : 'tenant_management'} />
         <section className="rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-sm">
           <div className="mb-5">
-            <PropertySelector locale={locale} properties={propertyOptions} selectedPropertyId={selectedProperty?.id} />
+            <PropertySelector locale={locale} properties={propertyOptions} selectedPropertyId={selectedProperty?.id} selectedTenantId={selectedTenantId} />
           </div>
           {selectedProperty ? (
             <>
               <h2 className="mb-5 text-base font-semibold">Ajouter des locataires</h2>
-              <OccupancyManager initialStatus={activeLeases.length ? 'rented' : selectedProperty.occupancy_status} tenants={tenants ?? []} />
+              <OccupancyManager initialStatus={activeLeases.length ? 'rented' : selectedProperty.occupancy_status} initialTenantId={selectedTenantId} tenants={tenants ?? []} />
             </>
           ) : (
             <p className="text-sm leading-6 text-[var(--muted)]">Choisissez un bien pour ajouter un locataire et creer un bail.</p>

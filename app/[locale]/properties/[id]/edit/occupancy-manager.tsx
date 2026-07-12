@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {useState} from 'react';
 
 import {terminateLeaseAction} from '../../actions';
@@ -20,9 +21,11 @@ type ActiveLease = {
 
 export function OccupancyManager({
   initialStatus,
+  initialTenantId = '',
   tenants
 }: {
   initialStatus: string;
+  initialTenantId?: string;
   tenants: TenantOption[];
 }) {
   const [status, setStatus] = useState(initialStatus === 'rented' ? 'rented' : 'vacant');
@@ -57,7 +60,7 @@ export function OccupancyManager({
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_150px_150px_130px_130px_130px_auto]" key={row.id}>
               <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
                 Locataire
-                <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" name="assignment_tenant_id">
+                <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3 text-sm font-normal" defaultValue={index === 0 ? initialTenantId : ''} name="assignment_tenant_id">
                   <option value="">Choisir un locataire</option>
                   {tenants.map((tenant) => (
                     <option key={tenant.id} value={tenant.id}>
@@ -96,7 +99,11 @@ export function OccupancyManager({
               ) : null}
             </div>
           ))}
-          {!tenants.length ? <p className="text-sm text-[#ba1a1a]">Ajoutez un locataire dans la page Locataires avant de continuer.</p> : null}
+          {!tenants.length ? (
+            <Link className="text-sm font-medium text-[#ba1a1a] underline-offset-2 hover:underline" href="/tenants?new=1">
+              Ajoutez un locataire dans la page Locataires avant de continuer.
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
