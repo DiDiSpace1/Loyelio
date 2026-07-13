@@ -18,7 +18,7 @@ export default async function QuittancePage() {
     .returns<QuittancePropertyOption[]>();
   const {data: tenants} = await supabase
     .from('tenants')
-    .select('id, full_name')
+    .select('id, full_name, leases(id, status, property_id, monthly_rent, charges_amount)')
     .eq('workspace_id', workspaceId)
     .order('full_name', {ascending: true})
     .returns<QuittanceTenantOption[]>();

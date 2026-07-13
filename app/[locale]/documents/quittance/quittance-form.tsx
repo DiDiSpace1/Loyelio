@@ -16,6 +16,13 @@ export type QuittancePropertyOption = {
 export type QuittanceTenantOption = {
   full_name: string;
   id: string;
+  leases?: {
+    charges_amount: number | null;
+    id: string;
+    monthly_rent: number | null;
+    property_id: string | null;
+    status: string;
+  }[];
 };
 
 export type RecentReceipt = {
@@ -46,6 +53,55 @@ function currentMonth() {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateLabel(value: string) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(date);
+}
+
+function frenchDateToIso(value: string) {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+function monthToDisplayDate(value: string) {
+  if (!value) {
+    return '';
+  }
+
+  const [year, month] = value.split('-');
+
+  if (!year || !month) {
+    return value;
+  }
+
+  return `01/${month.padStart(2, '0')}/${year}`;
+}
+
+function displayDateToMonth(value: string) {
+  const isoDate = frenchDateToIso(value);
+
+  if (!isoDate) {
+    return null;
+  }
+
+  return isoDate.slice(0, 7);
 }
 
 function monthLabel(value: string) {
@@ -118,7 +174,7 @@ function ReceiptPreview({property, state, tenant}: {property: QuittancePropertyO
           <span className="font-semibold tabular-nums">{Number.isFinite(total) ? money(String(total)) : '0,00 EUR'}</span>
         </div>
       </div>
-      <p className="mt-7 text-xs leading-5 text-[var(--muted)]">Paiement recu le {state.paidAt || '-'} par {state.paymentMethod === 'cash' ? 'especes' : state.paymentMethod === 'cheque' ? 'cheque' : 'virement bancaire'}.</p>
+      <p className="mt-7 text-xs leading-5 text-[var(--muted)]">Paiement recu le {dateLabel(state.paidAt) || '-'} par {state.paymentMethod === 'cash' ? 'especes' : state.paymentMethod === 'cheque' ? 'cheque' : 'virement bancaire'}.</p>
       <div className="mt-7 border-t border-[var(--line-soft)] pt-5 text-xs leading-5 text-[#33413f]">
         <p>Fait a {property?.city ?? '-'}, le {todayLabel()}</p>
         <p className="mt-5 text-[var(--muted)]">Signature du proprietaire</p>
@@ -142,22 +198,31 @@ export function QuittanceForm({
   tenants: QuittanceTenantOption[];
 }) {
   const initialProperty = properties[0] ?? null;
+  const initialPaidAt = today();
+  const initialPeriodMonth = currentMonth();
   const [state, setState] = useState<FormState>({
     amount: initialProperty?.monthly_rent_estimate ? String(Number(initialProperty.monthly_rent_estimate)) : '',
     charges: initialProperty?.charges_estimate ? String(Number(initialProperty.charges_estimate)) : '',
     ownerName,
-    paidAt: today(),
+    paidAt: initialPaidAt,
     paymentMethod: 'bank_transfer',
-    periodMonth: currentMonth(),
+    periodMonth: initialPeriodMonth,
     propertyId: initialProperty?.id ?? '',
     tenantId: ''
   });
+  const [paidAtDisplay, setPaidAtDisplay] = useState(dateLabel(initialPaidAt));
+  const [periodDisplay, setPeriodDisplay] = useState(monthToDisplayDate(initialPeriodMonth));
   const [showPreview, setShowPreview] = useState(false);
   const [previewLarge, setPreviewLarge] = useState(false);
   const [message, setMessage] = useState('');
   const [isPending, startTransition] = useTransition();
   const selectedProperty = useMemo(() => properties.find((property) => property.id === state.propertyId) ?? null, [properties, state.propertyId]);
   const selectedTenant = useMemo(() => tenants.find((tenant) => tenant.id === state.tenantId) ?? null, [tenants, state.tenantId]);
+  const selectedLease = useMemo(() => {
+    const activeLeases = selectedTenant?.leases?.filter((lease) => lease.status === 'active') ?? [];
+    return activeLeases.find((lease) => lease.property_id === state.propertyId) ?? activeLeases[0] ?? null;
+  }, [selectedTenant, state.propertyId]);
+  const selectedTenantHasNoBail = Boolean(state.tenantId && !selectedLease);
 
   function update(next: Partial<FormState>) {
     setState((current) => ({...current, ...next}));
@@ -165,11 +230,53 @@ export function QuittanceForm({
 
   function onPropertyChange(propertyId: string) {
     const property = properties.find((item) => item.id === propertyId);
+    const activeLease = selectedTenant?.leases?.find((lease) => lease.status === 'active' && lease.property_id === propertyId);
+
+    if (activeLease) {
+      update({
+        amount: activeLease.monthly_rent != null ? String(Number(activeLease.monthly_rent)) : '',
+        charges: activeLease.charges_amount != null ? String(Number(activeLease.charges_amount)) : '',
+        propertyId
+      });
+      return;
+    }
+
     update({
-      amount: property?.monthly_rent_estimate ? String(Number(property.monthly_rent_estimate)) : state.amount,
-      charges: property?.charges_estimate ? String(Number(property.charges_estimate)) : state.charges,
+      amount: state.tenantId ? '' : property?.monthly_rent_estimate ? String(Number(property.monthly_rent_estimate)) : state.amount,
+      charges: state.tenantId ? '' : property?.charges_estimate ? String(Number(property.charges_estimate)) : state.charges,
       propertyId
     });
+  }
+
+  function onTenantChange(tenantId: string) {
+    const tenant = tenants.find((item) => item.id === tenantId);
+    const activeLeases = tenant?.leases?.filter((lease) => lease.status === 'active') ?? [];
+    const lease = activeLeases.find((item) => item.property_id === state.propertyId) ?? activeLeases[0] ?? null;
+
+    update({
+      amount: lease?.monthly_rent != null ? String(Number(lease.monthly_rent)) : '',
+      charges: lease?.charges_amount != null ? String(Number(lease.charges_amount)) : '',
+      propertyId: lease?.property_id ?? state.propertyId,
+      tenantId
+    });
+  }
+
+  function onPaidAtChange(value: string) {
+    setPaidAtDisplay(value);
+    const nextPaidAt = frenchDateToIso(value);
+
+    if (nextPaidAt) {
+      update({paidAt: nextPaidAt});
+    }
+  }
+
+  function onPeriodChange(value: string) {
+    setPeriodDisplay(value);
+    const nextPeriod = displayDateToMonth(value);
+
+    if (nextPeriod) {
+      update({periodMonth: nextPeriod});
+    }
   }
 
   function generatePdf() {
@@ -256,32 +363,32 @@ export function QuittanceForm({
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Montant du loyer
-              <input className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" min="0" onChange={(event) => update({amount: event.target.value})} step="0.01" type="number" value={state.amount} />
-            </label>
-            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Charges (optionnel)
-              <input className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" min="0" onChange={(event) => update({charges: event.target.value})} step="0.01" type="number" value={state.charges} />
-            </label>
-            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Periode pour la quittance
-              <input className="focus-ring min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" onChange={(event) => update({periodMonth: event.target.value})} type="month" value={state.periodMonth} />
-            </label>
-            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Date du paiement
-              <input className="focus-ring min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" onChange={(event) => update({paidAt: event.target.value})} type="date" value={state.paidAt} />
-            </label>
             <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)] md:col-span-2">
-              Locataire (optionnel)
-              <select className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" onChange={(event) => update({tenantId: event.target.value})} value={state.tenantId}>
-                <option value="">Aucun locataire specifique</option>
+              Locataire
+              <select className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" onChange={(event) => onTenantChange(event.target.value)} value={state.tenantId}>
+                <option value="">Choisir un locataire</option>
                 {tenants.map((tenant) => (
                   <option key={tenant.id} value={tenant.id}>
                     {tenant.full_name}
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Montant du loyer
+              <input className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c] disabled:bg-[#f8fbfa] disabled:text-[var(--muted)]" disabled={selectedTenantHasNoBail} min="0" onChange={(event) => update({amount: event.target.value})} placeholder={selectedTenantHasNoBail ? 'Bail non cree' : '0'} step="0.01" type="number" value={state.amount} />
+            </label>
+            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Charges (optionnel)
+              <input className="focus-ring min-h-11 w-full min-w-0 truncate rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c] disabled:bg-[#f8fbfa] disabled:text-[var(--muted)]" disabled={selectedTenantHasNoBail} min="0" onChange={(event) => update({charges: event.target.value})} placeholder={selectedTenantHasNoBail ? 'Bail non cree' : '0'} step="0.01" type="number" value={state.charges} />
+            </label>
+            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Periode pour la quittance
+              <input className="focus-ring min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" inputMode="numeric" onChange={(event) => onPeriodChange(event.target.value)} placeholder="01/07/2026" value={periodDisplay} />
+            </label>
+            <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Date du paiement
+              <input className="focus-ring min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] px-3 text-sm font-normal normal-case tracking-normal text-[#171d1c]" inputMode="numeric" onChange={(event) => onPaidAtChange(event.target.value)} placeholder="13/07/2026" value={paidAtDisplay} />
             </label>
             <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)] md:col-span-2">
               Mode de paiement
