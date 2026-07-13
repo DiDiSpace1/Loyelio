@@ -3,6 +3,7 @@ import {getLocale} from 'next-intl/server';
 import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
+import {TransactionActionsMenu, type TransactionActionRow} from './transaction-actions-menu';
 import {TransactionDrawer, type LeaseOption} from './transaction-drawer';
 
 type PropertyOption = {
@@ -36,10 +37,13 @@ type RevenueRow = {
 type PaymentRow = {
   amount: number;
   id: string;
+  notes: string | null;
   paid_at: string;
+  payment_method: string | null;
   rent_charges: {
     period_month: string;
     status: string;
+    total_due: number | null;
     leases: {
       properties: {
         name: string;
@@ -56,7 +60,8 @@ type ExpenseRow = {
   description: string | null;
   expense_date: string;
   id: string;
-  payment_status: string | null;
+  property_id: string | null;
+  tax_category_id: string | null;
   properties: {
     name: string;
   } | null;
@@ -71,19 +76,31 @@ type TransactionRow =
       amount: number;
       category: string;
       date: string;
+      description?: string | null;
       id: string;
       meta: string;
+      notes?: string | null;
+      paymentMethod?: string | null;
+      propertyId?: string | null;
       status: string;
+      taxCategoryId?: string | null;
       type: 'expense';
+      vendor?: string | null;
     }
   | {
       amount: number;
       category: string;
       date: string;
+      description?: string | null;
       id: string;
       meta: string;
+      notes?: string | null;
+      paymentMethod?: string | null;
+      propertyId?: string | null;
       status: string;
+      taxCategoryId?: string | null;
       type: 'revenue';
+      vendor?: string | null;
     };
 
 type TransactionsPageProps = {
@@ -135,18 +152,6 @@ function paidAmount(row: Pick<RevenueRow, 'rent_payments'>) {
   return row.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 }
 
-function statusLabel(status: string) {
-  if (status === 'paid') {
-    return {className: 'bg-[#ecfdf5] text-[var(--accent)]', label: 'Payé'};
-  }
-
-  if (status === 'partial') {
-    return {className: 'bg-[#fff8ec] text-[#924628]', label: 'Partiel'};
-  }
-
-  return {className: 'bg-[#ffdad6] text-[#ba1a1a]', label: 'À suivre'};
-}
-
 function Icon({children, className = ''}: {children: string; className?: string}) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
@@ -177,7 +182,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<RevenueRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .gte('paid_at', range.start)
       .lt('paid_at', range.end)
@@ -185,14 +190,14 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<PaymentRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .gte('paid_at', previousRange.start)
       .lt('paid_at', previousRange.end)
       .returns<PaymentRow[]>(),
     supabase
       .from('expenses')
-      .select('id, amount, description, expense_date, payment_status, vendor, properties(name), tax_categories(label)')
+      .select('id, amount, description, expense_date, property_id, tax_category_id, vendor, properties(name), tax_categories(label)')
       .eq('workspace_id', workspaceId)
       .gte('expense_date', range.start)
       .lt('expense_date', range.end)
@@ -200,14 +205,14 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<ExpenseRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .order('paid_at', {ascending: false})
       .limit(8)
       .returns<PaymentRow[]>(),
     supabase
       .from('expenses')
-      .select('id, amount, description, expense_date, payment_status, vendor, properties(name), tax_categories(label)')
+      .select('id, amount, description, expense_date, property_id, tax_category_id, vendor, properties(name), tax_categories(label)')
       .eq('workspace_id', workspaceId)
       .order('expense_date', {ascending: false})
       .limit(8)
@@ -227,20 +232,26 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     ...(recentPayments ?? []).map((row) => ({
       amount: Number(row.amount ?? 0),
       category: 'Loyer',
-      date: row.paid_at,
-      id: `revenue-${row.id}`,
-      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' · ') || '-',
-      status: row.rent_charges?.status ?? 'paid',
+	      date: row.paid_at,
+	      id: row.id,
+	      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
+	      notes: row.notes,
+	      paymentMethod: row.payment_method,
+	      status: row.rent_charges?.status ?? 'paid',
       type: 'revenue' as const
     })),
     ...(recentExpenses ?? []).map((row) => ({
       amount: Number(row.amount ?? 0),
-      category: row.tax_categories?.label ?? 'Dépense',
-      date: row.expense_date,
-      id: `expense-${row.id}`,
-      meta: [row.properties?.name, row.vendor].filter(Boolean).join(' · ') || '-',
-      status: row.payment_status ?? 'paid',
-      type: 'expense' as const
+      category: row.tax_categories?.label ?? 'Depense',
+	      date: row.expense_date,
+	      description: row.description,
+	      id: row.id,
+	      meta: [row.properties?.name, row.vendor].filter(Boolean).join(' - ') || '-',
+	      propertyId: row.property_id,
+	      status: 'paid',
+	      taxCategoryId: row.tax_category_id,
+	      type: 'expense' as const,
+	      vendor: row.vendor
     }))
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -251,14 +262,14 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">Transactions</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Gérez vos revenus et dépenses immobilières.</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Gerez vos revenus et depenses immobilieres.</p>
         </div>
         <TransactionDrawer leases={leases ?? []} locale={locale} properties={properties ?? []} taxCategories={taxCategories ?? []} />
       </div>
 
       {params.error ? (
         <div className="mt-6 rounded-lg border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
-          Impossible d&apos;enregistrer cette transaction. Vérifiez les champs ou le fichier joint.
+          Impossible d&apos;enregistrer cette transaction. Verifiez les champs ou le fichier joint.
         </div>
       ) : null}
 
@@ -266,17 +277,17 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
         <StatCard
           icon="payments"
           label={`Revenus Mensuels (${range.label.charAt(0).toUpperCase() + range.label.slice(1)})`}
-          note={revenueTrend === null ? 'Aucune donnée le mois dernier' : `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString('fr-FR', {maximumFractionDigits: 1})}% vs mois dernier`}
+          note={revenueTrend === null ? 'Aucune donnee le mois dernier' : `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString('fr-FR', {maximumFractionDigits: 1})}% vs mois dernier`}
           tone="revenue"
           value={formatMoney(monthlyRevenue)}
         />
-        <StatCard icon="receipt_long" label="Dépenses Mensuelles" note={`${expenseRows.length} transaction${expenseRows.length > 1 ? 's' : ''} ce mois`} tone="expense" value={formatMoney(monthlyExpenses)} />
-        <StatCard icon="hourglass_empty" label="Loyers en attente" note="Paiements à suivre" tone="pending" value={formatMoney(pendingRevenue)} />
+        <StatCard icon="receipt_long" label="Depenses Mensuelles" note={`${expenseRows.length} transaction${expenseRows.length > 1 ? 's' : ''} ce mois`} tone="expense" value={formatMoney(monthlyExpenses)} />
+        <StatCard icon="hourglass_empty" label="Loyers en attente" note="Paiements a suivre" tone="pending" value={formatMoney(pendingRevenue)} />
       </section>
 
       <section className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#171d1c]">Historique récent</h2>
+          <h2 className="text-lg font-semibold text-[#171d1c]">Historique recent</h2>
           <span className="text-sm text-[var(--muted)]">{combinedRows.length} mouvements</span>
         </div>
         <div className="overflow-x-auto">
@@ -284,21 +295,29 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
             <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
               <tr>
                 <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Catégorie</th>
+                <th className="px-6 py-3">Categorie</th>
                 <th className="px-6 py-3">Bien / Locataire</th>
-                <th className="px-6 py-3 text-right">Montant</th>
-                <th className="px-6 py-3">Statut</th>
+	                <th className="px-6 py-3 text-right">Montant</th>
+	                <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line-soft)]">
               {combinedRows.length ? (
                 combinedRows.map((row) => {
-                  const status =
-                    row.type === 'revenue'
-                      ? statusLabel(row.status)
-                      : row.status === 'pending'
-                        ? {className: 'bg-[#fff8ec] text-[#924628]', label: 'À régler'}
-                        : {className: 'bg-[#ecfdf5] text-[var(--accent)]', label: 'Payé'};
+                  const actionRow: TransactionActionRow = {
+                    amount: row.amount,
+                    category: row.category,
+                    date: row.date,
+                    description: row.description,
+                    id: row.id,
+                    meta: row.meta,
+                    notes: row.notes,
+                    paymentMethod: row.paymentMethod,
+                    propertyId: row.propertyId,
+                    taxCategoryId: row.taxCategoryId,
+                    type: row.type,
+                    vendor: row.vendor
+                  };
                   return (
                     <tr className="hover:bg-[#f8fbfa]" key={row.id}>
                       <td className="px-6 py-4 tabular-nums">{formatDate(row.date)}</td>
@@ -309,10 +328,15 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
                         </span>
                       </td>
                       <td className="px-6 py-4 font-medium text-[#33413f]">{row.meta}</td>
-                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>{row.type === 'expense' ? '- ' : ''}{formatMoney(row.amount)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
-                      </td>
+	                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>{row.type === 'expense' ? '- ' : ''}{formatMoney(row.amount)}</td>
+	                      <td className="px-6 py-4 text-right">
+	                        <TransactionActionsMenu
+	                          locale={locale}
+	                          properties={(properties ?? []).map((property) => ({id: property.id, label: property.name}))}
+	                          row={actionRow}
+	                          taxCategories={(taxCategories ?? []).map((category) => ({id: category.id, label: category.label}))}
+	                        />
+	                      </td>
                     </tr>
                   );
                 })

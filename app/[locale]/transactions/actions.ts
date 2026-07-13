@@ -44,7 +44,6 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const periodMonth = monthStart(value(formData, 'period_month'));
   const amount = moneyValue(formData, 'amount');
   const receivedAt = value(formData, 'received_at') || new Date().toISOString().slice(0, 10);
-  const requestedStatus = value(formData, 'status') === 'partial' ? 'partial' : 'paid';
 
   if (!leaseId || !periodMonth || amount <= 0) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_missing`);
@@ -74,7 +73,13 @@ export async function createRevenueTransactionAction(formData: FormData) {
     .maybeSingle<{id: string; rent_payments: {amount: number | null}[]}>();
   const alreadyPaid = existingCharge?.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
   const nextPaid = alreadyPaid + amount;
-  const status = requestedStatus === 'partial' || nextPaid < totalDue ? 'partial' : 'paid';
+  const remainingDue = Math.max(0, totalDue - alreadyPaid);
+
+  if (amount > remainingDue) {
+    redirect(`${localizedPath(locale, '/transactions')}?error=revenue_overpaid`);
+  }
+
+  const status = nextPaid < totalDue ? 'partial' : 'paid';
   const {data: charge, error: chargeError} = await supabase
     .from('rent_charges')
     .upsert(
@@ -175,8 +180,6 @@ export async function createExpenseTransactionAction(formData: FormData) {
     description: value(formData, 'description') || null,
     document_id: documentId,
     expense_date: expenseDate,
-    payment_method: paymentMethod(value(formData, 'payment_method')),
-    payment_status: value(formData, 'payment_status') === 'pending' ? 'pending' : 'paid',
     property_id: value(formData, 'property_id') || null,
     receipt_status: documentId ? 'attached' : 'missing',
     tax_category_id: value(formData, 'tax_category_id') || null,
@@ -186,6 +189,130 @@ export async function createExpenseTransactionAction(formData: FormData) {
 
   if (error) {
     redirect(`${localizedPath(locale, '/transactions')}?error=expense_failed`);
+  }
+
+  revalidatePath(localizedPath(locale, '/transactions'));
+  revalidatePath(localizedPath(locale, '/dashboard'));
+  revalidatePath(localizedPath(locale, '/tax'));
+  redirect(localizedPath(locale, '/transactions'));
+}
+
+async function updateRentChargeStatus(supabase: Awaited<ReturnType<typeof getCurrentUserWorkspace>>['supabase'], workspaceId: string, rentChargeId: string) {
+  const {data: charge} = await supabase.from('rent_charges').select('id, total_due, rent_payments(amount)').eq('id', rentChargeId).eq('workspace_id', workspaceId).single<{id: string; total_due: number | null; rent_payments: {amount: number | null}[]}>();
+
+  if (!charge) {
+    return;
+  }
+
+  const paidTotal = charge.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+  const totalDue = Number(charge.total_due ?? 0);
+  const status = paidTotal <= 0 ? 'unpaid' : paidTotal >= totalDue ? 'paid' : 'partial';
+
+  await supabase.from('rent_charges').update({status}).eq('id', rentChargeId).eq('workspace_id', workspaceId);
+}
+
+export async function updateTransactionAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const type = value(formData, 'type');
+  const id = value(formData, 'id');
+  const amount = moneyValue(formData, 'amount');
+
+  if (!id || amount <= 0) {
+    redirect(`${localizedPath(locale, '/transactions')}?error=transaction_missing`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+
+  if (type === 'revenue') {
+    const paidAt = value(formData, 'date') || new Date().toISOString().slice(0, 10);
+    const {data: payment} = await supabase.from('rent_payments').select('id, amount, rent_charge_id, rent_charges(total_due, rent_payments(id, amount))').eq('id', id).eq('workspace_id', workspaceId).single<{
+      amount: number | null;
+      id: string;
+      rent_charge_id: string;
+      rent_charges: {total_due: number | null; rent_payments: {id: string; amount: number | null}[]} | null;
+    }>();
+
+    if (!payment) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=payment_not_found`);
+    }
+
+    const otherPaid = (payment.rent_charges?.rent_payments ?? []).filter((row) => row.id !== payment.id).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const totalDue = Number(payment.rent_charges?.total_due ?? 0);
+
+    if (amount > Math.max(0, totalDue - otherPaid)) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=revenue_overpaid`);
+    }
+
+    const {error} = await supabase
+      .from('rent_payments')
+      .update({
+        amount,
+        notes: value(formData, 'notes') || null,
+        paid_at: paidAt,
+        payment_method: paymentMethod(value(formData, 'payment_method'))
+      })
+      .eq('id', id)
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=payment_update_failed`);
+    }
+
+    await updateRentChargeStatus(supabase, workspaceId, payment.rent_charge_id);
+  } else if (type === 'expense') {
+    const expenseDate = value(formData, 'date');
+    const {error} = await supabase
+      .from('expenses')
+      .update({
+        amount,
+        description: value(formData, 'description') || null,
+        expense_date: expenseDate,
+        property_id: value(formData, 'property_id') || null,
+        tax_category_id: value(formData, 'tax_category_id') || null,
+        vendor: value(formData, 'vendor') || null
+      })
+      .eq('id', id)
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=expense_update_failed`);
+    }
+  }
+
+  revalidatePath(localizedPath(locale, '/transactions'));
+  revalidatePath(localizedPath(locale, '/dashboard'));
+  revalidatePath(localizedPath(locale, '/tax'));
+  redirect(localizedPath(locale, '/transactions'));
+}
+
+export async function deleteTransactionAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const type = value(formData, 'type');
+  const id = value(formData, 'id');
+
+  if (!id) {
+    redirect(`${localizedPath(locale, '/transactions')}?error=transaction_missing`);
+  }
+
+  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+
+  if (type === 'revenue') {
+    const {data: payment} = await supabase.from('rent_payments').select('rent_charge_id').eq('id', id).eq('workspace_id', workspaceId).single<{rent_charge_id: string}>();
+    const {error} = await supabase.from('rent_payments').delete().eq('id', id).eq('workspace_id', workspaceId);
+
+    if (error) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=payment_delete_failed`);
+    }
+
+    if (payment?.rent_charge_id) {
+      await updateRentChargeStatus(supabase, workspaceId, payment.rent_charge_id);
+    }
+  } else if (type === 'expense') {
+    const {error} = await supabase.from('expenses').delete().eq('id', id).eq('workspace_id', workspaceId);
+
+    if (error) {
+      redirect(`${localizedPath(locale, '/transactions')}?error=expense_delete_failed`);
+    }
   }
 
   revalidatePath(localizedPath(locale, '/transactions'));
