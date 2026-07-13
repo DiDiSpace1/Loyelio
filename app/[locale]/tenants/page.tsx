@@ -260,7 +260,7 @@ function SummaryCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase">{label}</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-[#171d1c]">{value}</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-[#171d1c]">{value}</p>
           <p className="mt-1 text-sm text-[var(--muted)]">{note}</p>
         </div>
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${iconToneClass}`}>
