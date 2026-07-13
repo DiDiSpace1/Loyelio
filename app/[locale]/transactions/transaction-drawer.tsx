@@ -43,6 +43,33 @@ function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+function isoDateToDisplay(value: string) {
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : '';
+}
+
+function displayDateToIso(value: string) {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, rawDay, rawMonth, year] = match;
+  const day = rawDay.padStart(2, '0');
+  const month = rawMonth.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function monthToDisplayDate(value: string) {
+  const [year, month] = value.split('-');
+  return year && month ? `01/${month}/${year}` : '';
+}
+
+function displayDateToMonth(value: string) {
+  const isoDate = displayDateToIso(value);
+  return isoDate ? isoDate.slice(0, 7) : null;
+}
+
 function periodStart(month: string) {
   return `${month}-01`;
 }
@@ -79,10 +106,31 @@ export function TransactionDrawer({
   const initialLeaseId = initialTenantId ? leases.find((lease) => lease.tenants?.id === initialTenantId)?.id : undefined;
   const [open, setOpen] = useState(initialOpen);
   const [mode, setMode] = useState<'expense' | 'revenue'>('revenue');
-  const [periodMonth, setPeriodMonth] = useState(currentMonth());
+  const initialPeriodMonth = currentMonth();
+  const initialReceivedAt = today();
+  const [periodMonth, setPeriodMonth] = useState(initialPeriodMonth);
+  const [periodDisplay, setPeriodDisplay] = useState(monthToDisplayDate(initialPeriodMonth));
+  const [receivedAt, setReceivedAt] = useState(initialReceivedAt);
+  const [receivedAtDisplay, setReceivedAtDisplay] = useState(isoDateToDisplay(initialReceivedAt));
   const [selectedLeaseId, setSelectedLeaseId] = useState(initialLeaseId ?? leases[0]?.id ?? '');
   const selectedLease = useMemo(() => leases.find((lease) => lease.id === selectedLeaseId), [leases, selectedLeaseId]);
   const amountDue = remainingForPeriod(selectedLease, periodMonth);
+
+  function updatePeriodDisplay(value: string) {
+    setPeriodDisplay(value);
+    const nextMonth = displayDateToMonth(value);
+    if (nextMonth) {
+      setPeriodMonth(nextMonth);
+    }
+  }
+
+  function updateReceivedAtDisplay(value: string) {
+    setReceivedAtDisplay(value);
+    const nextDate = displayDateToIso(value);
+    if (nextDate) {
+      setReceivedAt(nextDate);
+    }
+  }
 
   return (
     <>
@@ -134,8 +182,8 @@ export function TransactionDrawer({
                     Type de revenu
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[#171d1c]" name="revenue_type" defaultValue="rent">
                       <option value="rent">Loyer</option>
-                      <option value="charges">Charges</option>
-                      <option value="other">Autre revenu</option>
+                      <option value="deposit">Depot de garantie</option>
+                      <option value="other">Autre</option>
                     </select>
                   </label>
 
@@ -165,7 +213,8 @@ export function TransactionDrawer({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
                       Periode concernee
-                      <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="period_month" onChange={(event) => setPeriodMonth(event.target.value)} type="month" value={periodMonth} required />
+                      <input name="period_month" type="hidden" value={periodMonth} />
+                      <input className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm" inputMode="numeric" onChange={(event) => updatePeriodDisplay(event.target.value)} placeholder="01/07/2026" required value={periodDisplay} />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
                       Montant a payer
@@ -191,7 +240,8 @@ export function TransactionDrawer({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
                       Date de reception
-                      <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" defaultValue={today()} name="received_at" type="date" required />
+                      <input name="received_at" type="hidden" value={receivedAt} />
+                      <input className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm" inputMode="numeric" onChange={(event) => updateReceivedAtDisplay(event.target.value)} placeholder="13/07/2026" required value={receivedAtDisplay} />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
                       Mode de paiement
