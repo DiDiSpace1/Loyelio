@@ -18,6 +18,13 @@ export type LeaseOption = {
   charges_amount: number | null;
   id: string;
   monthly_rent: number | null;
+  rent_charges: {
+    period_month: string;
+    total_due: number | null;
+    rent_payments: {
+      amount: number | null;
+    }[];
+  }[];
   properties: {
     id: string;
     name: string;
@@ -34,6 +41,20 @@ function today() {
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
+}
+
+function periodStart(month: string) {
+  return `${month}-01`;
+}
+
+function paidForPeriod(lease: LeaseOption | undefined, month: string) {
+  const charge = lease?.rent_charges.find((row) => row.period_month === periodStart(month));
+  return charge?.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
+}
+
+function remainingForPeriod(lease: LeaseOption | undefined, month: string) {
+  const expected = Number(lease?.monthly_rent ?? 0) + Number(lease?.charges_amount ?? 0);
+  return Math.max(0, expected - paidForPeriod(lease, month));
 }
 
 function Icon({children, className = ''}: {children: string; className?: string}) {
@@ -53,9 +74,10 @@ export function TransactionDrawer({
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'expense' | 'revenue'>('revenue');
+  const [periodMonth, setPeriodMonth] = useState(currentMonth());
   const [selectedLeaseId, setSelectedLeaseId] = useState(leases[0]?.id ?? '');
   const selectedLease = useMemo(() => leases.find((lease) => lease.id === selectedLeaseId), [leases, selectedLeaseId]);
-  const leaseAmount = Number(selectedLease?.monthly_rent ?? 0) + Number(selectedLease?.charges_amount ?? 0);
+  const amountDue = remainingForPeriod(selectedLease, periodMonth);
 
   return (
     <>
@@ -138,14 +160,15 @@ export function TransactionDrawer({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
                       Période concernée
-                      <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" defaultValue={currentMonth()} name="period_month" type="month" required />
+                      <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="period_month" onChange={(event) => setPeriodMonth(event.target.value)} type="month" value={periodMonth} required />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Montant
+                      Montant à payer
                       <div className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white">
-                        <input className="min-w-0 flex-1 border-0 bg-transparent px-3 text-sm outline-none" defaultValue={leaseAmount ? leaseAmount.toFixed(2).replace('.', ',') : ''} name="amount" placeholder="560,00" required />
+                        <input className="min-w-0 flex-1 border-0 bg-transparent px-3 text-sm outline-none" key={`${selectedLeaseId}-${periodMonth}-${amountDue}`} defaultValue={amountDue ? amountDue.toFixed(2).replace('.', ',') : ''} name="amount" placeholder="560,00" required />
                         <span className="px-3 text-sm font-semibold text-[#3d4947]">€</span>
                       </div>
+                      {selectedLease ? <span className="text-xs text-[var(--muted)]">Déjà payé: {paidForPeriod(selectedLease, periodMonth).toFixed(2).replace('.', ',')} €</span> : null}
                     </label>
                   </div>
 
@@ -174,8 +197,8 @@ export function TransactionDrawer({
                         Payé
                       </label>
                       <label className="focus-within:ring-2 focus-within:ring-[var(--accent)] flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-[var(--line)] bg-white text-sm text-[#3d4947]">
-                        <input className="sr-only" name="status" type="radio" value="pending" />
-                        En attente
+                        <input className="sr-only" name="status" type="radio" value="partial" />
+                        Partiel
                       </label>
                     </div>
                   </fieldset>

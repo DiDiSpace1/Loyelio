@@ -44,21 +44,37 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const periodMonth = monthStart(value(formData, 'period_month'));
   const amount = moneyValue(formData, 'amount');
   const receivedAt = value(formData, 'received_at') || new Date().toISOString().slice(0, 10);
-  const status = value(formData, 'status') === 'paid' ? 'paid' : 'unpaid';
+  const requestedStatus = value(formData, 'status') === 'partial' ? 'partial' : 'paid';
 
   if (!leaseId || !periodMonth || amount <= 0) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_missing`);
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
-  const {data: lease} = await supabase.from('leases').select('id, charges_amount').eq('id', leaseId).eq('workspace_id', workspaceId).maybeSingle<{id: string; charges_amount: number | null}>();
+  const {data: lease} = await supabase
+    .from('leases')
+    .select('id, monthly_rent, charges_amount')
+    .eq('id', leaseId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle<{id: string; monthly_rent: number | null; charges_amount: number | null}>();
 
   if (!lease) {
     redirect(`${localizedPath(locale, '/transactions')}?error=lease_missing`);
   }
 
+  const rentAmount = Number(lease.monthly_rent ?? 0);
   const chargesAmount = Number(lease.charges_amount ?? 0);
-  const rentAmount = Math.max(0, amount - chargesAmount);
+  const totalDue = rentAmount + chargesAmount;
+  const {data: existingCharge} = await supabase
+    .from('rent_charges')
+    .select('id, rent_payments(amount)')
+    .eq('workspace_id', workspaceId)
+    .eq('lease_id', leaseId)
+    .eq('period_month', periodMonth)
+    .maybeSingle<{id: string; rent_payments: {amount: number | null}[]}>();
+  const alreadyPaid = existingCharge?.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
+  const nextPaid = alreadyPaid + amount;
+  const status = requestedStatus === 'partial' || nextPaid < totalDue ? 'partial' : 'paid';
   const {data: charge, error: chargeError} = await supabase
     .from('rent_charges')
     .upsert(
@@ -70,7 +86,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
         period_month: periodMonth,
         rent_amount: rentAmount,
         status,
-        total_due: amount,
+        total_due: totalDue,
         workspace_id: workspaceId
       },
       {onConflict: 'lease_id,period_month'}
@@ -82,19 +98,17 @@ export async function createRevenueTransactionAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_failed`);
   }
 
-  if (status === 'paid') {
-    const {error: paymentError} = await supabase.from('rent_payments').insert({
-      amount,
-      notes: value(formData, 'notes') || null,
-      paid_at: receivedAt,
-      payment_method: paymentMethod(value(formData, 'payment_method')),
-      rent_charge_id: charge.id,
-      workspace_id: workspaceId
-    });
+  const {error: paymentError} = await supabase.from('rent_payments').insert({
+    amount,
+    notes: value(formData, 'notes') || null,
+    paid_at: receivedAt,
+    payment_method: paymentMethod(value(formData, 'payment_method')),
+    rent_charge_id: charge.id,
+    workspace_id: workspaceId
+  });
 
-    if (paymentError) {
-      redirect(`${localizedPath(locale, '/transactions')}?error=payment_failed`);
-    }
+  if (paymentError) {
+    redirect(`${localizedPath(locale, '/transactions')}?error=payment_failed`);
   }
 
   revalidatePath(localizedPath(locale, '/transactions'));

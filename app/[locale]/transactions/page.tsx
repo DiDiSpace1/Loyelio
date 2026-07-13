@@ -20,12 +20,33 @@ type RevenueRow = {
   period_month: string;
   status: string;
   total_due: number;
+  rent_payments: {
+    amount: number;
+  }[];
   leases: {
     properties: {
       name: string;
     } | null;
     tenants: {
       full_name: string;
+    } | null;
+  } | null;
+};
+
+type PaymentRow = {
+  amount: number;
+  id: string;
+  paid_at: string;
+  rent_charges: {
+    period_month: string;
+    status: string;
+    leases: {
+      properties: {
+        name: string;
+      } | null;
+      tenants: {
+        full_name: string;
+      } | null;
     } | null;
   } | null;
 };
@@ -110,11 +131,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function monthLabel(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    month: 'long',
-    year: 'numeric'
-  }).format(new Date(`${value.slice(0, 7)}-01T00:00:00.000Z`));
+function paidAmount(row: Pick<RevenueRow, 'rent_payments'>) {
+  return row.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 }
 
 function statusLabel(status: string) {
@@ -139,31 +157,39 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const range = monthRange();
   const previousRange = previousMonthRange();
-  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: previousRevenues}, {data: currentExpenses}, {data: recentRevenues}, {data: recentExpenses}] = await Promise.all([
+  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}, {data: recentPayments}, {data: recentExpenses}] = await Promise.all([
     supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
       .from('leases')
-      .select('id, monthly_rent, charges_amount, properties(id, name), tenants(id, full_name)')
+      .select('id, monthly_rent, charges_amount, properties(id, name), tenants(id, full_name), rent_charges(period_month, total_due, rent_payments(amount))')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active')
       .order('created_at', {ascending: false})
       .returns<LeaseOption[]>(),
     supabase
       .from('rent_charges')
-      .select('id, period_month, status, total_due, leases(properties(name), tenants(full_name))')
+      .select('id, period_month, status, total_due, rent_payments(amount), leases(properties(name), tenants(full_name))')
       .eq('workspace_id', workspaceId)
       .gte('period_month', range.start)
       .lt('period_month', range.end)
       .order('period_month', {ascending: false})
       .returns<RevenueRow[]>(),
     supabase
-      .from('rent_charges')
-      .select('id, total_due')
+      .from('rent_payments')
+      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
-      .gte('period_month', previousRange.start)
-      .lt('period_month', previousRange.end)
-      .returns<Pick<RevenueRow, 'id' | 'total_due'>[]>(),
+      .gte('paid_at', range.start)
+      .lt('paid_at', range.end)
+      .order('paid_at', {ascending: false})
+      .returns<PaymentRow[]>(),
+    supabase
+      .from('rent_payments')
+      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
+      .eq('workspace_id', workspaceId)
+      .gte('paid_at', previousRange.start)
+      .lt('paid_at', previousRange.end)
+      .returns<PaymentRow[]>(),
     supabase
       .from('expenses')
       .select('id, amount, description, expense_date, payment_status, vendor, properties(name), tax_categories(label)')
@@ -173,12 +199,12 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .order('expense_date', {ascending: false})
       .returns<ExpenseRow[]>(),
     supabase
-      .from('rent_charges')
-      .select('id, period_month, status, total_due, leases(properties(name), tenants(full_name))')
+      .from('rent_payments')
+      .select('id, amount, paid_at, rent_charges(period_month, status, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
-      .order('period_month', {ascending: false})
+      .order('paid_at', {ascending: false})
       .limit(8)
-      .returns<RevenueRow[]>(),
+      .returns<PaymentRow[]>(),
     supabase
       .from('expenses')
       .select('id, amount, description, expense_date, payment_status, vendor, properties(name), tax_categories(label)')
@@ -188,20 +214,23 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<ExpenseRow[]>()
   ]);
   const revenueRows = currentRevenues ?? [];
+  const paymentRows = currentPayments ?? [];
   const expenseRows = currentExpenses ?? [];
-  const monthlyRevenue = revenueRows.filter((row) => row.status === 'paid').reduce((sum, row) => sum + Number(row.total_due ?? 0), 0);
-  const previousRevenue = (previousRevenues ?? []).reduce((sum, row) => sum + Number(row.total_due ?? 0), 0);
+  const monthlyRevenue = paymentRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const previousRevenue = (previousPayments ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const monthlyExpenses = expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const pendingRevenue = revenueRows.filter((row) => row.status !== 'paid' && row.status !== 'waived').reduce((sum, row) => sum + Number(row.total_due ?? 0), 0);
+  const pendingRevenue = revenueRows
+    .filter((row) => row.status !== 'paid' && row.status !== 'waived')
+    .reduce((sum, row) => sum + Math.max(0, Number(row.total_due ?? 0) - paidAmount(row)), 0);
   const revenueTrend = previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : null;
   const combinedRows: TransactionRow[] = [
-    ...(recentRevenues ?? []).map((row) => ({
-      amount: Number(row.total_due ?? 0),
+    ...(recentPayments ?? []).map((row) => ({
+      amount: Number(row.amount ?? 0),
       category: 'Loyer',
-      date: row.period_month,
+      date: row.paid_at,
       id: `revenue-${row.id}`,
-      meta: [row.leases?.properties?.name, row.leases?.tenants?.full_name].filter(Boolean).join(' · ') || '-',
-      status: row.status,
+      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' · ') || '-',
+      status: row.rent_charges?.status ?? 'paid',
       type: 'revenue' as const
     })),
     ...(recentExpenses ?? []).map((row) => ({
@@ -272,7 +301,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
                         : {className: 'bg-[#ecfdf5] text-[var(--accent)]', label: 'Payé'};
                   return (
                     <tr className="hover:bg-[#f8fbfa]" key={row.id}>
-                      <td className="px-6 py-4 tabular-nums">{row.type === 'revenue' ? monthLabel(row.date) : formatDate(row.date)}</td>
+                      <td className="px-6 py-4 tabular-nums">{formatDate(row.date)}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${row.type === 'revenue' ? 'bg-[#ecfdf5] text-[var(--accent)]' : 'bg-[#ffdbce] text-[#924628]'}`}>
                           <Icon className="text-[15px]">{row.type === 'revenue' ? 'payments' : 'receipt_long'}</Icon>
