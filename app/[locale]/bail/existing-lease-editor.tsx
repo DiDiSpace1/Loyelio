@@ -57,7 +57,7 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
                 <input name="locale" type="hidden" value={locale} />
                 <input name="property_id" type="hidden" value={propertyId} />
                 <input name="lease_id" type="hidden" value={lease.id} />
-                <button className="focus-ring w-full rounded-md border border-[#f3b4b4] px-4 py-2 text-sm font-semibold text-[#ba1a1a]" type="submit">
+                <button className="focus-ring w-full rounded-md border border-[#f3b4b4] px-4 py-2 text-sm font-semibold text-[#ba1a1a] cursor-pointer" type="submit">
                   Supprimer
                 </button>
               </form>
@@ -92,8 +92,8 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
                 <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] px-3 text-sm font-normal" defaultValue={editingLease.end_date ?? ''} name="end_date" />
               </label>
               <MoneyField defaultValue={moneyInput(editingLease.monthly_rent)} label="Montant loyer" name="monthly_rent" required />
-              <MoneyField defaultValue={moneyInput(editingLease.charges_amount)} label="Charge" name="charges_amount" />
-              <MoneyField defaultValue={moneyInput(editingLease.deposit_amount)} label="Caution" name="deposit_amount" />
+              <MoneyField defaultValue={moneyInput(editingLease.charges_amount)} label="Charge (Optionnel)" name="charges_amount" />
+              <MoneyField defaultValue={moneyInput(editingLease.deposit_amount)} label="Caution (Optionnel)" name="deposit_amount" />
             </div>
 
             <div className="flex flex-col-reverse gap-3 border-t border-[var(--line-soft)] px-5 py-4 sm:flex-row sm:justify-end">

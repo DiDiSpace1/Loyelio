@@ -115,7 +115,7 @@ export function TransactionActionsMenu({
             <input name="type" type="hidden" value={row.type} />
             <input name="id" type="hidden" value={row.id} />
             <ConfirmSubmitButton
-              className="w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0]"
+              className="w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0] cursor-pointer"
               confirmLabel="Supprimer"
               description="Cette transaction sera supprimee de l'historique et des calculs mensuels."
               title="Supprimer cette transaction ?"

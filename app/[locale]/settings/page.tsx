@@ -412,7 +412,7 @@ function DataTab({locale, storageLimit, storageUsage}: {locale: string; storageL
                 <input className="focus-ring min-h-10 rounded-lg border border-[var(--line)] px-3" name="confirmation" placeholder="SUPPRIMER" />
               </label>
             </div>
-            <button className="focus-ring min-h-11 rounded-lg bg-[#ba1a1a] px-6 text-sm font-semibold text-white" type="submit">
+            <button className="focus-ring min-h-11 rounded-lg bg-[#ba1a1a] px-6 text-sm font-semibold text-white cursor-pointer" type="submit">
               Supprimer definitivement
             </button>
           </div>

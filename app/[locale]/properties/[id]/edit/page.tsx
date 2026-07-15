@@ -171,7 +171,7 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
                     <p className="mt-1 text-xs text-[var(--muted)]">{photo.size_bytes ? `${Math.round(photo.size_bytes / 1024)} KB` : 'Photo'}</p>
                   </div>
                   <button
-                    className="focus-ring rounded-md border border-[#f3b4b4] px-3 py-2 text-sm font-semibold text-[#ba1a1a]"
+                    className="focus-ring rounded-md border border-[#f3b4b4] px-3 py-2 text-sm font-semibold text-[#ba1a1a] cursor-pointer"
                     form={`delete-photo-${photo.id}`}
                     type="submit"
                   >
