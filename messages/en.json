@@ -465,7 +465,7 @@
     "requiredActions": "{count, plural, one {# required action} other {# required actions}}",
     "noMissingExpenses": "No expense without receipt for now.",
     "info": "Exported data is intended to help with accounting preparation. Tax treatment must still be validated by your accountant.",
-    "footer": "? 2026 Loyelio - Simplified property management",
+    "footer": "© 2026 Loyelio - Simplified property management",
     "legal": "Legal notice",
     "statusPaid": "Paid",
     "statusPending": "Pending",

@@ -465,7 +465,7 @@
     "requiredActions": "{count, plural, one {# action requise} other {# actions requises}}",
     "noMissingExpenses": "Aucune depense sans justificatif pour le moment.",
     "info": "Les donnees exportees sont destinees a faciliter la preparation comptable. Leur traitement fiscal reste a valider par votre comptable.",
-    "footer": "? 2026 Loyelio - Gestion immobiliere simplifiee",
+    "footer": "© 2026 Loyelio - Gestion immobiliere simplifiee",
     "legal": "Mentions legales",
     "statusPaid": "Paye",
     "statusPending": "En attente",
