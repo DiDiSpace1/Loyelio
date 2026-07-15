@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 
 export function isoDateToDisplay(value: string) {
   const [year, month, day] = value.split('-');
@@ -29,6 +29,20 @@ export function displayDateToMonth(value: string) {
   return isoDate ? isoDate.slice(0, 7) : null;
 }
 
+function openNativePicker(input: HTMLInputElement | null) {
+  if (!input) {
+    return;
+  }
+
+  input.focus();
+  if (typeof input.showPicker === 'function') {
+    input.showPicker();
+    return;
+  }
+
+  input.click();
+}
+
 export function DateDisplayInput({
   className = '',
   defaultValue = '',
@@ -44,17 +58,29 @@ export function DateDisplayInput({
   placeholder?: string;
   required?: boolean;
 }) {
+  const pickerRef = useRef<HTMLInputElement>(null);
   const [isoValue, setIsoValue] = useState(defaultValue);
   const [displayValue, setDisplayValue] = useState(isoDateToDisplay(defaultValue));
 
   return (
     <>
       <input name={name} type="hidden" value={isoValue} />
-      <span className={`${className} relative inline-flex items-center overflow-hidden`}>
+      <span
+        className={`${className} relative inline-flex cursor-pointer items-center overflow-hidden text-left`}
+        onClick={() => openNativePicker(pickerRef.current)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openNativePicker(pickerRef.current);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         <span className={displayValue ? 'text-current' : 'text-[#8a9693]'}>{displayValue || placeholder}</span>
         <input
           aria-label={placeholder}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           max="9999-12-31"
           min="1900-01-01"
           onChange={(event) => {
@@ -63,6 +89,7 @@ export function DateDisplayInput({
             setDisplayValue(isoDateToDisplay(nextIso));
             onIsoChange?.(nextIso);
           }}
+          ref={pickerRef}
           required={required}
           type="date"
           value={isoValue}
@@ -87,17 +114,29 @@ export function MonthDisplayInput({
   required?: boolean;
   value: string;
 }) {
+  const pickerRef = useRef<HTMLInputElement>(null);
   const [monthValue, setMonthValue] = useState(value);
   const [displayValue, setDisplayValue] = useState(monthToDisplayDate(value));
 
   return (
     <>
       <input name={name} type="hidden" value={monthValue} />
-      <span className={`${className} relative inline-flex items-center overflow-hidden`}>
+      <span
+        className={`${className} relative inline-flex cursor-pointer items-center overflow-hidden text-left`}
+        onClick={() => openNativePicker(pickerRef.current)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openNativePicker(pickerRef.current);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         <span className={displayValue ? 'text-current' : 'text-[#8a9693]'}>{displayValue || placeholder}</span>
         <input
           aria-label={placeholder}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           max="9999-12"
           min="1900-01"
           onChange={(event) => {
@@ -106,6 +145,7 @@ export function MonthDisplayInput({
             setDisplayValue(monthToDisplayDate(nextMonth));
             onMonthChange?.(nextMonth);
           }}
+          ref={pickerRef}
           required={required}
           type="month"
           value={monthValue}
