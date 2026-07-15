@@ -305,10 +305,10 @@ async function CreateTenantView({locale}: {locale: string}) {
         </label>
       </SectionCard>
       <div className="flex justify-end gap-3">
-        <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold" href="/tenants">
+        <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold cursor-pointer" href="/tenants">
           {common('cancel')}
         </Link>
-        <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
+        <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white cursor-pointer" style={{color: '#ffffff'}} type="submit">
           {common('add')}
         </button>
       </div>

@@ -103,10 +103,10 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
               <h2 className="mb-0 text-base font-semibold">Ajouter des locataires</h2>
               <OccupancyManager initialStatus={activeLeases.length ? 'rented' : selectedProperty.occupancy_status} initialTenantId={selectedTenantId} tenants={tenants ?? []} />
               <div className="flex justify-end gap-3">
-                <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold" href={source === 'property' ? `/properties/${selectedProperty.id}` : '/bail'}>
+                <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold cursor-pointer" href={source === 'property' ? `/properties/${selectedProperty.id}` : '/bail'}>
                   Annuler
                 </Link>
-                <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
+                <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white cursor-pointer" style={{color: '#ffffff'}} type="submit">
                   Enregistrer
                 </button>
               </div>

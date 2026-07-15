@@ -196,10 +196,10 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
         </SectionCard>
 
         <div className="flex justify-end gap-3">
-          <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold" href={`/properties/${property.id}`}>
+          <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold cursor-pointer" href={`/properties/${property.id}`}>
             Annuler
           </Link>
-          <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" type="submit">
+          <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white cursor-pointer" type="submit">
             Enregistrer
           </button>
         </div>

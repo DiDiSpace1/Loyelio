@@ -34,13 +34,16 @@ function openNativePicker(input: HTMLInputElement | null) {
     return;
   }
 
-  input.focus();
-  if (typeof input.showPicker === 'function') {
-    input.showPicker();
-    return;
+  try {
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+      return;
+    }
+  } catch {
+    input.focus();
   }
 
-  input.click();
+  input.focus();
 }
 
 export function DateDisplayInput({
@@ -67,7 +70,6 @@ export function DateDisplayInput({
       <input name={name} type="hidden" value={isoValue} />
       <span
         className={`${className} relative inline-flex cursor-pointer items-center overflow-hidden text-left`}
-        onClick={() => openNativePicker(pickerRef.current)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -80,7 +82,7 @@ export function DateDisplayInput({
         <span className={displayValue ? 'text-current' : 'text-[#8a9693]'}>{displayValue || placeholder}</span>
         <input
           aria-label={placeholder}
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           max="9999-12-31"
           min="1900-01-01"
           onChange={(event) => {
@@ -123,7 +125,6 @@ export function MonthDisplayInput({
       <input name={name} type="hidden" value={monthValue} />
       <span
         className={`${className} relative inline-flex cursor-pointer items-center overflow-hidden text-left`}
-        onClick={() => openNativePicker(pickerRef.current)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -136,7 +137,7 @@ export function MonthDisplayInput({
         <span className={displayValue ? 'text-current' : 'text-[#8a9693]'}>{displayValue || placeholder}</span>
         <input
           aria-label={placeholder}
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           max="9999-12"
           min="1900-01"
           onChange={(event) => {
