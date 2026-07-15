@@ -89,19 +89,19 @@
       },
       "solo": {
         "name": "Solo",
-        "price": "49 EUR/an",
+        "price": "39 EUR/an",
         "units": "1-5 biens",
         "description": "Pour les petits bailleurs, LMNP et propriétaires en colocation."
       },
       "plus": {
         "name": "Plus",
-        "price": "89 EUR/an",
+        "price": "69 EUR/an",
         "units": "6-10 biens",
         "description": "Pour les bailleurs avec plusieurs chambres ou plusieurs biens."
       },
       "portfolio": {
         "name": "Portfolio",
-        "price": "149 EUR/an",
+        "price": "99 EUR/an",
         "units": "11-20 biens",
         "description": "Pour les bailleurs semi-professionnels et petits investisseurs."
       },

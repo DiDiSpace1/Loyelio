@@ -89,19 +89,19 @@
       },
       "solo": {
         "name": "Solo",
-        "price": "EUR 49/year",
+        "price": "EUR 39/year",
         "units": "1-5 properties",
         "description": "For small landlords, LMNP owners and shared-flat landlords."
       },
       "plus": {
         "name": "Plus",
-        "price": "EUR 89/year",
+        "price": "EUR 69/year",
         "units": "6-10 properties",
         "description": "For owners with multiple rooms or several small properties."
       },
       "portfolio": {
         "name": "Portfolio",
-        "price": "EUR 149/year",
+        "price": "EUR 99/year",
         "units": "11-20 properties",
         "description": "For semi-professional landlords and small investors."
       },

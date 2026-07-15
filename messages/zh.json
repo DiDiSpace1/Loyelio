@@ -89,19 +89,19 @@
       },
       "solo": {
         "name": "个人版",
-        "price": "49 欧元/年",
+        "price": "39 欧元/年",
         "units": "1-5 处房产",
         "description": "适合小型房东、LMNP 及合租房东。"
       },
       "plus": {
         "name": "进阶版",
-        "price": "89 欧元/年",
+        "price": "69 欧元/年",
         "units": "6-10 处房产",
         "description": "适合拥有多个房间或多处房产的房东。"
       },
       "portfolio": {
         "name": "资产组合版",
-        "price": "149 欧元/年",
+        "price": "99 欧元/年",
         "units": "11-20 处房产",
         "description": "适合半专业房东及小型投资者。"
       },
