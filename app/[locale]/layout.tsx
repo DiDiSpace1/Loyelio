@@ -5,6 +5,7 @@ import {notFound} from 'next/navigation';
 
 import '../globals.css';
 import {CookieNotice} from '@/components/app/cookie-notice';
+import {MessageProvider} from '@/components/message/MessageProvider';
 import {locales, type Locale} from '@/lib/i18n/routing';
 
 export const metadata: Metadata = {
@@ -50,8 +51,10 @@ export default async function LocaleLayout({children, params}: LocaleLayoutProps
       </head>
       <body>
         <NextIntlClientProvider messages={messages}>
-          {children}
-          <CookieNotice />
+          <MessageProvider>
+            {children}
+            <CookieNotice />
+          </MessageProvider>
         </NextIntlClientProvider>
       </body>
     </html>

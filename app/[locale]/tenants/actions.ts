@@ -68,7 +68,7 @@ export async function createTenantAction(formData: FormData) {
   }
 
   revalidatePath(localizedPath(locale, '/tenants'));
-  redirect(localizedPath(locale, '/tenants'));
+  redirect(`${localizedPath(locale, '/tenants')}?success=tenant_created`);
 }
 
 export async function updateTenantAction(formData: FormData) {

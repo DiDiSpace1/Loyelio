@@ -162,7 +162,7 @@ export async function createPropertyAction(formData: FormData) {
   }
 
   revalidatePath(localizedPath(locale, '/properties'));
-  redirect(localizedPath(locale, `/properties/${property.id}`));
+  redirect(`${localizedPath(locale, `/properties/${property.id}`)}?success=property_created`);
 }
 
 export async function createPropertyDraftAction(formData: FormData) {
@@ -595,7 +595,7 @@ export async function assignPropertyTenantsAction(formData: FormData) {
   revalidatePath(localizedPath(locale, `/properties/${propertyId}/edit`));
   revalidatePath(localizedPath(locale, `/properties/${propertyId}/tenants`));
   revalidatePath(localizedPath(locale, '/tenants'));
-  redirect(localizedPath(locale, returnTo === 'bail' ? `/bail?property_id=${propertyId}` : `/properties/${propertyId}/tenants`));
+  redirect(localizedPath(locale, returnTo === 'bail' ? `/bail?property_id=${propertyId}&success=lease_created` : `/properties/${propertyId}/tenants?success=lease_created`));
 }
 
 export async function deletePropertyAction(formData: FormData) {
@@ -704,7 +704,7 @@ export async function createLeaseAction(formData: FormData) {
   }
 
   revalidatePath(localizedPath(locale, `/properties/${propertyId}`));
-  redirect(localizedPath(locale, `/properties/${propertyId}`));
+  redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?success=lease_created`);
 }
 
 export async function addRentPaymentAction(formData: FormData) {

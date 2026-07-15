@@ -120,7 +120,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(localizedPath(locale, '/transactions'));
+  redirect(`${localizedPath(locale, '/transactions')}?success=transaction_created`);
 }
 
 export async function createExpenseTransactionAction(formData: FormData) {
@@ -196,7 +196,7 @@ export async function createExpenseTransactionAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(localizedPath(locale, '/transactions'));
+  redirect(`${localizedPath(locale, '/transactions')}?success=transaction_created`);
 }
 
 async function updateRentChargeStatus(supabase: Awaited<ReturnType<typeof getCurrentUserWorkspace>>['supabase'], workspaceId: string, rentChargeId: string) {

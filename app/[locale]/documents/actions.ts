@@ -88,7 +88,7 @@ export async function uploadDocumentAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(localizedPath(locale, '/documents'));
+  redirect(`${localizedPath(locale, '/documents')}?success=document_uploaded`);
 }
 
 export async function createExpenseAction(formData: FormData) {

@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import {useMemo, useState, useTransition} from 'react';
 
+import {useMessage} from '@/components/message/MessageProvider';
+
 export type QuittancePropertyOption = {
   address_line1: string | null;
   charges_estimate: number | null;
@@ -197,6 +199,7 @@ export function QuittanceForm({
   recentReceipts: RecentReceipt[];
   tenants: QuittanceTenantOption[];
 }) {
+  const message = useMessage();
   const initialProperty = properties[0] ?? null;
   const initialPaidAt = today();
   const initialPeriodMonth = currentMonth();
@@ -214,7 +217,6 @@ export function QuittanceForm({
   const [periodDisplay, setPeriodDisplay] = useState(monthToDisplayDate(initialPeriodMonth));
   const [showPreview, setShowPreview] = useState(false);
   const [previewLarge, setPreviewLarge] = useState(false);
-  const [message, setMessage] = useState('');
   const [isPending, startTransition] = useTransition();
   const selectedProperty = useMemo(() => properties.find((property) => property.id === state.propertyId) ?? null, [properties, state.propertyId]);
   const selectedTenant = useMemo(() => tenants.find((tenant) => tenant.id === state.tenantId) ?? null, [tenants, state.tenantId]);
@@ -280,8 +282,6 @@ export function QuittanceForm({
   }
 
   function generatePdf() {
-    setMessage('');
-
     startTransition(async () => {
       const response = await fetch('/api/documents/quittance', {
         body: JSON.stringify({
@@ -301,11 +301,11 @@ export function QuittanceForm({
       const result = (await response.json()) as {downloadUrl?: string | null; error?: string};
 
       if (!response.ok) {
-        setMessage(result.error ?? 'Impossible de generer la quittance.');
+        message.error(result.error ?? 'Impossible de generer la quittance.');
         return;
       }
 
-      setMessage('Quittance generee et archivee dans vos documents.');
+      message.success('Quittance generee et archivee dans vos documents.');
 
       if (result.downloadUrl) {
         window.location.href = result.downloadUrl;
@@ -335,8 +335,6 @@ export function QuittanceForm({
           </button>
         </div>
       </div>
-
-      {message ? <div className="mb-5 rounded-lg border border-[var(--line-soft)] bg-white p-4 text-sm text-[#33413f]">{message}</div> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <section className="min-h-[520px] rounded-xl border border-[var(--line-soft)] bg-white p-6 shadow-sm">
