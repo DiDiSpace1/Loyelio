@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type {ReactNode} from 'react';
-import {getLocale} from 'next-intl/server';
+import {getLocale, getTranslations} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
 import {localizedPath} from '@/lib/navigation';
@@ -173,6 +173,7 @@ function ReceiptIndicator({expense}: {expense: ExpenseRow & {viewUrl?: string | 
 
 export default async function TaxPage({searchParams}: TaxPageProps) {
   const locale = await getLocale();
+  const t = await getTranslations('tax');
   const params = await searchParams;
   const year = parseYear(params.year);
   const propertyId = params.property_id ?? '';
@@ -245,32 +246,32 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
       <div className="mx-auto max-w-[1280px]">
         <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">Préparation comptable {year}</h1>
-            <p className="mt-2 text-sm leading-6 text-[#3d4947]">Préparez et exportez vos revenus, dépenses et justificatifs pour votre comptable.</p>
-            <p className="mt-1 text-xs font-medium text-[#3d4947]">Période du 01/01/{year} au 31/12/{year}</p>
+            <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title', {year})}</h1>
+            <p className="mt-2 text-sm leading-6 text-[#3d4947]">{t('subtitle')}</p>
+            <p className="mt-1 text-xs font-medium text-[#3d4947]">{t('period', {year})}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link className="focus-ring inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--line)] bg-white px-4 text-sm font-medium text-[#3d4947] hover:bg-[#f0f5f2]" href={`/api/tax/export?${exportQuery.toString()}`}>
               <Icon>download</Icon>
-              Exporter CSV
+              {t('exportCsv')}
             </Link>
             <Link className="focus-ring inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white hover:bg-[#005049]" href={`/api/tax/export.zip?${exportQuery.toString()}`} style={{color: '#ffffff'}}>
               <Icon>folder_zip</Icon>
-              Exporter l&apos;archive ZIP
+              {t('exportZip')}
             </Link>
           </div>
         </div>
 
         {params.error ? (
           <div className="mb-6 rounded-md border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
-            Impossible de finaliser cette action. Verifiez le fichier, votre forfait ou reessayez.
+            {t('error')}
           </div>
         ) : null}
 
         <form className="mb-8 rounded-lg border border-[var(--line-soft)] bg-white p-4 shadow-sm">
           <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
             <label className="grid gap-1 text-xs font-semibold text-[#3d4947]">
-              Année
+              {t('year')}
               <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm font-normal" defaultValue={year} name="year">
                 {[2026, 2025, 2024].map((option) => (
                   <option key={option} value={option}>
@@ -280,9 +281,9 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
               </select>
             </label>
             <label className="grid gap-1 text-xs font-semibold text-[#3d4947]">
-              Bien
+              {t('property')}
               <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm font-normal" defaultValue={propertyId} name="property_id">
-                <option value="">Tous les biens</option>
+                <option value="">{t('allProperties')}</option>
                 {(properties ?? []).map((property) => (
                   <option key={property.id} value={property.id}>
                     {property.name}
@@ -292,50 +293,50 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
             </label>
             <input name="tab" type="hidden" value={selectedTab} />
             <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-6 text-sm font-semibold text-white hover:bg-[#005049]" style={{color: '#ffffff'}} type="submit">
-              Filtrer
+              {t('filter')}
             </button>
           </div>
         </form>
 
         <section className="mb-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Revenus encaissés" note="Loyers et charges reçus" value={formatMoney(receivedRevenue)} />
-          <StatCard accent="expense" label="Dépenses enregistrées" note="Toutes catégories confondues" value={formatMoney(recordedExpenses)} />
-          <StatCard label="Justificatifs disponibles" note="Factures et reçus liés" tone="primary" value={String(availableDocumentsCount ?? 0)} />
-          <StatCard accent="missing" label="Justificatifs manquants" note="Dépenses sans document lié" tone="danger" value={String(missingReceipts.length)} />
+          <StatCard label={t('revenueReceived')} note={t('revenueNote')} value={formatMoney(receivedRevenue)} />
+          <StatCard accent="expense" label={t('expensesRecorded')} note={t('expensesNote')} value={formatMoney(recordedExpenses)} />
+          <StatCard label={t('receiptsAvailable')} note={t('receiptsAvailableNote')} tone="primary" value={String(availableDocumentsCount ?? 0)} />
+          <StatCard accent="missing" label={t('receiptsMissing')} note={t('receiptsMissingNote')} tone="danger" value={String(missingReceipts.length)} />
         </section>
 
         <section className="mb-8 overflow-hidden rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
           <div className="border-b border-[var(--line-soft)] bg-[#f0f5f2] px-6 py-4">
-            <h2 className="text-base font-semibold">Résumé annuel</h2>
+            <h2 className="text-base font-semibold">{t('annualSummary')}</h2>
           </div>
           <div className="space-y-4 p-6">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-sm text-[#3d4947]">Revenus encaissés</span>
+              <span className="text-sm text-[#3d4947]">{t('revenueReceived')}</span>
               <span className="font-semibold tabular-nums">{formatMoney(receivedRevenue)}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="text-sm text-[#3d4947]">Dépenses enregistrées</span>
+              <span className="text-sm text-[#3d4947]">{t('expensesRecorded')}</span>
               <span className="font-semibold text-[#ba1a1a] tabular-nums">- {formatMoney(recordedExpenses)}</span>
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--line-soft)] pt-4">
-              <span className="text-base font-semibold">Solde de trésorerie</span>
+              <span className="text-base font-semibold">{t('cashBalance')}</span>
               <span className={`text-xl font-semibold tabular-nums ${cashBalance < 0 ? 'text-[#ba1a1a]' : 'text-[var(--accent)]'}`}>{formatMoney(cashBalance)}</span>
             </div>
           </div>
           <div className="border-t border-[var(--line-soft)] bg-white px-6 py-3">
-            <p className="text-sm italic text-[#3d4947]">Ce solde correspond uniquement aux flux enregistrés. Il ne constitue pas un résultat fiscal.</p>
+            <p className="text-sm italic text-[#3d4947]">{t('balanceDisclaimer')}</p>
           </div>
         </section>
 
         <section className="mb-8 overflow-hidden rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[var(--line-soft)] p-5 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-base font-semibold">Détail des opérations</h2>
+            <h2 className="text-base font-semibold">{t('operationDetail')}</h2>
             <div className="inline-flex w-fit rounded-lg bg-[#f0f5f2] p-1">
               <Link className={`focus-ring rounded-md px-4 py-2 text-xs font-semibold ${selectedTab === 'revenues' ? 'bg-white text-[var(--accent)] shadow-sm' : 'text-[#3d4947]'}`} href={tabHref({propertyId, tab: 'revenues', year})}>
-                Revenus
+                {t('revenues')}
               </Link>
               <Link className={`focus-ring rounded-md px-4 py-2 text-xs font-semibold ${selectedTab === 'expenses' ? 'bg-white text-[var(--accent)] shadow-sm' : 'text-[#3d4947]'}`} href={tabHref({propertyId, tab: 'expenses', year})}>
-                Dépenses
+                {t('expenses')}
               </Link>
             </div>
           </div>
@@ -345,13 +346,13 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
                   <tr>
-                    <th className="px-6 py-3">Date</th>
-                    <th className="px-6 py-3">Bien</th>
-                    <th className="px-6 py-3">Catégorie</th>
-                    <th className="px-6 py-3">Description</th>
-                    <th className="px-6 py-3">Fournisseur</th>
-                    <th className="px-6 py-3 text-right">Montant</th>
-                    <th className="px-6 py-3 text-center">Justificatif</th>
+                    <th className="px-6 py-3">{t('date')}</th>
+                    <th className="px-6 py-3">{t('property')}</th>
+                    <th className="px-6 py-3">{t('category')}</th>
+                    <th className="px-6 py-3">{t('description')}</th>
+                    <th className="px-6 py-3">{t('vendor')}</th>
+                    <th className="px-6 py-3 text-right">{t('amount')}</th>
+                    <th className="px-6 py-3 text-center">{t('receipt')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-soft)]">
@@ -361,11 +362,11 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                       return (
                         <tr className="hover:bg-[#f8fbfa]" key={expense.id}>
                           <td className="px-6 py-4 tabular-nums">{formatDate(expense.expense_date)}</td>
-                          <td className="px-6 py-4">{expense.properties?.name ?? 'Global'}</td>
+                          <td className="px-6 py-4">{expense.properties?.name ?? t('global')}</td>
                           <td className="px-6 py-4">
-                            <CategoryBadge>{expense.tax_categories?.label ?? 'Autres frais'}</CategoryBadge>
+                            <CategoryBadge>{expense.tax_categories?.label ?? t('otherFees')}</CategoryBadge>
                           </td>
-                          <td className="px-6 py-4">{expense.description || 'Dépense'}</td>
+                          <td className="px-6 py-4">{expense.description || t('expenseFallback')}</td>
                           <td className="px-6 py-4">{expense.vendor || '-'}</td>
                           <td className={`px-6 py-4 text-right font-semibold tabular-nums ${missing ? 'text-[#ba1a1a]' : ''}`}>{formatMoney(Number(expense.amount ?? 0))}</td>
                           <td className="px-6 py-4 text-center">
@@ -377,7 +378,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                   ) : (
                     <tr>
                       <td className="px-6 py-10 text-center text-[var(--muted)]" colSpan={7}>
-                        Aucune dépense enregistrée pour cette période.
+                        {t('noExpenses')}
                       </td>
                     </tr>
                   )}
@@ -389,14 +390,14 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
                   <tr>
-                    <th className="px-6 py-3">Date</th>
-                    <th className="px-6 py-3">Bien</th>
-                    <th className="px-6 py-3">Locataire</th>
-                    <th className="px-6 py-3">Type</th>
-                    <th className="px-6 py-3">Période</th>
-                    <th className="px-6 py-3 text-right">Montant</th>
-                    <th className="px-6 py-3">Statut</th>
-                    <th className="px-6 py-3 text-center">Justificatif</th>
+                    <th className="px-6 py-3">{t('date')}</th>
+                    <th className="px-6 py-3">{t('property')}</th>
+                    <th className="px-6 py-3">{t('tenant')}</th>
+                    <th className="px-6 py-3">{t('type')}</th>
+                    <th className="px-6 py-3">{t('periodColumn')}</th>
+                    <th className="px-6 py-3 text-right">{t('amount')}</th>
+                    <th className="px-6 py-3">{t('status')}</th>
+                    <th className="px-6 py-3 text-center">{t('receipt')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-soft)]">
@@ -408,7 +409,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                           <td className="px-6 py-4 tabular-nums">{charge.due_date ? formatDate(charge.due_date) : formatDate(charge.period_month)}</td>
                           <td className="px-6 py-4">{charge.leases?.properties?.name ?? '-'}</td>
                           <td className="px-6 py-4">{charge.leases?.tenants?.full_name ?? '-'}</td>
-                          <td className="px-6 py-4">Loyer + Charges</td>
+                          <td className="px-6 py-4">{t('rentAndCharges')}</td>
                           <td className="px-6 py-4 capitalize">{formatMonth(charge.period_month)}</td>
                           <td className="px-6 py-4 text-right font-semibold tabular-nums">{formatMoney(Number(charge.total_due ?? 0))}</td>
                           <td className="px-6 py-4">
@@ -425,7 +426,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                   ) : (
                     <tr>
                       <td className="px-6 py-10 text-center text-[var(--muted)]" colSpan={8}>
-                        Aucun revenu enregistré pour cette période.
+                        {t('noRevenue')}
                       </td>
                     </tr>
                   )}
@@ -439,9 +440,9 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
           <div className="flex flex-col gap-3 border-b border-[var(--line-soft)] bg-[#f8fbfa] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Icon className="text-[#e07a00]">warning</Icon>
-              <h2 className="text-base font-semibold">Dépenses sans justificatif</h2>
+              <h2 className="text-base font-semibold">{t('missingExpenses')}</h2>
             </div>
-            <span className="w-fit rounded-md border border-[#f0d6b6] bg-white px-3 py-1 text-xs font-medium text-[#924628]">{missingReceipts.length} actions requises</span>
+            <span className="w-fit rounded-md border border-[#f0d6b6] bg-white px-3 py-1 text-xs font-medium text-[#924628]">{t('requiredActions', {count: missingReceipts.length})}</span>
           </div>
           {missingReceipts.length ? (
             <div className="divide-y divide-[var(--line-soft)]">
@@ -456,7 +457,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                         {expense.description || expense.vendor || 'Dépense'} - {formatMoney(Number(expense.amount ?? 0))}
                       </p>
                       <p className="mt-1 text-sm text-[#3d4947]">
-                        {formatDate(expense.expense_date)} • {expense.properties?.name ?? 'Global'} • {expense.tax_categories?.label ?? 'Autres frais'}
+                        {formatDate(expense.expense_date)} - {expense.properties?.name ?? t('global')} - {expense.tax_categories?.label ?? t('otherFees')}
                       </p>
                     </div>
                   </div>
@@ -474,16 +475,16 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
 
         <div className="mb-20 flex gap-3 rounded-lg border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
           <Icon className="shrink-0 text-[#e07a00]">info</Icon>
-          <p>Les données exportées sont destinées à faciliter la préparation comptable. Leur traitement fiscal reste à valider par votre comptable.</p>
+          <p>{t('info')}</p>
         </div>
 
         <footer className="flex flex-col gap-4 border-t border-[var(--line-soft)] py-8 text-sm text-[#3d4947] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold text-[#171d1c]">Loyelio</p>
-            <p className="mt-2">© 2026 Loyelio - Gestion Immobilière Simplifiée</p>
+            <p className="mt-2">{t('footer')}</p>
           </div>
           <Link className="hover:text-[var(--accent)]" href={localizedPath(locale, '/terms')}>
-            Mentions Légales
+            {t('legal')}
           </Link>
         </footer>
       </div>

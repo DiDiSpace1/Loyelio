@@ -1,6 +1,7 @@
 'use client';
 
 import {useState} from 'react';
+import {useTranslations} from 'next-intl';
 
 import {DateDisplayInput, isoDateToDisplay} from '@/components/forms/date-display-input';
 
@@ -23,6 +24,8 @@ function moneyInput(value: number | null) {
 }
 
 export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: EditableLease[]; locale: string; propertyId: string}) {
+  const t = useTranslations('bail');
+  const common = useTranslations('common');
   const [editingLease, setEditingLease] = useState<EditableLease | null>(null);
 
   if (!leases.length) {
@@ -33,32 +36,32 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
     <>
       <section className="mb-6 rounded-lg border border-[var(--line-soft)] bg-[#fbfdfc] p-4">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Locataires existants</h2>
-          <span className="text-xs font-medium text-[var(--muted)]">{leases.length} bail{leases.length > 1 ? 's' : ''} actif{leases.length > 1 ? 's' : ''}</span>
+          <h2 className="text-sm font-semibold">{t('existingTenants')}</h2>
+          <span className="text-xs font-medium text-[var(--muted)]">{t('activeLeaseCount', {count: leases.length})}</span>
         </div>
         <div className="grid gap-3">
           {leases.map((lease) => (
             <div className="grid gap-3 rounded-md border border-[var(--line-soft)] bg-white p-3 md:grid-cols-[minmax(0,1fr)_140px_140px_auto_auto] md:items-center" key={lease.id}>
               <div className="min-w-0">
-                <p className="truncate font-medium">{lease.tenants?.full_name ?? 'Locataire'}</p>
+                <p className="truncate font-medium">{lease.tenants?.full_name ?? t('tenant')}</p>
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#53615f]">Date debut</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#53615f]">{t('startDate')}</p>
                 <p className="mt-1 text-sm">{isoDateToDisplay(lease.start_date)}</p>
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#53615f]">Date fin</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#53615f]">{t('endDate')}</p>
                 <p className="mt-1 text-sm">{lease.end_date ? isoDateToDisplay(lease.end_date) : '-'}</p>
               </div>
               <button className="focus-ring rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold cursor-pointer" onClick={() => setEditingLease(lease)} type="button">
-                Modifier
+                {t('edit')}
               </button>
               <form action={deleteLeaseAction}>
                 <input name="locale" type="hidden" value={locale} />
                 <input name="property_id" type="hidden" value={propertyId} />
                 <input name="lease_id" type="hidden" value={lease.id} />
                 <button className="focus-ring w-full rounded-md border border-[#f3b4b4] px-4 py-2 text-sm font-semibold text-[#ba1a1a] cursor-pointer" type="submit">
-                  Supprimer
+                  {t('delete')}
                 </button>
               </form>
             </div>
@@ -74,34 +77,34 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
             <input name="lease_id" type="hidden" value={editingLease.id} />
             <div className="flex items-center justify-between gap-4 border-b border-[var(--line-soft)] px-5 py-4">
               <div className="min-w-0">
-                <h3 className="truncate text-lg font-semibold">Modifier le bail</h3>
-                <p className="mt-1 truncate text-sm text-[var(--muted)]">{editingLease.tenants?.full_name ?? 'Locataire'}</p>
+                <h3 className="truncate text-lg font-semibold">{t('editLease')}</h3>
+                <p className="mt-1 truncate text-sm text-[var(--muted)]">{editingLease.tenants?.full_name ?? t('tenant')}</p>
               </div>
-              <button className="focus-ring rounded-full p-2 text-[#33413f]" onClick={() => setEditingLease(null)} type="button" aria-label="Fermer">
+              <button className="focus-ring rounded-full p-2 text-[#33413f]" onClick={() => setEditingLease(null)} type="button" aria-label={t('close')}>
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
 
             <div className="grid gap-4 p-5 md:grid-cols-2">
               <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
-                Date debut
+                {t('startDate')}
                 <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] px-3 text-sm font-normal" defaultValue={editingLease.start_date} name="start_date" required />
               </label>
               <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
-                Date fin
+                {t('endDate')}
                 <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] px-3 text-sm font-normal" defaultValue={editingLease.end_date ?? ''} name="end_date" />
               </label>
-              <MoneyField defaultValue={moneyInput(editingLease.monthly_rent)} label="Montant loyer" name="monthly_rent" required />
-              <MoneyField defaultValue={moneyInput(editingLease.charges_amount)} label="Charge (Optionnel)" name="charges_amount" />
-              <MoneyField defaultValue={moneyInput(editingLease.deposit_amount)} label="Caution (Optionnel)" name="deposit_amount" />
+              <MoneyField defaultValue={moneyInput(editingLease.monthly_rent)} label={t('monthlyRent')} name="monthly_rent" required />
+              <MoneyField defaultValue={moneyInput(editingLease.charges_amount)} label={t('optionalCharge')} name="charges_amount" />
+              <MoneyField defaultValue={moneyInput(editingLease.deposit_amount)} label={t('optionalDeposit')} name="deposit_amount" />
             </div>
 
             <div className="flex flex-col-reverse gap-3 border-t border-[var(--line-soft)] px-5 py-4 sm:flex-row sm:justify-end">
               <button className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-5 text-sm font-semibold" onClick={() => setEditingLease(null)} type="button">
-                Annuler
+                {common('cancel')}
               </button>
               <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
-                Enregistrer
+                {common('save')}
               </button>
             </div>
           </form>

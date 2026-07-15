@@ -1,6 +1,7 @@
 'use client';
 
 import {useRouter} from 'next/navigation';
+import {useTranslations} from 'next-intl';
 
 import {localizedPath} from '@/lib/navigation';
 
@@ -21,10 +22,11 @@ export function PropertySelector({
   selectedTenantId?: string;
 }) {
   const router = useRouter();
+  const t = useTranslations('bail');
 
   return (
     <label className="grid gap-2 text-xs font-semibold text-[#33413f]">
-      Bien
+      {t('property')}
       <select
         className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm font-normal"
         defaultValue={selectedPropertyId ?? ''}
@@ -45,7 +47,7 @@ export function PropertySelector({
           router.push(localizedPath(locale, path as `/${string}`));
         }}
       >
-        <option value="">Veuillez choisir votre bien</option>
+        <option value="">{t('propertyPlaceholder')}</option>
         {properties.map((property) => (
           <option key={property.id} value={property.id}>
             {property.name}

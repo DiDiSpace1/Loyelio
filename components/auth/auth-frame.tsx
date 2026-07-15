@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 import {localizedPath} from '@/lib/navigation';
 
@@ -25,8 +26,9 @@ export function AuthFrame({children, footerText, legal, locale, privacy, tagline
       <section className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-[400px]">
           <div className="mb-6 text-center">
-            <Link className="inline-flex items-center justify-center text-[30px] font-semibold leading-[38px] tracking-[-0.02em] text-[var(--accent)]" href={localizedPath(locale, '/')}>
-              Loyelio
+            <Link className="inline-flex items-center justify-center gap-3 text-[30px] font-semibold leading-[38px] tracking-[-0.02em] text-[var(--accent)]" href={localizedPath(locale, '/')}>
+              <Image alt="" className="h-10 w-10 rounded-lg object-contain" height={40} priority src="/logo.png" width={40} />
+              <span>Loyelio</span>
             </Link>
             <p className="mt-1 text-sm leading-5 text-[var(--muted)]">{tagline}</p>
           </div>

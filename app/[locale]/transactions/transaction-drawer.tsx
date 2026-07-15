@@ -1,6 +1,7 @@
 'use client';
 
 import {useMemo, useState} from 'react';
+import {useTranslations} from 'next-intl';
 
 import {DateDisplayInput, MonthDisplayInput} from '@/components/forms/date-display-input';
 
@@ -78,6 +79,8 @@ export function TransactionDrawer({
   properties: PropertyOption[];
   taxCategories: TaxCategoryOption[];
 }) {
+  const t = useTranslations('transactions');
+  const common = useTranslations('common');
   const initialLeaseId = initialTenantId ? leases.find((lease) => lease.tenants?.id === initialTenantId)?.id : undefined;
   const [open, setOpen] = useState(initialOpen);
   const [mode, setMode] = useState<'expense' | 'revenue'>('revenue');
@@ -96,15 +99,15 @@ export function TransactionDrawer({
         type="button"
       >
         <Icon className="text-[18px]">add</Icon>
-        Ajouter une transaction
+        {t('addTransaction')}
       </button>
 
       {open ? (
         <div className="fixed inset-0 z-[10000]">
-          <button aria-label="Fermer" className="absolute inset-0 bg-[#171d1c]/45" onClick={() => setOpen(false)} type="button" />
+          <button aria-label={t('close')} className="absolute inset-0 bg-[#171d1c]/45" onClick={() => setOpen(false)} type="button" />
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-[520px] flex-col bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-6 py-5">
-              <h2 className="text-xl font-semibold text-[#171d1c]">Ajouter une transaction</h2>
+              <h2 className="text-xl font-semibold text-[#171d1c]">{t('addTransaction')}</h2>
               <button className="focus-ring rounded-md p-2 text-[#171d1c] hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button">
                 <Icon>close</Icon>
               </button>
@@ -118,7 +121,7 @@ export function TransactionDrawer({
                   type="button"
                 >
                   <Icon className="block text-[30px]">payments</Icon>
-                  <span className="mt-3 block text-sm font-semibold">Revenu</span>
+                  <span className="mt-3 block text-sm font-semibold">{t('revenue')}</span>
                 </button>
                 <button
                   className={`focus-ring min-h-[92px] rounded-lg border p-4 text-center transition ${mode === 'expense' ? 'border-[var(--accent)] bg-[#e6f4f1] text-[#171d1c]' : 'border-[var(--line)] bg-white text-[#3d4947] hover:bg-[#f8fbfa]'}`}
@@ -126,7 +129,7 @@ export function TransactionDrawer({
                   type="button"
                 >
                   <Icon className="block text-[30px]">receipt_long</Icon>
-                  <span className="mt-3 block text-sm font-semibold">Depense</span>
+                  <span className="mt-3 block text-sm font-semibold">{t('expense')}</span>
                 </button>
               </div>
 
@@ -134,21 +137,21 @@ export function TransactionDrawer({
                 <form action={createRevenueTransactionAction} className="grid gap-5" id="transaction-revenue-form">
                   <input name="locale" type="hidden" value={locale} />
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Type de revenu
+                    {t('revenueType')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[#171d1c]" name="revenue_type" defaultValue="rent">
-                      <option value="rent">Loyer</option>
-                      <option value="deposit">Depot de garantie</option>
-                      <option value="other">Autre</option>
+                      <option value="rent">{t('rent')}</option>
+                      <option value="deposit">{t('deposit')}</option>
+                      <option value="other">{t('other')}</option>
                     </select>
                   </label>
 
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Bail
+                    {t('lease')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[#171d1c]" name="lease_id" value={selectedLeaseId} onChange={(event) => setSelectedLeaseId(event.target.value)} required>
-                      <option value="">Choisir un bail</option>
+                      <option value="">{t('chooseLease')}</option>
                       {leases.map((lease) => (
                         <option key={lease.id} value={lease.id}>
-                          {(lease.properties?.name ?? 'Bien') + ' - ' + (lease.tenants?.full_name ?? 'Locataire')}
+                          {(lease.properties?.name ?? t('property')) + ' - ' + (lease.tenants?.full_name ?? t('tenant'))}
                         </option>
                       ))}
                     </select>
@@ -156,22 +159,22 @@ export function TransactionDrawer({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Bien immobilier
+                      {t('property')}
                       <input className="min-h-11 rounded-md border border-[var(--line-soft)] bg-[#f7faf9] px-3 text-sm text-[#3d4947]" readOnly value={selectedLease?.properties?.name ?? ''} />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Locataire
+                      {t('tenant')}
                       <input className="min-h-11 rounded-md border border-[var(--line-soft)] bg-[#f7faf9] px-3 text-sm text-[#3d4947]" readOnly value={selectedLease?.tenants?.full_name ?? ''} />
                     </label>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid min-w-0 gap-2 text-sm text-[#3d4947]">
-                      Periode concernee
+                      {t('period')}
                       <MonthDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="period_month" onMonthChange={setPeriodMonth} required value={periodMonth} />
                     </label>
                     <label className="grid min-w-0 gap-2 text-sm text-[#3d4947]">
-                      Montant a payer
+                      {t('amountDue')}
                       <div className="relative min-h-11 min-w-0 rounded-md border border-[var(--line)] bg-white">
                         <input
                           className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-14 text-sm outline-none"
@@ -185,38 +188,38 @@ export function TransactionDrawer({
                         />
                         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#3d4947]">EUR</span>
                       </div>
-	                      {selectedLease ? <span className="text-xs text-[var(--muted)]">Deja paye: {paidForPeriod(selectedLease, periodMonth).toFixed(2).replace('.', ',')} EUR</span> : null}
+	                      {selectedLease ? <span className="text-xs text-[var(--muted)]">{t('alreadyPaid', {amount: paidForPeriod(selectedLease, periodMonth).toFixed(2).replace('.', ',')})}</span> : null}
                     </label>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Date de reception
+                      {t('receivedAt')}
                       <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm" defaultValue={today()} name="received_at" required />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Mode de paiement
+                      {t('paymentMethod')}
                       <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="payment_method" defaultValue="bank_transfer">
-                        <option value="bank_transfer">Virement bancaire</option>
-                        <option value="card">Carte bancaire</option>
-                        <option value="cash">Especes</option>
-                        <option value="cheque">Cheque</option>
-                        <option value="other">Autre</option>
+                        <option value="bank_transfer">{t('bankTransfer')}</option>
+                        <option value="card">{t('card')}</option>
+                        <option value="cash">{t('cash')}</option>
+                        <option value="cheque">{t('cheque')}</option>
+                        <option value="other">{t('other')}</option>
                       </select>
                     </label>
                   </div>
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Note additionnelle
-                    <textarea className="focus-ring min-h-24 rounded-md border border-[var(--line)] bg-white px-3 py-3 text-sm" name="notes" placeholder="Ex: Paiement anticipe recu le 28..." />
+                    {t('additionalNote')}
+                    <textarea className="focus-ring min-h-24 rounded-md border border-[var(--line)] bg-white px-3 py-3 text-sm" name="notes" placeholder={t('notePlaceholder')} />
                   </label>
                 </form>
               ) : (
                 <form action={createExpenseTransactionAction} className="grid gap-5" id="transaction-expense-form">
                   <input name="locale" type="hidden" value={locale} />
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Categorie de la depense
+                    {t('expenseCategory')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="tax_category_id" defaultValue={taxCategories[0]?.id ?? ''}>
-                      {taxCategories.length ? null : <option value="">Autres frais</option>}
+                      {taxCategories.length ? null : <option value="">{t('otherFees')}</option>}
                       {taxCategories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.label}
@@ -225,9 +228,9 @@ export function TransactionDrawer({
                     </select>
                   </label>
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Bien immobilier concerne
+                    {t('relatedProperty')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="property_id" defaultValue={properties[0]?.id ?? ''}>
-                      <option value="">Global</option>
+                      <option value="">{t('global')}</option>
                       {properties.map((property) => (
                         <option key={property.id} value={property.id}>
                           {property.name}
@@ -237,56 +240,56 @@ export function TransactionDrawer({
                   </label>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Fournisseur
+                      {t('vendor')}
                       <input autoComplete="off" className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" defaultValue="" name="vendor" placeholder="ex: Leroy Merlin" />
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Date de facture
+                      {t('invoiceDate')}
                       <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm" defaultValue={today()} name="expense_date" required />
                     </label>
                   </div>
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Description
+                    {t('description')}
                     <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="description" placeholder="ex: Peinture et materiel de renovation" />
                   </label>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid min-w-0 gap-2 text-sm text-[#3d4947]">
-                      Montant TTC
+                      {t('amountVat')}
                       <div className="relative min-h-11 min-w-0 rounded-md border border-[var(--line)] bg-white">
                         <input className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-14 text-sm outline-none" name="amount" placeholder="0.00" required />
                         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#3d4947]">EUR</span>
                       </div>
                     </label>
                     <label className="grid gap-2 text-sm text-[#3d4947]">
-                      Mode de paiement
+                      {t('paymentMethod')}
                       <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="payment_method" defaultValue="card">
-                        <option value="card">Carte bancaire</option>
-                        <option value="bank_transfer">Virement bancaire</option>
-                        <option value="cash">Especes</option>
-                        <option value="cheque">Cheque</option>
-                        <option value="other">Autre</option>
+                        <option value="card">{t('card')}</option>
+                        <option value="bank_transfer">{t('bankTransfer')}</option>
+                        <option value="cash">{t('cash')}</option>
+                        <option value="cheque">{t('cheque')}</option>
+                        <option value="other">{t('other')}</option>
                       </select>
                     </label>
                   </div>
                   <fieldset className="grid gap-3">
-                    <legend className="mb-1 text-sm text-[#3d4947]">Statut du paiement</legend>
+                    <legend className="mb-1 text-sm text-[#3d4947]">{t('paymentStatus')}</legend>
                     <div className="grid grid-cols-2 gap-3">
                       <label className="focus-within:ring-2 focus-within:ring-[var(--accent)] flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-[var(--accent)] bg-[#e6f4f1] text-sm font-semibold text-[var(--accent)]">
                         <input defaultChecked name="payment_status" type="radio" value="paid" />
-                        Paye
+                        {t('paid')}
                       </label>
                       <label className="focus-within:ring-2 focus-within:ring-[var(--accent)] flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white text-sm text-[#3d4947]">
                         <input name="payment_status" type="radio" value="pending" />
-                        A regler
+                        {t('pendingPayment')}
                       </label>
                     </div>
                   </fieldset>
                   <label className="grid gap-2 text-sm text-[#3d4947]">
-                    Justificatif (Facture, ticket...)
+                    {t('receipt')}
                     <div className="grid min-h-36 place-items-center rounded-lg border border-dashed border-[var(--line)] bg-[#fbfdfc] p-5 text-center">
                       <Icon className="mb-3 rounded-full bg-[#eef2f0] p-2 text-[28px]">cloud_upload</Icon>
-                      <span className="text-sm font-semibold text-[#171d1c]">Cliquez pour ajouter un fichier</span>
-                      <span className="mt-1 text-xs text-[#3d4947]">PDF, JPG ou PNG (Max 10Mo)</span>
+                      <span className="text-sm font-semibold text-[#171d1c]">{t('uploadReceipt')}</span>
+                      <span className="mt-1 text-xs text-[#3d4947]">{t('uploadHint')}</span>
                       <input accept=".pdf,.jpg,.jpeg,.png" className="mt-4 w-full text-sm" name="receipt" type="file" />
                     </div>
                   </label>
@@ -296,10 +299,10 @@ export function TransactionDrawer({
 
             <div className="grid grid-cols-[1fr_1.6fr] gap-4 border-t border-[var(--line-soft)] bg-[#fbfdfc] px-6 py-5">
               <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white text-sm font-semibold hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button">
-                Annuler
+                {common('cancel')}
               </button>
               <button className="focus-ring min-h-11 rounded-lg bg-[var(--accent)] text-sm font-semibold text-white shadow-sm hover:bg-[var(--accent-strong)]" form={mode === 'revenue' ? 'transaction-revenue-form' : 'transaction-expense-form'} style={{color: '#ffffff'}} type="submit">
-                {mode === 'revenue' ? 'Enregistrer la transaction' : 'Enregistrer la depense'}
+                {mode === 'revenue' ? t('saveTransaction') : t('saveExpense')}
               </button>
             </div>
           </aside>

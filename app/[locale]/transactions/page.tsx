@@ -1,4 +1,4 @@
-import {getLocale} from 'next-intl/server';
+import {getLocale, getTranslations} from 'next-intl/server';
 
 import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -111,7 +111,7 @@ type TransactionsPageProps = {
   }>;
 };
 
-function monthRange() {
+function monthRange(locale: string) {
   const now = new Date();
   const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
   const end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
@@ -119,7 +119,7 @@ function monthRange() {
   return {
     current: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
-    label: new Intl.DateTimeFormat('fr-FR', {month: 'long'}).format(start),
+    label: new Intl.DateTimeFormat(locale, {month: 'long'}).format(start),
     start: start.toISOString().slice(0, 10)
   };
 }
@@ -135,15 +135,15 @@ function previousMonthRange() {
   };
 }
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat('fr-FR', {
+function formatMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     currency: 'EUR',
     style: 'currency'
   }).format(value);
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -160,9 +160,10 @@ function Icon({children, className = ''}: {children: string; className?: string}
 
 export default async function TransactionsPage({searchParams}: TransactionsPageProps) {
   const locale = await getLocale();
+  const t = await getTranslations('transactions');
   const params = await searchParams;
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
-  const range = monthRange();
+  const range = monthRange(locale);
   const previousRange = previousMonthRange();
   const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}, {data: recentPayments}, {data: recentExpenses}] = await Promise.all([
     supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
@@ -233,7 +234,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const combinedRows: TransactionRow[] = [
     ...(recentPayments ?? []).map((row) => ({
       amount: Number(row.amount ?? 0),
-      category: 'Loyer',
+      category: t('rent'),
 	      date: row.paid_at,
 	      id: row.id,
 	      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
@@ -244,7 +245,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     })),
     ...(recentExpenses ?? []).map((row) => ({
       amount: Number(row.amount ?? 0),
-      category: row.tax_categories?.label ?? 'Depense',
+      category: row.tax_categories?.label ?? t('expense'),
 	      date: row.expense_date,
 	      description: row.description,
 	      id: row.id,
@@ -263,44 +264,44 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     <AppShell>
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">Transactions</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Gerez vos revenus et depenses immobilieres.</p>
+          <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
         <TransactionDrawer initialOpen={params.new === 'transaction'} initialTenantId={params.tenant_id} leases={leases ?? []} locale={locale} properties={properties ?? []} taxCategories={taxCategories ?? []} />
       </div>
 
       {params.error ? (
         <div className="mt-6 rounded-lg border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
-          Impossible d&apos;enregistrer cette transaction. Verifiez les champs ou le fichier joint.
+          {t('error')}
         </div>
       ) : null}
 
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         <StatCard
           icon="payments"
-          label={`Revenus Mensuels (${range.label.charAt(0).toUpperCase() + range.label.slice(1)})`}
-          note={revenueTrend === null ? 'Aucune donnee le mois dernier' : `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString('fr-FR', {maximumFractionDigits: 1})}% vs mois dernier`}
+          label={t('monthlyRevenue', {month: range.label.charAt(0).toUpperCase() + range.label.slice(1)})}
+          note={revenueTrend === null ? t('noPreviousMonth') : t('trend', {value: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString(locale, {maximumFractionDigits: 1})}`})}
           tone="revenue"
-          value={formatMoney(monthlyRevenue)}
+          value={formatMoney(monthlyRevenue, locale)}
         />
-        <StatCard icon="receipt_long" label="Depenses Mensuelles" note={`${expenseRows.length} transaction${expenseRows.length > 1 ? 's' : ''} ce mois`} tone="expense" value={formatMoney(monthlyExpenses)} />
-        <StatCard icon="hourglass_empty" label="Loyers en attente" note="Paiements a suivre" tone="pending" value={formatMoney(pendingRevenue)} />
+        <StatCard icon="receipt_long" label={t('monthlyExpenses')} note={t('transactionCount', {count: expenseRows.length})} tone="expense" value={formatMoney(monthlyExpenses, locale)} />
+        <StatCard icon="hourglass_empty" label={t('pendingRents')} note={t('paymentsToFollow')} tone="pending" value={formatMoney(pendingRevenue, locale)} />
       </section>
 
       <section className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#171d1c]">Historique recent</h2>
-          <span className="text-sm text-[var(--muted)]">{combinedRows.length} mouvements</span>
+          <h2 className="text-lg font-semibold text-[#171d1c]">{t('recentHistory')}</h2>
+          <span className="text-sm text-[var(--muted)]">{t('movementCount', {count: combinedRows.length})}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
               <tr>
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Categorie</th>
-                <th className="px-6 py-3">Bien / Locataire</th>
-	                <th className="px-6 py-3 text-right">Montant</th>
-	                <th className="px-6 py-3 text-right">Actions</th>
+                <th className="px-6 py-3">{t('date')}</th>
+                <th className="px-6 py-3">{t('category')}</th>
+                <th className="px-6 py-3">{t('propertyTenant')}</th>
+	                <th className="px-6 py-3 text-right">{t('amount')}</th>
+	                <th className="px-6 py-3 text-right">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line-soft)]">
@@ -322,7 +323,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
                   };
                   return (
                     <tr className="hover:bg-[#f8fbfa]" key={row.id}>
-                      <td className="px-6 py-4 tabular-nums">{formatDate(row.date)}</td>
+                      <td className="px-6 py-4 tabular-nums">{formatDate(row.date, locale)}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${row.type === 'revenue' ? 'bg-[#ecfdf5] text-[var(--accent)]' : 'bg-[#ffdbce] text-[#924628]'}`}>
                           <Icon className="text-[15px]">{row.type === 'revenue' ? 'payments' : 'receipt_long'}</Icon>
@@ -330,7 +331,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
                         </span>
                       </td>
                       <td className="px-6 py-4 font-medium text-[#33413f]">{row.meta}</td>
-	                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>{row.type === 'expense' ? '- ' : ''}{formatMoney(row.amount)}</td>
+	                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>{row.type === 'expense' ? '- ' : ''}{formatMoney(row.amount, locale)}</td>
 	                      <td className="px-6 py-4 text-right">
 	                        <TransactionActionsMenu
 	                          locale={locale}
@@ -345,7 +346,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
               ) : (
                 <tr>
                   <td className="px-6 py-12 text-center text-[var(--muted)]" colSpan={5}>
-                    Aucune transaction pour le moment.
+                    {t('noTransactions')}
                   </td>
                 </tr>
               )}

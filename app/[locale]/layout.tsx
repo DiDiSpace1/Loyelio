@@ -10,6 +10,11 @@ import {locales, type Locale} from '@/lib/i18n/routing';
 
 export const metadata: Metadata = {
   description: 'Loyers, justificatifs et dossier fiscal pour petits bailleurs LMNP.',
+  icons: {
+    apple: '/logo.png',
+    icon: '/logo.png',
+    shortcut: '/logo.png'
+  },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   openGraph: {
     description: 'Classez vos loyers, factures et contrats, puis exportez un dossier fiscal clair.',

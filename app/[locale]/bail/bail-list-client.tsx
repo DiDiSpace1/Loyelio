@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import {useTranslations} from 'next-intl';
 import {useMemo, useState} from 'react';
 
 export type BailListRow = {
@@ -22,16 +23,20 @@ export type BailListRow = {
   } | null;
 };
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: string) {
   if (!value) {
     return '-';
   }
 
-  return new Intl.DateTimeFormat('fr-FR').format(new Date(`${value}T00:00:00Z`));
+  return new Intl.DateTimeFormat(locale).format(new Date(`${value}T00:00:00Z`));
 }
 
-function formatMoney(value: number) {
-  return `${Number(value ?? 0).toLocaleString('fr-FR', {maximumFractionDigits: 0})}€`;
+function formatMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+    style: 'currency'
+  }).format(Number(value ?? 0));
 }
 
 function formatPropertyAddress(property: BailListRow['properties']) {
@@ -55,24 +60,25 @@ function statusBadge(status: string) {
   if (status === 'active') {
     return {
       className: 'bg-[#ecfdf5] text-[#047857]',
-      label: 'Actif'
+      labelKey: 'active'
     };
   }
 
   if (status === 'ended') {
     return {
       className: 'bg-[#eef2ff] text-[#3755c3]',
-      label: 'Termine'
+      labelKey: 'ended'
     };
   }
 
   return {
     className: 'bg-[#fff4db] text-[#9a5a00]',
-    label: 'Clauses a definir'
+    labelKey: 'draft'
   };
 }
 
 export function BailListClient({initialQuery, locale, leases}: {initialQuery: string; locale: string; leases: BailListRow[]}) {
+  const t = useTranslations('bail');
   const [queryInput, setQueryInput] = useState(initialQuery);
   const [appliedQuery, setAppliedQuery] = useState(initialQuery);
   const filteredLeases = useMemo(() => leases.filter((lease) => leaseMatches(lease, appliedQuery)), [appliedQuery, leases]);
@@ -110,10 +116,10 @@ export function BailListClient({initialQuery, locale, leases}: {initialQuery: st
             applySearch();
           }}
         >
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">Q</span>
-          <input className="focus-ring min-h-11 w-full rounded-full border border-transparent bg-[#eef2f7] px-11 pr-11 text-sm" onChange={(event) => setQueryInput(event.target.value)} placeholder="Rechercher..." value={queryInput} />
+          <span className="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[20px] text-[var(--muted)]">search</span>
+          <input className="focus-ring min-h-11 w-full rounded-full border border-transparent bg-[#eef2f7] px-11 pr-11 text-sm" onChange={(event) => setQueryInput(event.target.value)} placeholder={t('searchPlaceholder')} value={queryInput} />
           {queryInput ? (
-            <button aria-label="Effacer la recherche" className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#33413f] hover:bg-[#dce3eb]" onClick={clearSearch} type="button">
+            <button aria-label={t('clearSearch')} className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#33413f] hover:bg-[#dce3eb]" onClick={clearSearch} type="button">
               <span className="material-symbols-outlined text-[22px]">close</span>
             </button>
           ) : null}
@@ -128,13 +134,13 @@ export function BailListClient({initialQuery, locale, leases}: {initialQuery: st
             return (
               <Link className="block rounded-xl border border-[var(--line-soft)] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href={`/bail/${lease.id}`} key={lease.id}>
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="min-w-0 truncate text-xl font-semibold text-[#17211f]">{lease.properties?.name ?? 'Bail sans bien'}</h2>
-                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
+                  <h2 className="min-w-0 truncate text-xl font-semibold text-[#17211f]">{lease.properties?.name ?? t('withoutProperty')}</h2>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}>{t(`status.${badge.labelKey}`)}</span>
                 </div>
                 <div className="mt-4 grid gap-3 text-sm text-[#53615f]">
                   <p className="flex items-center gap-2">
                     <span className="flex h-5 w-5 items-center justify-center rounded border border-[#c7d2ce] text-[10px] font-bold">P</span>
-                    <span className="truncate">{lease.tenants?.full_name ?? 'Locataire a definir'}</span>
+                    <span className="truncate">{lease.tenants?.full_name ?? t('tenantPending')}</span>
                   </p>
                   <p className="flex items-center gap-2">
                     <span className="flex h-5 w-5 items-center justify-center rounded border border-[#c7d2ce] text-[10px] font-bold">B</span>
@@ -142,30 +148,28 @@ export function BailListClient({initialQuery, locale, leases}: {initialQuery: st
                   </p>
                   <p className="flex items-center gap-2">
                     <span className="flex h-5 w-5 items-center justify-center rounded border border-[#c7d2ce] text-[10px] font-bold">D</span>
-                    <span>
-                      Du {formatDate(lease.start_date)} au {formatDate(lease.end_date)}
-                    </span>
+                    <span>{t('fromTo', {end: formatDate(lease.end_date, locale), start: formatDate(lease.start_date, locale)})}</span>
                   </p>
                 </div>
                 <dl className="mt-5 grid gap-2 border-t border-[var(--line-soft)] pt-4 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="text-[var(--muted)]">Loyer</dt>
-                    <dd className="font-semibold text-[#00796b] tabular-nums">{formatMoney(lease.monthly_rent)}</dd>
+                    <dt className="text-[var(--muted)]">{t('rent')}</dt>
+                    <dd className="font-semibold text-[#00796b] tabular-nums">{formatMoney(lease.monthly_rent, locale)}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="text-[var(--muted)]">Provision sur charges</dt>
-                    <dd className="font-semibold text-[#00796b] tabular-nums">{formatMoney(lease.charges_amount)}</dd>
+                    <dt className="text-[var(--muted)]">{t('chargesProvision')}</dt>
+                    <dd className="font-semibold text-[#00796b] tabular-nums">{formatMoney(lease.charges_amount, locale)}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="text-[var(--muted)]">Frequence</dt>
-                    <dd className="font-medium">mensuelle</dd>
+                    <dt className="text-[var(--muted)]">{t('frequency')}</dt>
+                    <dd className="font-medium">{t('monthly')}</dd>
                   </div>
                 </dl>
               </Link>
             );
           })
         ) : (
-          <div className="rounded-xl border border-[var(--line-soft)] bg-white p-6 text-sm text-[var(--muted)] sm:col-span-2 xl:col-span-3">Aucun bail trouve.</div>
+          <div className="rounded-xl border border-[var(--line-soft)] bg-white p-6 text-sm text-[var(--muted)] sm:col-span-2 xl:col-span-3">{t('empty')}</div>
         )}
       </section>
     </>

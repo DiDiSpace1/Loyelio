@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {getLocale, getTranslations} from 'next-intl/server';
 import {redirect} from 'next/navigation';
 
@@ -68,8 +69,9 @@ export async function AppShell({children}: {children: React.ReactNode}) {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <aside className="fixed inset-y-0 left-0 hidden w-[226px] border-r border-[var(--line-soft)] bg-[var(--background)] px-4 py-6 lg:block">
-        <Link href="/dashboard" className="block px-2 text-2xl font-bold leading-7 text-[var(--accent)]">
-          {common('appName')}
+        <Link href="/dashboard" className="flex items-center gap-2 px-2 text-2xl font-bold leading-7 text-[var(--accent)]">
+          <Image alt="" className="h-8 w-8 rounded-md object-contain" height={32} priority src="/logo.png" width={32} />
+          <span>{common('appName')}</span>
         </Link>
         <p className="mt-1 px-2 text-sm text-[#3d4947]">{shell('tagline')}</p>
         {userEmail ? (
@@ -93,7 +95,10 @@ export async function AppShell({children}: {children: React.ReactNode}) {
       </aside>
       <div className="lg:pl-[226px]">
         <header className="sticky top-0 z-10 border-b border-[var(--line-soft)] bg-[var(--background)]/95 px-5 py-4 backdrop-blur lg:hidden">
-          <div className="font-semibold">{common('appName')}</div>
+          <div className="flex items-center gap-2 font-semibold">
+            <Image alt="" className="h-7 w-7 rounded-md object-contain" height={28} src="/logo.png" width={28} />
+            <span>{common('appName')}</span>
+          </div>
           <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {navItems.map((item) => (
               <Link className="shrink-0 rounded-md border border-[var(--line)] px-3 py-2 text-xs" href={item.href} key={item.key}>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {useLocale, useTranslations} from 'next-intl';
 
 const PRICING_PLANS = ['free', 'solo', 'plus', 'portfolio', 'custom'] as const;
@@ -14,8 +15,9 @@ export function LandingPage() {
     <main className="bg-[var(--background)] text-[var(--foreground)]">
       <nav className="sticky top-0 z-50 border-b border-[var(--line-soft)] bg-[var(--background)]">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
-          <Link className="text-xl font-bold text-[var(--accent)]" href={localized('/')}>
-            {common('appName')}
+          <Link className="inline-flex items-center gap-2 text-xl font-bold text-[var(--accent)]" href={localized('/')}>
+            <Image alt="" className="h-8 w-8 rounded-md object-contain" height={32} priority src="/logo.png" width={32} />
+            <span>{common('appName')}</span>
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
