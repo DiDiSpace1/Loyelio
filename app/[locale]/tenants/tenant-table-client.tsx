@@ -249,6 +249,7 @@ export function TenantTableClient({
             {rows.length ? (
               rows.map((tenant) => {
                 const lease = displayLease(tenant, selectedMonth);
+                const hasLease = Boolean(lease);
                 const status = tenant.is_active ? paymentStatus(lease, selectedMonth) : {className: 'bg-[#e5e7eb] text-[#4b5563]', labelKey: 'disabled'};
 
                 return (
@@ -281,12 +282,15 @@ export function TenantTableClient({
                         <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/tenants/${tenant.id}/edit`}>
                           {common('edit')}
                         </Link>
-                        <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/bail/new?tenant_id=${tenant.id}`}>
-                          {t('actions.createLease')}
-                        </Link>
-                        <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/transactions?new=transaction&tenant_id=${tenant.id}`}>
-                          {t('actions.transaction')}
-                        </Link>
+                        {hasLease ? (
+                          <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/transactions?new=transaction&tenant_id=${tenant.id}`}>
+                            {t('actions.transaction')}
+                          </Link>
+                        ) : (
+                          <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/bail/new?tenant_id=${tenant.id}`}>
+                            {t('actions.createLease')}
+                          </Link>
+                        )}
                         <form action={updateTenantActiveAction}>
                           <input name="locale" type="hidden" value={locale} />
                           <input name="tenant_id" type="hidden" value={tenant.id} />

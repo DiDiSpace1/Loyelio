@@ -348,7 +348,7 @@
     },
     "actions": {
       "createLease": "创建租约",
-      "transaction": "交易",
+      "transaction": "登记收款",
       "deactivate": "停用",
       "activate": "启用",
       "deleteTitle": "确定删除此租客？",
