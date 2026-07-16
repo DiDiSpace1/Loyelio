@@ -198,12 +198,14 @@
       "activeRentals": "Active rentals"
     },
     "quick": {
+      "createProperty": "Create property",
+      "createPropertyNote": "Add an address and property details",
+      "addTenant": "Add tenant",
+      "addTenantNote": "Create a tenant profile",
       "createLease": "Create lease",
       "createLeaseNote": "Link a tenant to a property",
-      "addDocument": "Add document",
-      "addDocumentNote": "File leases, receipts or tax documents",
-      "prepareTax": "Prepare tax pack",
-      "prepareTaxNote": "Check income and expenses"
+      "addTransaction": "Add transaction",
+      "addTransactionNote": "Record income or expense"
     },
     "chart": {
       "title": "Income & expenses",

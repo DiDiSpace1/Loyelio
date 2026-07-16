@@ -198,12 +198,14 @@
       "activeRentals": "Locations actives"
     },
     "quick": {
+      "createProperty": "Créer un bien",
+      "createPropertyNote": "Ajouter une adresse et ses détails",
+      "addTenant": "Ajouter un locataire",
+      "addTenantNote": "Créer une fiche locataire",
       "createLease": "Créer un bail",
       "createLeaseNote": "Associer un locataire à un bien",
-      "addDocument": "Ajouter un document",
-      "addDocumentNote": "Classer bail, quittance ou impôts",
-      "prepareTax": "Préparer le fiscal",
-      "prepareTaxNote": "Vérifier les revenus et dépenses"
+      "addTransaction": "Ajouter une transaction",
+      "addTransactionNote": "Enregistrer un revenu ou une dépense"
     },
     "chart": {
       "title": "Revenus & dépenses",

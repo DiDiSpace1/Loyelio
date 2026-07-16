@@ -18,7 +18,9 @@ type DashboardProperty = {
   }[];
   leases: {
     charges_amount: number;
+    end_date: string | null;
     monthly_rent: number;
+    start_date: string | null;
     status: string;
     tenants: {
       full_name: string;
@@ -31,20 +33,25 @@ type RentCharge = {
   status: string;
   total_due: number;
   period_month: string;
+  rent_payments: {
+    amount: number | null;
+  }[];
   leases: {
+    end_date: string | null;
     properties: {
       name: string;
     } | null;
+    start_date: string | null;
+    status: string;
     tenants: {
       full_name: string;
     } | null;
   } | null;
 };
 
-type ChartRentCharge = {
-  period_month: string;
-  status: string;
-  total_due: number;
+type ChartPayment = {
+  amount: number;
+  paid_at: string;
 };
 
 type ChartExpense = {
@@ -92,36 +99,58 @@ function formatAddress(property: Pick<DashboardProperty, 'address_line1' | 'post
   return [property.address_line1, property.postal_code, property.city].filter(Boolean).join(', ');
 }
 
+function isLeaseCurrentlyEffective(lease: Pick<DashboardProperty['leases'][number], 'end_date' | 'start_date' | 'status'> | null | undefined, today: string) {
+  return Boolean(lease && lease.status === 'active' && (!lease.start_date || lease.start_date <= today) && (!lease.end_date || lease.end_date >= today));
+}
+
+function isUnpaidStatus(status: string) {
+  return status === 'unpaid' || status === 'overdue' || status === 'late';
+}
+
+function remainingAmount(charge: Pick<RentCharge, 'rent_payments' | 'total_due'>) {
+  const paidAmount = charge.rent_payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+
+  return Math.max(0, Number(charge.total_due ?? 0) - paidAmount);
+}
+
 export default async function DashboardPage() {
   const locale = await getLocale();
   const t = await getTranslations('dashboard');
   const propertiesT = await getTranslations('properties');
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const month = currentMonthStart();
+  const monthEnd = addMonths(new Date(`${month}T00:00:00.000Z`), 1).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
   const chartMonths = buildRecentMonths();
   const chartStart = chartMonths[0]?.start ?? month;
   const chartEnd = chartMonths[chartMonths.length - 1]?.end ?? month;
   const {data: properties} = await supabase
     .from('properties')
-    .select('id, name, address_line1, postal_code, city, property_photos(file_path, is_cover), leases(status, monthly_rent, charges_amount, tenants(full_name))')
+    .select('id, name, address_line1, postal_code, city, property_photos(file_path, is_cover), leases(status, start_date, end_date, monthly_rent, charges_amount, tenants(full_name))')
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false})
     .returns<DashboardProperty[]>();
   const {data: rentCharges} = await supabase
     .from('rent_charges')
-    .select('id, status, total_due, period_month, leases(tenants(full_name), properties(name))')
+    .select('id, status, total_due, period_month, rent_payments(amount), leases(status, start_date, end_date, tenants(full_name), properties(name))')
     .eq('workspace_id', workspaceId)
     .eq('period_month', month)
     .order('created_at', {ascending: false})
-    .limit(5)
     .returns<RentCharge[]>();
-  const {data: chartRentCharges} = await supabase
-    .from('rent_charges')
-    .select('period_month, total_due, status')
+  const {data: currentPayments} = await supabase
+    .from('rent_payments')
+    .select('amount, paid_at')
     .eq('workspace_id', workspaceId)
-    .gte('period_month', chartStart)
-    .lt('period_month', chartEnd)
-    .returns<ChartRentCharge[]>();
+    .gte('paid_at', month)
+    .lt('paid_at', monthEnd)
+    .returns<ChartPayment[]>();
+  const {data: chartPayments} = await supabase
+    .from('rent_payments')
+    .select('paid_at, amount')
+    .eq('workspace_id', workspaceId)
+    .gte('paid_at', chartStart)
+    .lt('paid_at', chartEnd)
+    .returns<ChartPayment[]>();
   const {data: chartExpenses} = await supabase
     .from('expenses')
     .select('expense_date, amount')
@@ -134,12 +163,10 @@ export default async function DashboardPage() {
   const charges = rentCharges ?? [];
   const revenueByMonth = new Map<string, number>();
   const expenseByMonth = new Map<string, number>();
-  (chartRentCharges ?? [])
-    .filter((charge) => charge.status !== 'waived')
-    .forEach((charge) => {
-      const key = charge.period_month.slice(0, 7);
-      revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + Number(charge.total_due ?? 0));
-    });
+  (chartPayments ?? []).forEach((payment) => {
+    const key = payment.paid_at.slice(0, 7);
+    revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + Number(payment.amount ?? 0));
+  });
   (chartExpenses ?? []).forEach((expense) => {
     const key = expense.expense_date.slice(0, 7);
     expenseByMonth.set(key, (expenseByMonth.get(key) ?? 0) + Number(expense.amount ?? 0));
@@ -149,17 +176,13 @@ export default async function DashboardPage() {
     label: chartMonth.label,
     revenue: revenueByMonth.get(chartMonth.key) ?? 0
   }));
-  const activeLeaseCount = rows.reduce((sum, property) => sum + property.leases.filter((lease) => lease.status === 'active').length, 0);
-  const activeRentTotal = rows.reduce(
-    (sum, property) =>
-      sum +
-      property.leases
-        .filter((lease) => lease.status === 'active')
-        .reduce((leaseSum, lease) => leaseSum + Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0), 0),
-    0
-  );
-  const unpaidTotal = charges.filter((charge) => charge.status !== 'paid' && charge.status !== 'waived').reduce((sum, charge) => sum + Number(charge.total_due ?? 0), 0);
-  const paidTotal = charges.filter((charge) => charge.status === 'paid').reduce((sum, charge) => sum + Number(charge.total_due ?? 0), 0);
+  const activeLeaseCount = rows.reduce((sum, property) => sum + property.leases.filter((lease) => isLeaseCurrentlyEffective(lease, today)).length, 0);
+  const currentEffectiveCharges = charges.filter((charge) => isLeaseCurrentlyEffective(charge.leases, today));
+  const paidTotal = (currentPayments ?? []).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+  const pendingTotal = currentEffectiveCharges
+    .filter((charge) => charge.status !== 'paid' && charge.status !== 'waived' && !isUnpaidStatus(charge.status))
+    .reduce((sum, charge) => sum + remainingAmount(charge), 0);
+  const unpaidTotal = currentEffectiveCharges.filter((charge) => isUnpaidStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0);
   const signedPhotos = new Map<string, string>();
 
   await Promise.all(
@@ -196,10 +219,10 @@ export default async function DashboardPage() {
       </div>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard icon="payments" tone="primary" label={t('metrics.collectedRent')} value={formatMoney(activeRentTotal)} />
-        <MetricCard icon="hourglass_empty" tone="secondary" label={t('metrics.pending')} value={formatMoney(paidTotal)} />
-        <MetricCard icon="warning" tone="error" label={t('metrics.unpaid')} value={formatMoney(unpaidTotal)} />
-        <MetricCard icon="home_work" tone="primary" label={t('metrics.activeRentals')} value={activeLeaseCount.toString()} />
+        <MetricCard href="/transactions" icon="payments" tone="primary" label={t('metrics.collectedRent')} value={formatMoney(paidTotal)} />
+        <MetricCard href="/tenants" icon="hourglass_empty" tone="secondary" label={t('metrics.pending')} value={formatMoney(pendingTotal)} />
+        <MetricCard href="/tenants" icon="warning" tone="error" label={t('metrics.unpaid')} value={formatMoney(unpaidTotal)} />
+        <MetricCard href="/bail" icon="home_work" tone="primary" label={t('metrics.activeRentals')} value={activeLeaseCount.toString()} />
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -216,7 +239,7 @@ export default async function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2">
               {rows.length ? (
                 rows.map((property) => {
-                  const activeLeases = property.leases.filter((lease) => lease.status === 'active');
+                  const activeLeases = property.leases.filter((lease) => isLeaseCurrentlyEffective(lease, today));
                   const propertyRentTotal = activeLeases.reduce((sum, lease) => sum + Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0), 0);
                   const photoUrl = signedPhotos.get(property.id) ?? defaultApartmentPhoto;
 
@@ -251,9 +274,10 @@ export default async function DashboardPage() {
               <span className="text-sm text-[var(--muted)]">{t('checklist')}</span>
             </div>
             <div className="mt-5 grid gap-3">
+              <QuickAction href="/properties?new=1" label={t('quick.createProperty')} note={t('quick.createPropertyNote')} />
+              <QuickAction href="/tenants?new=1" label={t('quick.addTenant')} note={t('quick.addTenantNote')} />
               <QuickAction href="/bail" label={t('quick.createLease')} note={t('quick.createLeaseNote')} />
-              <QuickAction href="/documents" label={t('quick.addDocument')} note={t('quick.addDocumentNote')} />
-              <QuickAction href="/tax" label={t('quick.prepareTax')} note={t('quick.prepareTaxNote')} />
+              <QuickAction href="/transactions?new=transaction" label={t('quick.addTransaction')} note={t('quick.addTransactionNote')} />
             </div>
           </section>
         </aside>
@@ -262,7 +286,7 @@ export default async function DashboardPage() {
   );
 }
 
-function MetricCard({icon, label, tone, value}: {icon: string; label: string; tone: 'error' | 'primary' | 'secondary'; value: string}) {
+function MetricCard({href, icon, label, tone, value}: {href: string; icon: string; label: string; tone: 'error' | 'primary' | 'secondary'; value: string}) {
   const tones = {
     error: 'bg-[#ffdad6]/60 text-[#ba1a1a]',
     primary: 'bg-[var(--accent-soft)] text-[var(--accent)]',
@@ -271,13 +295,13 @@ function MetricCard({icon, label, tone, value}: {icon: string; label: string; to
   const valueClass = tone === 'error' ? 'text-[#ba1a1a]' : 'text-[#171d1c]';
 
   return (
-    <div className="rounded-xl border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+    <Link className="focus-ring rounded-xl border border-[var(--line-soft)] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-md" href={href}>
       <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-full ${tones[tone]}`}>
         <span className="material-symbols-outlined text-[22px]">{icon}</span>
       </div>
       <p className="mb-1 text-sm font-medium text-[var(--muted)]">{label}</p>
       <p className={`text-xl font-semibold tabular-nums ${valueClass}`}>{value}</p>
-    </div>
+    </Link>
   );
 }
 

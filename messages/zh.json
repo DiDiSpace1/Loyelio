@@ -198,12 +198,14 @@
       "activeRentals": "有效租赁"
     },
     "quick": {
+      "createProperty": "创建房产",
+      "createPropertyNote": "添加地址和房产信息",
+      "addTenant": "添加租客",
+      "addTenantNote": "创建租客资料",
       "createLease": "创建租约",
       "createLeaseNote": "将租客关联至房产",
-      "addDocument": "添加文档",
-      "addDocumentNote": "归类租约、收据或税务文件",
-      "prepareTax": "准备税务申报",
-      "prepareTaxNote": "核对收入与支出"
+      "addTransaction": "添加交易记录",
+      "addTransactionNote": "登记收入或支出"
     },
     "chart": {
       "title": "收入与支出",
