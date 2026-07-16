@@ -3,8 +3,8 @@ import {getLocale, getTranslations} from 'next-intl/server';
 import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {TransactionActionsMenu, type TransactionActionRow} from './transaction-actions-menu';
 import {TransactionDrawer, type LeaseOption} from './transaction-drawer';
+import {TransactionsOverview, type TransactionOverviewRow, type TransactionStat} from './transactions-overview';
 
 type PropertyOption = {
   id: string;
@@ -72,40 +72,6 @@ type ExpenseRow = {
   vendor: string | null;
 };
 
-type TransactionRow =
-  | {
-      amount: number;
-      category: string;
-      date: string;
-      description?: string | null;
-      id: string;
-      meta: string;
-      notes?: string | null;
-      paymentMethod?: string | null;
-      propertyId?: string | null;
-      revenueType?: string | null;
-      status: string;
-      taxCategoryId?: string | null;
-      type: 'expense';
-      vendor?: string | null;
-    }
-  | {
-      amount: number;
-      category: string;
-      date: string;
-      description?: string | null;
-      id: string;
-      meta: string;
-      notes?: string | null;
-      paymentMethod?: string | null;
-      propertyId?: string | null;
-      revenueType?: string | null;
-      status: string;
-      taxCategoryId?: string | null;
-      type: 'revenue';
-      vendor?: string | null;
-    };
-
 type TransactionsPageProps = {
   searchParams: Promise<{
     error?: string;
@@ -145,14 +111,6 @@ function formatMoney(value: number, locale: string) {
   }).format(value);
 }
 
-function formatDate(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  }).format(new Date(value));
-}
-
 function paidAmount(row: Pick<RevenueRow, 'rent_payments'>) {
   return row.rent_payments.filter((payment) => noteRevenueType(payment.notes) === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 }
@@ -183,10 +141,6 @@ function revenueCategory(type: string | null | undefined, t: (key: 'deposit' | '
   return t('rent');
 }
 
-function Icon({children, className = ''}: {children: string; className?: string}) {
-  return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
-}
-
 export default async function TransactionsPage({searchParams}: TransactionsPageProps) {
   const locale = await getLocale();
   const t = await getTranslations('transactions');
@@ -194,7 +148,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const range = monthRange(locale);
   const previousRange = previousMonthRange();
-  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}, {data: recentPayments}, {data: recentExpenses}] = await Promise.all([
+  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}] = await Promise.all([
     supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
@@ -234,20 +188,6 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .gte('expense_date', range.start)
       .lt('expense_date', range.end)
       .order('expense_date', {ascending: false})
-      .returns<ExpenseRow[]>(),
-    supabase
-      .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
-      .eq('workspace_id', workspaceId)
-      .order('paid_at', {ascending: false})
-      .limit(8)
-      .returns<PaymentRow[]>(),
-    supabase
-      .from('expenses')
-      .select('id, amount, description, expense_date, property_id, tax_category_id, vendor, properties(name), tax_categories(label)')
-      .eq('workspace_id', workspaceId)
-      .order('expense_date', {ascending: false})
-      .limit(8)
       .returns<ExpenseRow[]>()
   ]);
   const revenueRows = currentRevenues ?? [];
@@ -261,11 +201,25 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     .filter((row) => row.status !== 'paid' && row.status !== 'waived')
     .reduce((sum, row) => sum + Math.max(0, Number(row.total_due ?? 0) - paidAmount(row)), 0);
   const revenueTrend = previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : null;
-  const combinedRows: TransactionRow[] = [
-    ...(recentPayments ?? []).map((row) => ({
+  const pendingRows: TransactionOverviewRow[] = revenueRows
+    .filter((row) => row.status !== 'paid' && row.status !== 'waived')
+    .map((row) => ({
+      amount: Math.max(0, Number(row.total_due ?? 0) - paidAmount(row)),
+      category: t('pendingRents'),
+      date: row.period_month,
+      filter: 'pending' as const,
+      id: `pending-${row.id}`,
+      meta: [row.leases?.properties?.name, row.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
+      status: row.status,
+      type: 'pending' as const
+    }))
+    .filter((row) => row.amount > 0);
+  const combinedRows: TransactionOverviewRow[] = [
+    ...paymentRows.map((row) => ({
       amount: Number(row.amount ?? 0),
       category: revenueCategory(noteRevenueType(row.notes), t),
 	      date: row.paid_at,
+      filter: noteRevenueType(row.notes) === 'deposit' ? ('deposit' as const) : ('income' as const),
 	      id: row.id,
 	      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
       notes: cleanRevenueNotes(row.notes),
@@ -274,11 +228,12 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
 	      status: row.rent_charges?.status ?? 'paid',
       type: 'revenue' as const
     })),
-    ...(recentExpenses ?? []).map((row) => ({
+    ...expenseRows.map((row) => ({
       amount: Number(row.amount ?? 0),
       category: row.tax_categories?.label ?? t('expense'),
 	      date: row.expense_date,
 	      description: row.description,
+      filter: 'expense' as const,
 	      id: row.id,
 	      meta: [row.properties?.name, row.vendor].filter(Boolean).join(' - ') || '-',
 	      propertyId: row.property_id,
@@ -286,10 +241,45 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
 	      taxCategoryId: row.tax_category_id,
 	      type: 'expense' as const,
 	      vendor: row.vendor
-    }))
+    })),
+    ...pendingRows
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
+  const stats: TransactionStat[] = [
+    {
+      filter: 'income',
+      icon: 'payments',
+      label: t('monthlyRevenue', {month: range.label.charAt(0).toUpperCase() + range.label.slice(1)}),
+      note: revenueTrend === null ? t('noPreviousMonth') : t('trend', {value: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString(locale, {maximumFractionDigits: 1})}`}),
+      tone: 'revenue',
+      value: formatMoney(monthlyRevenue, locale)
+    },
+    {
+      filter: 'deposit',
+      icon: 'account_balance_wallet',
+      label: t('monthlyDeposits'),
+      note: t('depositsNote'),
+      tone: 'deposit',
+      value: formatMoney(monthlyDeposit, locale)
+    },
+    {
+      filter: 'expense',
+      icon: 'receipt_long',
+      label: t('monthlyExpenses'),
+      note: t('transactionCount', {count: expenseRows.length}),
+      tone: 'expense',
+      value: formatMoney(monthlyExpenses, locale)
+    },
+    {
+      filter: 'pending',
+      icon: 'hourglass_empty',
+      label: t('pendingRents'),
+      note: t('paymentsToFollow'),
+      tone: 'pending',
+      value: formatMoney(pendingRevenue, locale)
+    }
+  ];
 
   return (
     <AppShell>
@@ -307,120 +297,13 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
         </div>
       ) : null}
 
-      <section className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          icon="payments"
-          label={t('monthlyRevenue', {month: range.label.charAt(0).toUpperCase() + range.label.slice(1)})}
-          note={revenueTrend === null ? t('noPreviousMonth') : t('trend', {value: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toLocaleString(locale, {maximumFractionDigits: 1})}`})}
-          tone="revenue"
-          value={formatMoney(monthlyRevenue, locale)}
-        />
-        <StatCard icon="account_balance_wallet" label={t('monthlyDeposits')} note={t('depositsNote')} tone="deposit" value={formatMoney(monthlyDeposit, locale)} />
-        <StatCard icon="receipt_long" label={t('monthlyExpenses')} note={t('transactionCount', {count: expenseRows.length})} tone="expense" value={formatMoney(monthlyExpenses, locale)} />
-        <StatCard icon="hourglass_empty" label={t('pendingRents')} note={t('paymentsToFollow')} tone="pending" value={formatMoney(pendingRevenue, locale)} />
-      </section>
-
-      <section className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#171d1c]">{t('recentHistory')}</h2>
-          <span className="text-sm text-[var(--muted)]">{t('movementCount', {count: combinedRows.length})}</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
-              <tr>
-                <th className="px-6 py-3">{t('date')}</th>
-                <th className="px-6 py-3">{t('category')}</th>
-                <th className="px-6 py-3">{t('propertyTenant')}</th>
-	                <th className="px-6 py-3 text-right">{t('amount')}</th>
-	                <th className="px-6 py-3 text-right">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line-soft)]">
-              {combinedRows.length ? (
-                combinedRows.map((row) => {
-                  const actionRow: TransactionActionRow = {
-                    amount: row.amount,
-                    category: row.category,
-                    date: row.date,
-                    description: row.description,
-                    id: row.id,
-                    meta: row.meta,
-                    notes: row.notes,
-                    paymentMethod: row.paymentMethod,
-                    propertyId: row.propertyId,
-                    revenueType: row.revenueType,
-                    taxCategoryId: row.taxCategoryId,
-                    type: row.type,
-                    vendor: row.vendor
-                  };
-                  return (
-                    <tr className="hover:bg-[#f8fbfa]" key={row.id}>
-                      <td className="px-6 py-4 tabular-nums">{formatDate(row.date, locale)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${row.type === 'revenue' ? 'bg-[#ecfdf5] text-[var(--accent)]' : 'bg-[#ffdbce] text-[#924628]'}`}>
-                          <Icon className="text-[15px]">{row.type === 'revenue' ? 'payments' : 'receipt_long'}</Icon>
-                          {row.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-[#33413f]">{row.meta}</td>
-	                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>{row.type === 'expense' ? '- ' : ''}{formatMoney(row.amount, locale)}</td>
-	                      <td className="px-6 py-4 text-right">
-	                        <TransactionActionsMenu
-	                          locale={locale}
-	                          properties={(properties ?? []).map((property) => ({id: property.id, label: property.name}))}
-	                          row={actionRow}
-	                          taxCategories={(taxCategories ?? []).map((category) => ({id: category.id, label: category.label}))}
-	                        />
-	                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td className="px-6 py-12 text-center text-[var(--muted)]" colSpan={5}>
-                    {t('noTransactions')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <TransactionsOverview
+        locale={locale}
+        properties={(properties ?? []).map((property) => ({id: property.id, label: property.name}))}
+        rows={combinedRows}
+        stats={stats}
+        taxCategories={(taxCategories ?? []).map((category) => ({id: category.id, label: category.label}))}
+      />
     </AppShell>
-  );
-}
-
-function StatCard({icon, label, note, tone, value}: {icon: string; label: string; note: string; tone: 'deposit' | 'expense' | 'pending' | 'revenue'; value: string}) {
-  const tones = {
-    deposit: {
-      icon: 'bg-[#eef2ff] text-[#3755c3]',
-      value: 'text-[#3755c3]'
-    },
-    expense: {
-      icon: 'bg-[#ffdbce] text-[#924628]',
-      value: 'text-[#924628]'
-    },
-    pending: {
-      icon: 'bg-[#fff8ec] text-[#b35a09]',
-      value: 'text-[#b35a09]'
-    },
-    revenue: {
-      icon: 'bg-[#d9fbf4] text-[var(--accent)]',
-      value: 'text-[var(--accent)]'
-    }
-  };
-
-  return (
-    <div className="rounded-xl border border-[var(--line-soft)] bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${tones[tone].icon}`}>
-          <Icon>{icon}</Icon>
-        </div>
-      </div>
-      <p className="text-sm font-semibold text-[#3d4947]">{label}</p>
-      <p className={`mt-1 text-xl font-semibold tabular-nums ${tones[tone].value}`}>{value}</p>
-      <p className="mt-3 text-sm font-medium text-[#3d4947]">{note}</p>
-    </div>
   );
 }

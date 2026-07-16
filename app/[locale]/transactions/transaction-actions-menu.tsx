@@ -2,6 +2,7 @@
 
 import {useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
+import {useTranslations} from 'next-intl';
 
 import {ConfirmSubmitButton} from '@/components/app/confirm-submit-button';
 import {DateDisplayInput, isoDateToDisplay} from '@/components/forms/date-display-input';
@@ -47,6 +48,8 @@ export function TransactionActionsMenu({
   row: TransactionActionRow;
   taxCategories: TransactionActionOption[];
 }) {
+  const common = useTranslations('common');
+  const t = useTranslations('transactions');
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const summaryRef = useRef<HTMLElement>(null);
   const [viewOpen, setViewOpen] = useState(false);
@@ -106,10 +109,10 @@ export function TransactionActionsMenu({
         </summary>
         <div className="fixed z-[9999] w-44 rounded-lg border border-[var(--line-soft)] bg-white p-1 text-left text-sm shadow-xl" style={{left: position.left, top: position.top}}>
           <button className="w-full rounded-md px-3 py-2 text-left hover:bg-[#f0f5f2]" onClick={() => setViewOpen(true)} type="button">
-            Voir
+            {common('view')}
           </button>
           <button className="w-full rounded-md px-3 py-2 text-left hover:bg-[#f0f5f2] cursor-pointer" onClick={() => setEditOpen(true)} type="button">
-            Modifier
+            {common('edit')}
           </button>
           <form action={deleteTransactionAction}>
             <input name="locale" type="hidden" value={locale} />
@@ -118,43 +121,43 @@ export function TransactionActionsMenu({
             <input name="id" type="hidden" value={row.id} />
             <ConfirmSubmitButton
               className="w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0] cursor-pointer"
-              confirmLabel="Supprimer"
-              description="Cette transaction sera supprimee de l'historique et des calculs mensuels."
-              title="Supprimer cette transaction ?"
+              confirmLabel={common('delete')}
+              description={t('deleteDescription')}
+              title={t('deleteTitle')}
             >
-              Supprimer
+              {common('delete')}
             </ConfirmSubmitButton>
           </form>
         </div>
       </details>
 
       {viewOpen ? (
-        <Modal title="Detail de la transaction" onClose={() => setViewOpen(false)}>
+        <Modal title={t('detailTitle')} onClose={() => setViewOpen(false)}>
           <dl className="grid gap-3 text-sm">
-            <Info label="Type" value={row.type === 'revenue' ? 'Revenu' : 'Depense'} />
-            <Info label="Date" value={isoDateToDisplay(row.date)} />
-            <Info label="Categorie" value={row.category} />
-            <Info label="Bien / Locataire" value={row.meta} />
-            <Info label="Montant" value={`${moneyValue(row.amount)} EUR`} />
-            {row.vendor ? <Info label="Fournisseur" value={row.vendor} /> : null}
-            {row.description ? <Info label="Description" value={row.description} /> : null}
-            {row.notes ? <Info label="Note" value={row.notes} /> : null}
+            <Info label={t('type')} value={row.type === 'revenue' ? t('revenue') : t('expense')} />
+            <Info label={t('date')} value={isoDateToDisplay(row.date)} />
+            <Info label={t('category')} value={row.category} />
+            <Info label={t('propertyTenant')} value={row.meta} />
+            <Info label={t('amount')} value={`${moneyValue(row.amount)} EUR`} />
+            {row.vendor ? <Info label={t('vendor')} value={row.vendor} /> : null}
+            {row.description ? <Info label={t('description')} value={row.description} /> : null}
+            {row.notes ? <Info label={t('additionalNote')} value={row.notes} /> : null}
           </dl>
         </Modal>
       ) : null}
 
       {editOpen ? (
-        <Modal title="Modifier la transaction" onClose={() => setEditOpen(false)}>
+        <Modal title={t('editTitle')} onClose={() => setEditOpen(false)}>
           <form action={updateTransactionAction} className="grid gap-4">
             <input name="locale" type="hidden" value={locale} />
             <input name="type" type="hidden" value={row.type} />
             <input name="id" type="hidden" value={row.id} />
             <label className="grid gap-2 text-sm text-[#3d4947]">
-              Date
+              {t('date')}
               <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] px-3" defaultValue={row.date} name="date" required />
             </label>
             <label className="grid gap-2 text-sm text-[#3d4947]">
-              Montant
+              {t('amount')}
               <span className="flex min-h-11 items-center rounded-md border border-[var(--line)] bg-white px-3">
                 <input className="min-w-0 flex-1 border-0 bg-transparent outline-none" defaultValue={moneyValue(row.amount)} min="0.01" name="amount" required step="0.01" type="number" />
                 <span className="text-sm font-semibold">EUR</span>
@@ -163,26 +166,26 @@ export function TransactionActionsMenu({
             {row.type === 'revenue' ? (
               <>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Mode de paiement
+                  {t('paymentMethod')}
                   <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3" defaultValue={row.paymentMethod ?? 'bank_transfer'} name="payment_method">
-                    <option value="bank_transfer">Virement bancaire</option>
-                    <option value="card">Carte bancaire</option>
-                    <option value="cash">Especes</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="other">Autre</option>
+                    <option value="bank_transfer">{t('bankTransfer')}</option>
+                    <option value="card">{t('card')}</option>
+                    <option value="cash">{t('cash')}</option>
+                    <option value="cheque">{t('cheque')}</option>
+                    <option value="other">{t('other')}</option>
                   </select>
                 </label>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Note
+                  {t('additionalNote')}
                   <textarea className="focus-ring min-h-24 rounded-md border border-[var(--line)] px-3 py-3" defaultValue={row.notes ?? ''} name="notes" />
                 </label>
               </>
             ) : (
               <>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Categorie
+                  {t('category')}
                   <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3" defaultValue={row.taxCategoryId ?? ''} name="tax_category_id">
-                    {taxCategories.length ? null : <option value="">Autres frais</option>}
+                    {taxCategories.length ? null : <option value="">{t('otherFees')}</option>}
                     {taxCategories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.label}
@@ -191,9 +194,9 @@ export function TransactionActionsMenu({
                   </select>
                 </label>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Bien
+                  {t('property')}
                   <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3" defaultValue={row.propertyId ?? ''} name="property_id">
-                    <option value="">Global</option>
+                    <option value="">{t('global')}</option>
                     {properties.map((property) => (
                       <option key={property.id} value={property.id}>
                         {property.label}
@@ -202,21 +205,21 @@ export function TransactionActionsMenu({
                   </select>
                 </label>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Fournisseur
+                  {t('vendor')}
                   <input autoComplete="off" className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3" defaultValue={row.vendor ?? ''} name="vendor" />
                 </label>
                 <label className="grid gap-2 text-sm text-[#3d4947]">
-                  Description
+                  {t('description')}
                   <input className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-3" defaultValue={row.description ?? ''} name="description" />
                 </label>
               </>
             )}
             <div className="flex justify-end gap-3 border-t border-[var(--line-soft)] pt-4">
               <button className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-5 text-sm font-semibold" onClick={() => setEditOpen(false)} type="button">
-                Annuler
+                {common('cancel')}
               </button>
               <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
-                Enregistrer
+                {common('save')}
               </button>
             </div>
           </form>
