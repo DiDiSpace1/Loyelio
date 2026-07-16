@@ -16,25 +16,6 @@ type TaxCategoryOption = {
   label: string;
 };
 
-type RevenueRow = {
-  id: string;
-  period_month: string;
-  status: string;
-  total_due: number;
-  rent_payments: {
-    amount: number;
-    notes: string | null;
-  }[];
-  leases: {
-    properties: {
-      name: string;
-    } | null;
-    tenants: {
-      full_name: string;
-    } | null;
-  } | null;
-};
-
 type PaymentRow = {
   amount: number;
   id: string;
@@ -111,10 +92,6 @@ function formatMoney(value: number, locale: string) {
   }).format(value);
 }
 
-function paidAmount(row: Pick<RevenueRow, 'rent_payments'>) {
-  return row.rent_payments.filter((payment) => noteRevenueType(payment.notes) === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
-}
-
 const revenueTypeNotePattern = /^\[\[loyelio:revenue_type=(rent|deposit|other)\]\]\n?/;
 
 function noteRevenueType(notes: string | null | undefined) {
@@ -148,7 +125,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const range = monthRange(locale);
   const previousRange = previousMonthRange();
-  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentRevenues}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}] = await Promise.all([
+  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}] = await Promise.all([
     supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
@@ -158,14 +135,6 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .eq('status', 'active')
       .order('created_at', {ascending: false})
       .returns<LeaseOption[]>(),
-    supabase
-      .from('rent_charges')
-      .select('id, period_month, status, total_due, rent_payments(amount, notes), leases(properties(name), tenants(full_name))')
-      .eq('workspace_id', workspaceId)
-      .gte('period_month', range.start)
-      .lt('period_month', range.end)
-      .order('period_month', {ascending: false})
-      .returns<RevenueRow[]>(),
     supabase
       .from('rent_payments')
       .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
@@ -190,30 +159,13 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .order('expense_date', {ascending: false})
       .returns<ExpenseRow[]>()
   ]);
-  const revenueRows = currentRevenues ?? [];
   const paymentRows = currentPayments ?? [];
   const expenseRows = currentExpenses ?? [];
   const monthlyRevenue = paymentRows.filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const monthlyDeposit = paymentRows.filter((row) => noteRevenueType(row.notes) === 'deposit').reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const previousRevenue = (previousPayments ?? []).filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const monthlyExpenses = expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const pendingRevenue = revenueRows
-    .filter((row) => row.status !== 'paid' && row.status !== 'waived')
-    .reduce((sum, row) => sum + Math.max(0, Number(row.total_due ?? 0) - paidAmount(row)), 0);
   const revenueTrend = previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : null;
-  const pendingRows: TransactionOverviewRow[] = revenueRows
-    .filter((row) => row.status !== 'paid' && row.status !== 'waived')
-    .map((row) => ({
-      amount: Math.max(0, Number(row.total_due ?? 0) - paidAmount(row)),
-      category: t('pendingRents'),
-      date: row.period_month,
-      filter: 'pending' as const,
-      id: `pending-${row.id}`,
-      meta: [row.leases?.properties?.name, row.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
-      status: row.status,
-      type: 'pending' as const
-    }))
-    .filter((row) => row.amount > 0);
   const combinedRows: TransactionOverviewRow[] = [
     ...paymentRows.map((row) => ({
       amount: Number(row.amount ?? 0),
@@ -241,8 +193,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
 	      taxCategoryId: row.tax_category_id,
 	      type: 'expense' as const,
 	      vendor: row.vendor
-    })),
-    ...pendingRows
+    }))
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
@@ -270,14 +221,6 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       note: t('transactionCount', {count: expenseRows.length}),
       tone: 'expense',
       value: formatMoney(monthlyExpenses, locale)
-    },
-    {
-      filter: 'pending',
-      icon: 'hourglass_empty',
-      label: t('pendingRents'),
-      note: t('paymentsToFollow'),
-      tone: 'pending',
-      value: formatMoney(pendingRevenue, locale)
     }
   ];
 

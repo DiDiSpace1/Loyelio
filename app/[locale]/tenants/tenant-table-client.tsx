@@ -62,11 +62,18 @@ function leaseCoversMonth(lease: TenantTableRow['leases'][number], month: string
 
 function displayLease(tenant: TenantTableRow, month: string) {
   const leasesInMonth = tenant.leases.filter((lease) => leaseCoversMonth(lease, month));
-  return leasesInMonth.find((lease) => lease.status === 'active') ?? leasesInMonth[0] ?? null;
+  const nextActiveLease = tenant.leases
+    .filter((lease) => lease.status === 'active')
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+  return leasesInMonth.find((lease) => lease.status === 'active') ?? leasesInMonth[0] ?? nextActiveLease ?? null;
 }
 
 function activeLease(tenant: TenantTableRow, month: string) {
   return tenant.leases.find((lease) => lease.status === 'active' && leaseCoversMonth(lease, month)) ?? null;
+}
+
+function hasAssignedLease(tenant: TenantTableRow) {
+  return tenant.leases.some((lease) => lease.status === 'active' || lease.status === 'draft');
 }
 
 function paymentStatus(lease: TenantTableRow['leases'][number] | null, month: string) {
@@ -94,7 +101,7 @@ function paymentStatus(lease: TenantTableRow['leases'][number] | null, month: st
 function hasOverdueRent(tenant: TenantTableRow, month: string) {
   const currentPeriod = monthStart(month);
 
-  return tenant.leases.some((lease) => lease.rent_charges.some((rentCharge) => rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status)));
+  return tenant.leases.some((lease) => lease.rent_charges.some((rentCharge) => lease.start_date <= currentPeriod && rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status)));
 }
 
 function leaseExpiresSoon(tenant: TenantTableRow, month: string) {
@@ -161,7 +168,7 @@ export function TenantTableClient({
   const rows = useMemo(() => {
     const activeTenantRows = tenants.filter((tenant) => tenant.is_active);
     const activeRows = activeTenantRows.filter((tenant) => activeLease(tenant, selectedMonth));
-    const unassignedRows = activeTenantRows.filter((tenant) => !activeLease(tenant, selectedMonth));
+    const unassignedRows = activeTenantRows.filter((tenant) => !hasAssignedLease(tenant));
     const expiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, selectedMonth));
     const overdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, selectedMonth));
     const viewRows =

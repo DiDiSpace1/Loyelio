@@ -81,11 +81,15 @@ function activeLease(tenant: TenantRow, month: string) {
   return tenant.leases.find((lease) => lease.status === 'active' && leaseCoversMonth(lease, month)) ?? null;
 }
 
+function hasAssignedLease(tenant: TenantRow) {
+  return tenant.leases.some((lease) => lease.status === 'active' || lease.status === 'draft');
+}
+
 function hasOverdueRent(tenant: TenantRow, month: string) {
   const currentPeriod = monthStart(month);
 
   return tenant.leases.some((lease) =>
-    lease.rent_charges.some((rentCharge) => rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status))
+    lease.rent_charges.some((rentCharge) => lease.start_date <= currentPeriod && rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status))
   );
 }
 
@@ -137,7 +141,7 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   const activeTenantRows = allRows.filter((tenant) => tenant.is_active);
   const summaryMonth = isoMonth(new Date());
   const summaryActiveRows = activeTenantRows.filter((tenant) => activeLease(tenant, summaryMonth));
-  const summaryUnassignedRows = activeTenantRows.filter((tenant) => !activeLease(tenant, summaryMonth));
+  const summaryUnassignedRows = activeTenantRows.filter((tenant) => !hasAssignedLease(tenant));
   const summaryExpiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, summaryMonth));
   const summaryOverdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, summaryMonth));
   const summaryOverdueMonth = earliestOverdueMonth(activeTenantRows, summaryMonth);

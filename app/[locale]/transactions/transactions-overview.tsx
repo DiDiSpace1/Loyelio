@@ -5,14 +5,14 @@ import {useTranslations} from 'next-intl';
 
 import {TransactionActionsMenu, type TransactionActionOption, type TransactionActionRow} from './transaction-actions-menu';
 
-export type TransactionFilter = 'deposit' | 'expense' | 'income' | 'pending';
+export type TransactionFilter = 'deposit' | 'expense' | 'income';
 
 export type TransactionStat = {
   filter: TransactionFilter;
   icon: string;
   label: string;
   note: string;
-  tone: 'deposit' | 'expense' | 'pending' | 'revenue';
+  tone: 'deposit' | 'expense' | 'revenue';
   value: string;
 };
 
@@ -30,7 +30,7 @@ export type TransactionOverviewRow = {
   revenueType?: string | null;
   status: string;
   taxCategoryId?: string | null;
-  type: 'expense' | 'pending' | 'revenue';
+  type: 'expense' | 'revenue';
   vendor?: string | null;
 };
 
@@ -62,10 +62,6 @@ function StatCard({active, stat, onClick}: {active: boolean; stat: TransactionSt
     expense: {
       icon: 'bg-[#ffdbce] text-[#924628]',
       value: 'text-[#924628]'
-    },
-    pending: {
-      icon: 'bg-[#fff8ec] text-[#b35a09]',
-      value: 'text-[#b35a09]'
     },
     revenue: {
       icon: 'bg-[#d9fbf4] text-[var(--accent)]',
@@ -124,7 +120,7 @@ export function TransactionsOverview({
 
   return (
     <>
-      <section className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-8 grid gap-5 md:grid-cols-3">
         {stats.map((stat) => (
           <StatCard active={activeFilter === stat.filter} key={stat.filter} stat={stat} onClick={() => setActiveFilter(stat.filter)} />
         ))}
@@ -172,41 +168,38 @@ export function TransactionsOverview({
             <tbody className="divide-y divide-[var(--line-soft)]">
               {filteredRows.length ? (
                 filteredRows.map((row) => {
-                  const actionRow: TransactionActionRow | null =
-                    row.type === 'pending'
-                      ? null
-                      : {
-                          amount: row.amount,
-                          category: row.category,
-                          date: row.date,
-                          description: row.description,
-                          id: row.id,
-                          meta: row.meta,
-                          notes: row.notes,
-                          paymentMethod: row.paymentMethod,
-                          propertyId: row.propertyId,
-                          revenueType: row.revenueType,
-                          taxCategoryId: row.taxCategoryId,
-                          type: row.type,
-                          vendor: row.vendor
-                        };
+                  const actionRow: TransactionActionRow = {
+                    amount: row.amount,
+                    category: row.category,
+                    date: row.date,
+                    description: row.description,
+                    id: row.id,
+                    meta: row.meta,
+                    notes: row.notes,
+                    paymentMethod: row.paymentMethod,
+                    propertyId: row.propertyId,
+                    revenueType: row.revenueType,
+                    taxCategoryId: row.taxCategoryId,
+                    type: row.type,
+                    vendor: row.vendor
+                  };
 
                   return (
                     <tr className="hover:bg-[#f8fbfa]" key={row.id}>
                       <td className="px-6 py-4 tabular-nums">{formatDate(row.date, locale)}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${row.type === 'expense' ? 'bg-[#ffdbce] text-[#924628]' : row.type === 'pending' ? 'bg-[#fff8ec] text-[#b35a09]' : 'bg-[#ecfdf5] text-[var(--accent)]'}`}>
-                          <Icon className="text-[15px]">{row.type === 'expense' ? 'receipt_long' : row.type === 'pending' ? 'hourglass_empty' : 'payments'}</Icon>
+                        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${row.type === 'expense' ? 'bg-[#ffdbce] text-[#924628]' : 'bg-[#ecfdf5] text-[var(--accent)]'}`}>
+                          <Icon className="text-[15px]">{row.type === 'expense' ? 'receipt_long' : 'payments'}</Icon>
                           {row.category}
                         </span>
                       </td>
                       <td className="px-6 py-4 font-medium text-[#33413f]">{row.meta}</td>
-                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : row.type === 'pending' ? 'text-[#b35a09]' : 'text-[var(--accent)]'}`}>
+                      <td className={`px-6 py-4 text-right font-semibold tabular-nums ${row.type === 'expense' ? 'text-[#924628]' : 'text-[var(--accent)]'}`}>
                         {row.type === 'expense' ? '- ' : ''}
                         {formatMoney(row.amount, locale)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {actionRow ? <TransactionActionsMenu locale={locale} properties={properties} row={actionRow} taxCategories={taxCategories} /> : <span className="text-[var(--muted)]">-</span>}
+                        <TransactionActionsMenu locale={locale} properties={properties} row={actionRow} taxCategories={taxCategories} />
                       </td>
                     </tr>
                   );

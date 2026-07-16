@@ -21,9 +21,10 @@ type PropertyRow = {
   tax_regime: string;
   property_photos: {file_path: string; is_cover: boolean}[];
   leases: {
+    charges_amount: number;
     id: string;
-    status: string;
     monthly_rent: number;
+    status: string;
     tenants: {full_name: string} | null;
   }[];
 };
@@ -66,7 +67,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   const query = supabase
     .from('properties')
     .select(
-      'id, name, address_line1, city, postal_code, rental_mode, occupancy_status, monthly_rent_estimate, tax_regime, property_photos(file_path, is_cover), leases(id, status, monthly_rent, tenants(full_name))'
+      'id, name, address_line1, city, postal_code, rental_mode, occupancy_status, monthly_rent_estimate, tax_regime, property_photos(file_path, is_cover), leases(id, status, monthly_rent, charges_amount, tenants(full_name))'
     )
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
@@ -85,7 +86,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   const occupancyRate = rows.length ? Math.round((occupiedPropertyCount / rows.length) * 100) : 0;
   const monthlyRent = rows.reduce(
     (sum, property) => {
-      const leaseTotal = property.leases.filter((lease) => lease.status === 'active').reduce((leaseSum, lease) => leaseSum + Number(lease.monthly_rent), 0);
+      const leaseTotal = property.leases.filter((lease) => lease.status === 'active').reduce((leaseSum, lease) => leaseSum + Number(lease.monthly_rent) + Number(lease.charges_amount ?? 0), 0);
       return sum + (leaseTotal || Number(property.monthly_rent_estimate ?? 0));
     },
     0
