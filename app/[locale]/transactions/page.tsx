@@ -23,7 +23,7 @@ type RevenueRow = {
   total_due: number;
   rent_payments: {
     amount: number;
-    revenue_type: string | null;
+    notes: string | null;
   }[];
   leases: {
     properties: {
@@ -41,7 +41,6 @@ type PaymentRow = {
   notes: string | null;
   paid_at: string;
   payment_method: string | null;
-  revenue_type: string | null;
   rent_charges: {
     period_month: string;
     status: string;
@@ -155,11 +154,21 @@ function formatDate(value: string, locale: string) {
 }
 
 function paidAmount(row: Pick<RevenueRow, 'rent_payments'>) {
-  return row.rent_payments.filter((payment) => !payment.revenue_type || payment.revenue_type === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+  return row.rent_payments.filter((payment) => noteRevenueType(payment.notes) === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 }
 
-function isIncomePayment(row: Pick<PaymentRow, 'revenue_type'>) {
-  return row.revenue_type !== 'deposit';
+const revenueTypeNotePattern = /^\[\[loyelio:revenue_type=(rent|deposit|other)\]\]\n?/;
+
+function noteRevenueType(notes: string | null | undefined) {
+  return notes?.match(revenueTypeNotePattern)?.[1] ?? 'rent';
+}
+
+function cleanRevenueNotes(notes: string | null | undefined) {
+  return notes?.replace(revenueTypeNotePattern, '') || null;
+}
+
+function isIncomePayment(row: Pick<PaymentRow, 'notes'>) {
+  return noteRevenueType(row.notes) !== 'deposit';
 }
 
 function revenueCategory(type: string | null | undefined, t: (key: 'deposit' | 'other' | 'rent') => string) {
@@ -190,14 +199,14 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
       .from('leases')
-      .select('id, monthly_rent, charges_amount, deposit_amount, properties(id, name), tenants(id, full_name), rent_charges(period_month, total_due, rent_payments(amount, revenue_type))')
+      .select('id, monthly_rent, charges_amount, deposit_amount, properties(id, name), tenants(id, full_name), rent_charges(period_month, total_due, rent_payments(amount, notes))')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active')
       .order('created_at', {ascending: false})
       .returns<LeaseOption[]>(),
     supabase
       .from('rent_charges')
-      .select('id, period_month, status, total_due, rent_payments(amount, revenue_type), leases(properties(name), tenants(full_name))')
+      .select('id, period_month, status, total_due, rent_payments(amount, notes), leases(properties(name), tenants(full_name))')
       .eq('workspace_id', workspaceId)
       .gte('period_month', range.start)
       .lt('period_month', range.end)
@@ -205,7 +214,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<RevenueRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, revenue_type, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .gte('paid_at', range.start)
       .lt('paid_at', range.end)
@@ -213,7 +222,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<PaymentRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, revenue_type, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .gte('paid_at', previousRange.start)
       .lt('paid_at', previousRange.end)
@@ -228,7 +237,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<ExpenseRow[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, revenue_type, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
       .order('paid_at', {ascending: false})
       .limit(8)
@@ -245,7 +254,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const paymentRows = currentPayments ?? [];
   const expenseRows = currentExpenses ?? [];
   const monthlyRevenue = paymentRows.filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const monthlyDeposit = paymentRows.filter((row) => row.revenue_type === 'deposit').reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const monthlyDeposit = paymentRows.filter((row) => noteRevenueType(row.notes) === 'deposit').reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const previousRevenue = (previousPayments ?? []).filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const monthlyExpenses = expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const pendingRevenue = revenueRows
@@ -255,13 +264,13 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const combinedRows: TransactionRow[] = [
     ...(recentPayments ?? []).map((row) => ({
       amount: Number(row.amount ?? 0),
-      category: revenueCategory(row.revenue_type, t),
+      category: revenueCategory(noteRevenueType(row.notes), t),
 	      date: row.paid_at,
 	      id: row.id,
 	      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
-	      notes: row.notes,
+      notes: cleanRevenueNotes(row.notes),
 	      paymentMethod: row.payment_method,
-      revenueType: row.revenue_type,
+      revenueType: noteRevenueType(row.notes),
 	      status: row.rent_charges?.status ?? 'paid',
       type: 'revenue' as const
     })),

@@ -35,7 +35,7 @@ type RentCharge = {
   period_month: string;
   rent_payments: {
     amount: number | null;
-    revenue_type: string | null;
+    notes: string | null;
   }[];
   leases: {
     end_date: string | null;
@@ -52,8 +52,8 @@ type RentCharge = {
 
 type ChartPayment = {
   amount: number;
+  notes: string | null;
   paid_at: string;
-  revenue_type: string | null;
 };
 
 type ChartExpense = {
@@ -110,13 +110,13 @@ function isUnpaidStatus(status: string) {
 }
 
 function remainingAmount(charge: Pick<RentCharge, 'rent_payments' | 'total_due'>) {
-  const paidAmount = charge.rent_payments.filter((payment) => !payment.revenue_type || payment.revenue_type === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+  const paidAmount = charge.rent_payments.filter(isRentPayment).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 
   return Math.max(0, Number(charge.total_due ?? 0) - paidAmount);
 }
 
-function isRentPayment(payment: Pick<ChartPayment, 'revenue_type'>) {
-  return !payment.revenue_type || payment.revenue_type === 'rent';
+function isRentPayment(payment: {notes?: string | null}) {
+  return !payment.notes?.startsWith('[[loyelio:revenue_type=deposit]]') && !payment.notes?.startsWith('[[loyelio:revenue_type=other]]');
 }
 
 export default async function DashboardPage() {
@@ -138,21 +138,21 @@ export default async function DashboardPage() {
     .returns<DashboardProperty[]>();
   const {data: rentCharges} = await supabase
     .from('rent_charges')
-    .select('id, status, total_due, period_month, rent_payments(amount, revenue_type), leases(status, start_date, end_date, tenants(full_name), properties(name))')
+    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(full_name), properties(name))')
     .eq('workspace_id', workspaceId)
     .eq('period_month', month)
     .order('created_at', {ascending: false})
     .returns<RentCharge[]>();
   const {data: currentPayments} = await supabase
     .from('rent_payments')
-    .select('amount, paid_at, revenue_type')
+    .select('amount, paid_at, notes')
     .eq('workspace_id', workspaceId)
     .gte('paid_at', month)
     .lt('paid_at', monthEnd)
     .returns<ChartPayment[]>();
   const {data: chartPayments} = await supabase
     .from('rent_payments')
-    .select('paid_at, amount, revenue_type')
+    .select('paid_at, amount, notes')
     .eq('workspace_id', workspaceId)
     .gte('paid_at', chartStart)
     .lt('paid_at', chartEnd)

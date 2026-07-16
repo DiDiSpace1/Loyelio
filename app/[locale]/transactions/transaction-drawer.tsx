@@ -27,7 +27,7 @@ export type LeaseOption = {
     total_due: number | null;
     rent_payments: {
       amount: number | null;
-      revenue_type: string | null;
+      notes: string | null;
     }[];
   }[];
   properties: {
@@ -54,7 +54,7 @@ function periodStart(month: string) {
 
 function paidForPeriod(lease: LeaseOption | undefined, month: string) {
   const charge = lease?.rent_charges.find((row) => row.period_month === periodStart(month));
-  return charge?.rent_payments.filter((payment) => !payment.revenue_type || payment.revenue_type === 'rent').reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
+  return charge?.rent_payments.filter((payment) => !payment.notes?.startsWith('[[loyelio:revenue_type=deposit]]') && !payment.notes?.startsWith('[[loyelio:revenue_type=other]]')).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
 }
 
 function remainingForPeriod(lease: LeaseOption | undefined, month: string) {

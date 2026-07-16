@@ -42,8 +42,22 @@ function revenueType(value: string) {
   return ['rent', 'deposit', 'other'].includes(value) ? value : 'rent';
 }
 
-function isRentPayment(payment: {revenue_type?: string | null}) {
-  return !payment.revenue_type || payment.revenue_type === 'rent';
+const revenueTypeNotePattern = /^\[\[loyelio:revenue_type=(rent|deposit|other)\]\]\n?/;
+
+function noteRevenueType(notes: string | null | undefined) {
+  return notes?.match(revenueTypeNotePattern)?.[1] ?? 'rent';
+}
+
+function encodeRevenueNotes(type: string, notes: string) {
+  if (type === 'rent') {
+    return notes || null;
+  }
+
+  return `[[loyelio:revenue_type=${type}]]${notes ? `\n${notes}` : ''}`;
+}
+
+function isRentPayment(payment: {notes?: string | null}) {
+  return noteRevenueType(payment.notes) === 'rent';
 }
 
 export async function createRevenueTransactionAction(formData: FormData) {
@@ -53,6 +67,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const amount = moneyValue(formData, 'amount');
   const receivedAt = value(formData, 'received_at') || new Date().toISOString().slice(0, 10);
   const type = revenueType(value(formData, 'revenue_type'));
+  const notes = value(formData, 'notes');
 
   if (!leaseId || !periodMonth || amount <= 0) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_missing`);
@@ -75,11 +90,11 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const totalDue = rentAmount + chargesAmount;
   const {data: existingCharge} = await supabase
     .from('rent_charges')
-    .select('id, rent_payments(amount, revenue_type)')
+    .select('id, rent_payments(amount, notes)')
     .eq('workspace_id', workspaceId)
     .eq('lease_id', leaseId)
     .eq('period_month', periodMonth)
-    .maybeSingle<{id: string; rent_payments: {amount: number | null; revenue_type: string | null}[]}>();
+    .maybeSingle<{id: string; rent_payments: {amount: number | null; notes: string | null}[]}>();
   const alreadyPaid = existingCharge?.rent_payments.filter(isRentPayment).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
   const nextPaid = alreadyPaid + (type === 'rent' ? amount : 0);
   const remainingDue = Math.max(0, totalDue - alreadyPaid);
@@ -96,7 +111,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
         charges_amount: chargesAmount,
         due_date: receivedAt,
         lease_id: leaseId,
-        notes: value(formData, 'notes') || null,
+        notes: notes || null,
         period_month: periodMonth,
         rent_amount: rentAmount,
         status,
@@ -114,10 +129,9 @@ export async function createRevenueTransactionAction(formData: FormData) {
 
   const {error: paymentError} = await supabase.from('rent_payments').insert({
     amount,
-    notes: value(formData, 'notes') || null,
+    notes: encodeRevenueNotes(type, notes),
     paid_at: receivedAt,
     payment_method: paymentMethod(value(formData, 'payment_method')),
-    revenue_type: type,
     rent_charge_id: charge.id,
     workspace_id: workspaceId
   });
@@ -212,10 +226,10 @@ export async function createExpenseTransactionAction(formData: FormData) {
 async function updateRentChargeStatus(supabase: Awaited<ReturnType<typeof getCurrentUserWorkspace>>['supabase'], workspaceId: string, rentChargeId: string) {
   const {data: charge} = await supabase
     .from('rent_charges')
-    .select('id, total_due, rent_payments(amount, revenue_type)')
+    .select('id, total_due, rent_payments(amount, notes)')
     .eq('id', rentChargeId)
     .eq('workspace_id', workspaceId)
-    .single<{id: string; total_due: number | null; rent_payments: {amount: number | null; revenue_type: string | null}[]}>();
+    .single<{id: string; total_due: number | null; rent_payments: {amount: number | null; notes: string | null}[]}>();
 
   if (!charge) {
     return;
@@ -242,12 +256,12 @@ export async function updateTransactionAction(formData: FormData) {
 
   if (type === 'revenue') {
     const paidAt = value(formData, 'date') || new Date().toISOString().slice(0, 10);
-    const {data: payment} = await supabase.from('rent_payments').select('id, amount, revenue_type, rent_charge_id, rent_charges(total_due, rent_payments(id, amount, revenue_type))').eq('id', id).eq('workspace_id', workspaceId).single<{
+    const {data: payment} = await supabase.from('rent_payments').select('id, amount, notes, rent_charge_id, rent_charges(total_due, rent_payments(id, amount, notes))').eq('id', id).eq('workspace_id', workspaceId).single<{
       amount: number | null;
       id: string;
-      revenue_type: string | null;
+      notes: string | null;
       rent_charge_id: string;
-      rent_charges: {total_due: number | null; rent_payments: {id: string; amount: number | null; revenue_type: string | null}[]} | null;
+      rent_charges: {total_due: number | null; rent_payments: {id: string; amount: number | null; notes: string | null}[]} | null;
     }>();
 
     if (!payment) {
@@ -265,7 +279,7 @@ export async function updateTransactionAction(formData: FormData) {
       .from('rent_payments')
       .update({
         amount,
-        notes: value(formData, 'notes') || null,
+        notes: encodeRevenueNotes(revenueType(value(formData, 'revenue_type') || noteRevenueType(payment.notes)), value(formData, 'notes')),
         paid_at: paidAt,
         payment_method: paymentMethod(value(formData, 'payment_method'))
       })

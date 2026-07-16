@@ -739,7 +739,6 @@ export async function addRentPaymentAction(formData: FormData) {
     amount,
     paid_at: paidAt,
     payment_method: paymentMethod,
-    revenue_type: 'rent',
     rent_charge_id: rentChargeId,
     workspace_id: workspaceId
   });
