@@ -94,7 +94,7 @@ function formatMonth(value: string, locale: string) {
   }).format(new Date(`${value.slice(0, 7)}-01T00:00:00.000Z`));
 }
 
-function statusMeta(status: string, labels: {late: string; paid: string; pending: string; waived: string}) {
+function statusMeta(status: string, dueDate: string | null, today: string, labels: {late: string; paid: string; pending: string; unpaid: string; waived: string}) {
   if (status === 'paid') {
     return {className: 'bg-[#e8f8f2] text-[var(--accent)]', label: labels.paid};
   }
@@ -107,7 +107,11 @@ function statusMeta(status: string, labels: {late: string; paid: string; pending
     return {className: 'bg-[#eef2f0] text-[#6d7a77]', label: labels.waived};
   }
 
-  return {className: 'bg-[#ffdad6] text-[#ba1a1a]', label: labels.late};
+  if (dueDate && dueDate < today) {
+    return {className: 'bg-[#ffdad6] text-[#ba1a1a]', label: labels.late};
+  }
+
+  return {className: 'bg-[#eef2f0] text-[#53615f]', label: labels.unpaid};
 }
 
 function tabHref(input: {locale: string; propertyId: string; tab: 'expenses' | 'revenues'; year: number}) {
@@ -223,6 +227,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
   const {count: availableDocumentsCount} = await documentQuery;
   const expenseRows = expenses ?? [];
   const rentRows = (rentCharges ?? []).filter(isRentChargeWithinLeasePeriod);
+  const today = new Date().toISOString().slice(0, 10);
   const signedExpenseRows = await Promise.all(
     expenseRows.map(async (expense) => {
       if (!expense.documents?.file_path) {
@@ -405,7 +410,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                 <tbody className="divide-y divide-[var(--line-soft)]">
                   {rentRows.length ? (
                     rentRows.map((charge) => {
-                      const meta = statusMeta(charge.status, {late: t('statusLate'), paid: t('statusPaid'), pending: t('statusPending'), waived: t('statusWaived')});
+                      const meta = statusMeta(charge.status, charge.due_date, today, {late: t('statusLate'), paid: t('statusPaid'), pending: t('statusPending'), unpaid: t('statusUnpaid'), waived: t('statusWaived')});
                       return (
                         <tr className="hover:bg-[#f8fbfa]" key={`${charge.period_month}-${charge.leases?.tenants?.full_name ?? 'tenant'}-${charge.total_due}`}>
                           <td className="px-6 py-4 tabular-nums">{charge.due_date ? formatDate(charge.due_date, locale) : formatDate(charge.period_month, locale)}</td>

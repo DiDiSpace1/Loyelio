@@ -502,7 +502,8 @@
     "statusPending": "En attente",
     "statusWaived": "Annulé",
     "statusLate": "En retard",
-    "disclaimer": "Les catégories sont indicatives et ne remplacent pas un conseil fiscal."
+    "disclaimer": "Les catégories sont indicatives et ne remplacent pas un conseil fiscal.",
+    "statusUnpaid": "Non pay?"
   },
   "contact": {
     "title": "Contactez-nous",

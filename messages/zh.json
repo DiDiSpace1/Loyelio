@@ -502,7 +502,8 @@
     "statusPending": "待处理",
     "statusWaived": "已免除",
     "statusLate": "逾期",
-    "disclaimer": "类别划分仅供参考，不能替代税务建议。"
+    "disclaimer": "类别划分仅供参考，不能替代税务建议。",
+    "statusUnpaid": "???"
   },
   "contact": {
     "title": "联系我们",

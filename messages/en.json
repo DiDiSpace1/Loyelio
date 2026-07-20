@@ -502,7 +502,8 @@
     "statusPending": "Pending",
     "statusWaived": "Waived",
     "statusLate": "Late",
-    "disclaimer": "Categories are indicative and do not replace tax advice."
+    "disclaimer": "Categories are indicative and do not replace tax advice.",
+    "statusUnpaid": "Unpaid"
   },
   "contact": {
     "title": "Contact us",
