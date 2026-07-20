@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {updateTenantAction} from '../../actions';
@@ -40,7 +39,7 @@ export default async function EditTenantPage({params}: EditTenantPageProps) {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Link className="text-sm font-semibold text-[var(--accent)]" href={`/tenants/${tenant.id}`}>
@@ -87,7 +86,7 @@ export default async function EditTenantPage({params}: EditTenantPageProps) {
           </button>
         </div>
       </form>
-    </AppShell>
+    </>
   );
 }
 

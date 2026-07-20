@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getPlanLimits, getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -111,7 +110,7 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
   );
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <Link className="inline-flex items-center text-sm font-semibold text-[var(--accent)]" href="/properties">
@@ -205,7 +204,7 @@ export default async function PropertyDetailPage({params}: PropertyDetailPagePro
           </section>
         </aside>
       </section>
-    </AppShell>
+    </>
   );
 }
 

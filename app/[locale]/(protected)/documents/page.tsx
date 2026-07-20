@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {deleteDocumentAction} from './actions';
@@ -223,7 +222,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mb-8 flex flex-col gap-5 border-b border-[var(--line-soft)] pb-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
@@ -392,6 +391,6 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
           <div className="p-8 text-center text-sm text-[var(--muted)]">{t('empty')}</div>
         )}
       </section>
-    </AppShell>
+    </>
   );
 }

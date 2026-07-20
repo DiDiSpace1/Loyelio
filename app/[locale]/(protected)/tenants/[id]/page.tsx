@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 type TenantDetailPageProps = {
@@ -62,7 +61,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
   const activeLease = tenant.leases.find((lease) => lease.status === 'active') ?? tenant.leases[0] ?? null;
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Link className="text-sm font-semibold text-[var(--accent)]" href="/tenants">
@@ -72,7 +71,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dde1ff] text-lg font-bold uppercase text-[#3755c3]">{initials(tenant.full_name)}</div>
             <div>
               <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{tenant.full_name}</h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">{[tenant.email, tenant.phone].filter(Boolean).join(' Â· ') || t('contactMissing')}</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">{[tenant.email, tenant.phone].filter(Boolean).join(' ¡¤ ') || t('contactMissing')}</p>
             </div>
           </div>
         </div>
@@ -108,7 +107,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
                   <div className="grid gap-3 p-5 md:grid-cols-[1fr_auto]" key={lease.id}>
                     <div>
                       <p className="font-medium">{lease.properties?.name ?? t('propertyFallback')}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{[lease.units?.name, lease.start_date, lease.end_date].filter(Boolean).join(' Â· ')}</p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{[lease.units?.name, lease.start_date, lease.end_date].filter(Boolean).join(' ¡¤ ')}</p>
                     </div>
                     <div className="text-sm font-semibold tabular-nums">{money(lease.monthly_rent)}</div>
                   </div>
@@ -151,7 +150,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
           </section>
         </aside>
       </section>
-    </AppShell>
+    </>
   );
 }
 

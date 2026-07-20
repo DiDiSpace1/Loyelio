@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {useTranslations} from 'next-intl';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getPlanLimits, hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getDocumentStorageUsage, getPlanUsage, getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -92,7 +91,7 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
   const fullName = profile.full_name ?? '';
 
   return (
-    <AppShell>
+    <>
       <div className="mb-8">
         <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
@@ -136,7 +135,7 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
       {activeTab === 'securite' ? <SecurityTab /> : null}
 
       {activeTab === 'donnees' ? <DataTab locale={locale} storageLimit={currentLimits.storageBytes} storageUsage={storageUsage} /> : null}
-    </AppShell>
+    </>
   );
 }
 
@@ -218,7 +217,7 @@ function ProfileTab({
       <div className="flex items-center gap-6">
         <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#89f5e7] bg-[#dde1ff] text-xl font-bold text-[#3755c3]">
           {avatarInitials}
-          <span className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border border-white bg-[var(--accent)] text-sm text-white">✎</span>
+          <span className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border border-white bg-[var(--accent)] text-sm text-white">?</span>
         </div>
         <div>
           <h2 className="text-lg font-semibold text-[#171d1c]">{fullName || email || labels.landlord}</h2>
@@ -380,16 +379,16 @@ function SecurityTab() {
         <div className="grid gap-5 p-6">
           <label className="grid gap-2 text-sm font-medium text-[#33413f]">
             {t('oldPassword')}
-            <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="••••••••" type="password" />
+            <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="????????" type="password" />
           </label>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium text-[#33413f]">
               {t('newPassword')}
-              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="••••••••" type="password" />
+              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="????????" type="password" />
             </label>
             <label className="grid gap-2 text-sm font-medium text-[#33413f]">
               {t('confirmPassword')}
-              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="••••••••" type="password" />
+              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4" placeholder="????????" type="password" />
             </label>
           </div>
           <p className="text-sm leading-6 text-[var(--muted)]">{t('passwordHint')}</p>
@@ -480,7 +479,7 @@ function DataTab({locale, storageLimit, storageUsage}: {locale: string; storageL
 function FeatureItem({children}: {children: React.ReactNode}) {
   return (
     <li className="flex items-center gap-3">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--accent)] text-xs text-[var(--accent)]">✓</span>
+      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--accent)] text-xs text-[var(--accent)]">?</span>
       <span>{children}</span>
     </li>
   );

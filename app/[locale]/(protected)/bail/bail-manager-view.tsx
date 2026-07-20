@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {assignPropertyTenantsAction} from '../properties/actions';
@@ -75,7 +74,7 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
   const backLabel = source === 'property' ? t('backToProperties') : t('backToDashboard');
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Link className="text-sm font-semibold text-[var(--accent)]" href={backHref}>
@@ -118,6 +117,6 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
           <p className="text-sm leading-6 text-[var(--muted)]">{t('choosePropertyToAdd')}</p>
         )}
       </section>
-    </AppShell>
+    </>
   );
 }

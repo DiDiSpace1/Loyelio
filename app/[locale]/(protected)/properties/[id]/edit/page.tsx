@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getPlanLimits, getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -67,7 +66,7 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
   );
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Link className="text-sm font-semibold text-[var(--accent)]" href={`/properties/${property.id}`}>
@@ -211,7 +210,7 @@ export default async function EditPropertyPage({params, searchParams}: EditPrope
           <input name="photo_id" type="hidden" value={photo.id} />
         </form>
       ))}
-    </AppShell>
+    </>
   );
 }
 

@@ -1,6 +1,5 @@
 import {getLocale} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {QuittanceForm, type QuittancePropertyOption, type QuittanceTenantOption, type RecentReceipt} from './quittance-form';
@@ -47,8 +46,8 @@ export default async function QuittancePage() {
   );
 
   return (
-    <AppShell>
+    <>
       <QuittanceForm locale={locale} ownerName={profile.email ?? ''} properties={properties ?? []} recentReceipts={recentReceipts} tenants={tenants ?? []} />
-    </AppShell>
+    </>
   );
 }

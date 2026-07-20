@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {BailListClient, type BailListRow} from './bail-list-client';
@@ -22,7 +21,7 @@ export async function BailListView({query = ''}: BailListViewProps) {
     .returns<BailListRow[]>();
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
@@ -34,6 +33,6 @@ export async function BailListView({query = ''}: BailListViewProps) {
       </div>
 
       <BailListClient initialQuery={query.trim()} leases={data ?? []} locale={locale} />
-    </AppShell>
+    </>
   );
 }

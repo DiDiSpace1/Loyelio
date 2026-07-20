@@ -1,6 +1,5 @@
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {TransactionDrawer, type LeaseOption} from './transaction-drawer';
@@ -225,7 +224,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   ];
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
@@ -247,6 +246,6 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
         stats={stats}
         taxCategories={(taxCategories ?? []).map((category) => ({id: category.id, label: category.label}))}
       />
-    </AppShell>
+    </>
   );
 }

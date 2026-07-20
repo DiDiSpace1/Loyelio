@@ -3,7 +3,6 @@ import {notFound} from 'next/navigation';
 import {getLocale} from 'next-intl/server';
 import type {ReactNode} from 'react';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 type BailDetailPageProps = {
@@ -45,7 +44,7 @@ type BailDocument = {
 };
 
 function formatMoney(value: number) {
-  return `${Number(value ?? 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €`;
+  return `${Number(value ?? 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} �`;
 }
 
 function formatDate(value: string | null) {
@@ -126,7 +125,7 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
   const duration = yearsBetween(bail.start_date, bail.end_date);
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Link className="text-sm font-semibold text-[var(--accent)]" href="/bail">
@@ -134,7 +133,7 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
           </Link>
           <h1 className="mt-3 text-2xl font-semibold tracking-normal text-[#171d1c]">Bail de {bail.tenants?.full_name ?? 'Locataire'}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[#047857]">• {statusLabel(bail.status)}</span>
+            <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[#047857]">? {statusLabel(bail.status)}</span>
             <span className="rounded-full bg-[#f0f5f2] px-2.5 py-1 text-[#53615f]">Type : {modeLabel(bail.properties?.rental_mode)}</span>
             <span className="rounded-full bg-[#f0f5f2] px-2.5 py-1 text-[#53615f]">Debut : {formatShortDate(bail.start_date)}</span>
           </div>
@@ -203,7 +202,7 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
           </div>
         </InfoCard>
       </section>
-    </AppShell>
+    </>
   );
 }
 

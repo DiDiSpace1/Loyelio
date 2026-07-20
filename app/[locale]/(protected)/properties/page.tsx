@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {getLocale, getTranslations} from 'next-intl/server';
 
-import {AppShell} from '@/components/app/app-shell';
 import {getPlanLimits, getPropertyPhotoLimit} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -135,7 +134,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
   }));
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
@@ -195,14 +194,14 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
               label={t('summary.monthlyRevenue')}
               note={monthlyTrendLabel}
               trend={monthlyTrend !== null}
-              value={`${monthlyRent.toLocaleString('fr-FR')} â‚¬`}
+              value={`${monthlyRent.toLocaleString('fr-FR')} €`}
             />
           </section>
 
           <PropertyListClient initialMode={selectedMode} initialQuery={queryText} locale={locale} rows={listRows} />
         </>
       )}
-    </AppShell>
+    </>
   );
 }
 
