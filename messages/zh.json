@@ -30,8 +30,8 @@
     "noData": "暂无数据",
     "remove": "移除",
     "language": "语言",
-    "close": "??",
-    "upload": "??"
+    "close": "关闭",
+    "upload": "上传"
   },
   "nav": {
     "dashboard": "仪表盘",
@@ -420,28 +420,28 @@
       "storageLimit": "您套餐的文档存储空间已用尽。",
       "invoiceAmount": "请填写有效金额，以便将该维修发票记入支出。"
     },
-    "upload": "??",
+    "upload": "上传文档",
     "uploadModal": {
-      "sideTitle": "??????",
-      "sideCopy": "?????????????????",
-      "secureStorage": "????",
-      "access": "24/7 ??",
-      "title": "????",
-      "close": "??",
-      "dropTitle": "???????",
-      "dropHint": "PDF?JPG ? PNG??? 10MB?",
-      "documentType": "????",
-      "selectType": "????",
-      "associatedProperty": "????",
-      "chooseProperty": "????",
-      "tenantOptional": "??????",
-      "noSpecificTenant": "?????"
+      "sideTitle": "集中归档",
+      "sideCopy": "上传收据和税务文件，后续管理更轻松。",
+      "secureStorage": "安全存储",
+      "access": "24/7 访问",
+      "title": "上传文档",
+      "close": "关闭",
+      "dropTitle": "选择要上传的文件",
+      "dropHint": "PDF、JPG 或 PNG，最大 10MB",
+      "documentType": "文档类型",
+      "selectType": "选择类型",
+      "associatedProperty": "关联房产",
+      "chooseProperty": "选择房产",
+      "tenantOptional": "租客（可选）",
+      "noSpecificTenant": "不指定租客"
     },
     "receiptUpload": {
-      "button": "????",
-      "title": "????",
-      "hint": "?? PDF?JPG?JPEG ? PNG?????????????",
-      "file": "??"
+      "button": "添加票据",
+      "title": "添加票据",
+      "hint": "上传 PDF、JPG、JPEG 或 PNG，并关联到对应支出。",
+      "file": "文件"
     }
   },
   "tax": {
