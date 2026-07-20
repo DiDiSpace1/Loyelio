@@ -31,15 +31,15 @@ export function ContactPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,0.95fr)]">
-          <form className="ui-card rounded-lg p-5 md:p-8">
+          <form action="mailto:support@loyelio.com" className="ui-card rounded-lg p-5 md:p-8" encType="text/plain" method="post">
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label={t('nameLabel')} placeholder={t('namePlaceholder')} />
-              <Field label={t('emailLabel')} placeholder={t('emailPlaceholder')} type="email" />
+              <Field label={t('nameLabel')} name="name" placeholder={t('namePlaceholder')} />
+              <Field label={t('emailLabel')} name="email" placeholder={t('emailPlaceholder')} type="email" />
             </div>
 
             <label className="mt-4 block text-xs font-medium text-[var(--foreground)]">
               {t('subjectLabel')}
-              <select className="mt-2 h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)]">
+              <select className="mt-2 h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)]" name="subject">
                 <option>{t('subjectSupport')}</option>
                 <option>{t('subjectFiscal')}</option>
                 <option>{t('subjectBilling')}</option>
@@ -50,11 +50,12 @@ export function ContactPage() {
               {t('messageLabel')}
               <textarea
                 className="mt-2 min-h-32 w-full resize-none rounded-md border border-[var(--line)] bg-white px-3 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
+                name="message"
                 placeholder={t('messagePlaceholder')}
               />
             </label>
 
-            <button className="focus-ring mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-6 text-sm font-semibold !text-white transition-opacity hover:opacity-90">
+            <button className="focus-ring mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-6 text-sm font-semibold !text-white transition-opacity hover:opacity-90" type="submit">
               {t('submit')}
               <span aria-hidden="true">-&gt;</span>
             </button>
@@ -65,9 +66,9 @@ export function ContactPage() {
               <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-md bg-white/20 text-lg font-bold">?</div>
               <h2 className="mb-2 text-xl font-semibold leading-7">{t('supportTitle')}</h2>
               <p className="mb-6 text-sm font-semibold leading-5 text-[#d6fff7]">{t('supportCopy')}</p>
-              <a className="mb-3 flex items-center gap-3 text-sm font-bold" href="mailto:contact@loyelio.com">
+              <a className="mb-3 flex items-center gap-3 text-sm font-bold" href="mailto:support@loyelio.com">
                 <span aria-hidden="true" className="material-symbols-outlined text-[18px]">mail</span>
-                contact@loyelio.com
+                support@loyelio.com
               </a>
               <p className="flex items-center gap-3 text-xs font-bold text-[#d6fff7]">
                 <span aria-hidden="true" className="material-symbols-outlined text-[18px]">timer</span>
@@ -104,12 +105,13 @@ export function ContactPage() {
   );
 }
 
-function Field({label, placeholder, type = 'text'}: {label: string; placeholder: string; type?: string}) {
+function Field({label, name, placeholder, type = 'text'}: {label: string; name: string; placeholder: string; type?: string}) {
   return (
     <label className="block text-xs font-medium text-[var(--foreground)]">
       {label}
       <input
         className="mt-2 h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
+        name={name}
         placeholder={placeholder}
         type={type}
       />

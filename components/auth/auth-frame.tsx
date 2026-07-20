@@ -50,7 +50,7 @@ export function AuthFrame({children, footerText, legal, locale, privacy, tagline
             <Link className="font-semibold hover:text-[var(--accent)]" href={localizedPath(locale, '/privacy')}>
               {privacy}
             </Link>
-            <a className="font-semibold hover:text-[var(--accent)]" href="mailto:contact@loyelio.com">
+            <a className="font-semibold hover:text-[var(--accent)]" href="mailto:support@loyelio.com">
               Contact
             </a>
           </div>
