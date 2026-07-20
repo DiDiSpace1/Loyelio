@@ -194,7 +194,7 @@ export default async function PropertiesPage({searchParams}: PropertiesPageProps
               label={t('summary.monthlyRevenue')}
               note={monthlyTrendLabel}
               trend={monthlyTrend !== null}
-              value={`${monthlyRent.toLocaleString('fr-FR')} €`}
+              value={`${monthlyRent.toLocaleString('fr-FR')} â‚¬`}
             />
           </section>
 

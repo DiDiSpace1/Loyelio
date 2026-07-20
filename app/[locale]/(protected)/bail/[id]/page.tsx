@@ -44,7 +44,7 @@ type BailDocument = {
 };
 
 function formatMoney(value: number) {
-  return `${Number(value ?? 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €`;
+  return `${Number(value ?? 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} â‚¬`;
 }
 
 function formatDate(value: string | null) {

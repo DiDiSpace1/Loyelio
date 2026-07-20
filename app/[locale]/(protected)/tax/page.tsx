@@ -93,7 +93,7 @@ function formatMonth(value: string) {
 
 function statusMeta(status: string) {
   if (status === 'paid') {
-    return {className: 'bg-[#e8f8f2] text-[var(--accent)]', label: 'Pay¨¦'};
+    return {className: 'bg-[#e8f8f2] text-[var(--accent)]', label: 'PayÂ¨Â¦'};
   }
 
   if (status === 'partial') {
@@ -101,7 +101,7 @@ function statusMeta(status: string) {
   }
 
   if (status === 'waived') {
-    return {className: 'bg-[#eef2f0] text-[#6d7a77]', label: 'Annul¨¦'};
+    return {className: 'bg-[#eef2f0] text-[#6d7a77]', label: 'AnnulÂ¨Â¦'};
   }
 
   return {className: 'bg-[#ffdad6] text-[#ba1a1a]', label: 'En retard'};
@@ -453,7 +453,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-[#171d1c]">
-                        {expense.description || expense.vendor || 'D¨¦pense'} - {formatMoney(Number(expense.amount ?? 0))}
+                        {expense.description || expense.vendor || 'DÂ¨Â¦pense'} - {formatMoney(Number(expense.amount ?? 0))}
                       </p>
                       <p className="mt-1 text-sm text-[#3d4947]">
                         {formatDate(expense.expense_date)} - {expense.properties?.name ?? t('global')} - {expense.tax_categories?.label ?? t('otherFees')}
@@ -467,7 +467,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
           ) : (
             <div className="flex items-center gap-3 p-6 text-sm text-[var(--accent)]">
               <Icon>check_circle</Icon>
-              Aucune d¨¦pense sans justificatif pour le moment.
+              Aucune dÂ¨Â¦pense sans justificatif pour le moment.
             </div>
           )}
         </section>
