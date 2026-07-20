@@ -22,9 +22,9 @@ type SettingsTab = 'abonnement' | 'donnees' | 'profil' | 'securite';
 const tabs: SettingsTab[] = ['profil', 'abonnement', 'securite', 'donnees'];
 
 const planCards = [
-  {documents: 150, label: 'Solo', plan: 'solo', price: '39 EUR/an', properties: 5, storage: '500 MB', tenants: 20},
-  {documents: 400, label: 'Plus', plan: 'plus', price: '69 EUR/an', properties: 10, storage: '1.5 GB', tenants: 40},
-  {documents: 1000, label: 'Portfolio', plan: 'portfolio', price: '99 EUR/an', properties: 20, storage: '4 GB', tenants: 80}
+  {documents: 150, label: 'Solo', monthlyPrice: 4.9, plan: 'solo', properties: 5, storage: '500 MB', tenants: 20, yearlyPrice: 39},
+  {documents: 400, label: 'Plus', monthlyPrice: 7.9, plan: 'plus', properties: 10, storage: '1.5 GB', tenants: 40, yearlyPrice: 59},
+  {documents: 1000, label: 'Portfolio', monthlyPrice: 12.9, plan: 'portfolio', properties: 20, storage: '4 GB', tenants: 80, yearlyPrice: 89}
 ] as const;
 
 const errorMessages: Record<string, string> = {
@@ -50,6 +50,15 @@ function formatBytes(bytes: number) {
   }
 
   return `${Math.round(bytes / 1024 / 1024)} MB`;
+}
+
+function formatMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    currency: 'EUR',
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+    style: 'currency'
+  }).format(value);
 }
 
 function usagePercent(usage: number, limit: number) {
@@ -291,24 +300,6 @@ function SubscriptionTab({
               <p className="text-3xl font-semibold text-[var(--accent)]">{currentPlan === 'free' ? '0 EUR' : currentPlanLabel}</p>
               <h3 className="mt-5 text-xl font-semibold">{t('plan', {plan: currentPlanLabel})}</h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-[#33413f]">{t('currentPlanDescription')}</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {planCards.map((plan) =>
-                  plan.plan === currentPlan ? (
-                    <button className="min-h-11 cursor-not-allowed rounded-lg border border-[var(--line)] bg-[#f0f5f2] px-4 text-sm font-semibold text-[var(--muted)]" disabled key={plan.plan} type="button">
-                      {t('currentPlanButton')}
-                    </button>
-                  ) : (
-                    <form action={createCheckoutSessionAction} key={plan.plan}>
-                      <input name="locale" type="hidden" value={locale} />
-                      <input name="plan" type="hidden" value={plan.plan} />
-                      <input name="return_path" type="hidden" value="/settings?tab=abonnement" />
-                      <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f0f5f2]" type="submit">
-                        {t('choosePlan', {plan: plan.label})}
-                      </button>
-                    </form>
-                  )
-                )}
-              </div>
             </div>
             <div className="rounded-lg border border-[var(--line)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#33413f]">{t('included')}</p>
@@ -339,7 +330,18 @@ function SubscriptionTab({
                     </>
                   ) : null}
                 <h3 className="font-semibold">{plan.label}</h3>
-                <p className="mt-2 text-2xl font-semibold text-[var(--accent)]">{plan.price}</p>
+                <div className="mt-4 grid gap-2">
+                  <label className={['flex items-center justify-between rounded-lg border border-[var(--line)] px-3 py-2 text-sm', isCurrent ? 'cursor-default' : 'cursor-pointer'].join(' ')}>
+                    <span className="font-semibold">{t('monthly')}</span>
+                    <span className="font-semibold text-[var(--accent)]">{t('monthlyPrice', {price: formatMoney(plan.monthlyPrice, locale)})}</span>
+                    {!isCurrent ? <input className="ml-2" name="billing_interval" type="radio" value="monthly" /> : null}
+                  </label>
+                  <label className={['flex items-center justify-between rounded-lg border border-[var(--accent)] bg-[#eef7f4] px-3 py-2 text-sm', isCurrent ? 'cursor-default' : 'cursor-pointer'].join(' ')}>
+                    <span className="font-semibold">{t('yearly')}</span>
+                    <span className="font-semibold text-[var(--accent)]">{t('yearlyPrice', {price: formatMoney(plan.yearlyPrice, locale)})}</span>
+                    {!isCurrent ? <input className="ml-2" defaultChecked name="billing_interval" type="radio" value="yearly" /> : null}
+                  </label>
+                </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t('planSummary', {documents: plan.documents, properties: plan.properties, storage: plan.storage, tenants: plan.tenants})}</p>
                 <button
                   className={[
