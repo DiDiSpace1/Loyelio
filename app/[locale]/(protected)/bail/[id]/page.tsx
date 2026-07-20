@@ -44,6 +44,10 @@ type BailDocument = {
   id: string;
 };
 
+type BailDocumentWithUrl = BailDocument & {
+  downloadUrl: string | null;
+};
+
 function formatMoney(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {currency: 'EUR', style: 'currency'}).format(Number(value ?? 0));
 }
@@ -99,6 +103,7 @@ function documentKey(type: string) {
 export default async function BailDetailPage({params}: BailDetailPageProps) {
   const {id} = await params;
   const locale = await getLocale();
+  const common = await getTranslations('common');
   const t = await getTranslations('bail');
   const detail = await getTranslations('bail.detail');
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -124,6 +129,18 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
     .returns<BailDocument[]>();
   const totalMonthly = Number(bail.monthly_rent ?? 0) + Number(bail.charges_amount ?? 0);
   const duration = yearsBetween(bail.start_date, bail.end_date);
+  const signedDocuments: BailDocumentWithUrl[] = await Promise.all(
+    (documents ?? []).map(async (document) => {
+      const {data} = await supabase.storage.from('documents').createSignedUrl(document.file_path, 60 * 10, {
+        download: document.file_name
+      });
+
+      return {
+        ...document,
+        downloadUrl: data?.signedUrl ?? null
+      };
+    })
+  );
 
   return (
     <>
@@ -181,8 +198,8 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
 
         <InfoCard title={detail('leaseDocuments')} icon="folder">
           <div className="grid gap-3">
-            {(documents ?? []).length ? (
-              (documents ?? []).map((document) => (
+            {signedDocuments.length ? (
+              signedDocuments.map((document) => (
                 <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--line)] p-3" key={document.id}>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{document.file_name}</p>
@@ -190,7 +207,13 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
                       {detail(`documentTypes.${documentKey(document.document_type)}`)} {detail('documentDate', {date: formatShortDate(document.created_at, locale)})}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined shrink-0 text-base text-[var(--accent)]">download</span>
+                  {document.downloadUrl ? (
+                    <a aria-label={`${common('download')} ${document.file_name}`} className="focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--accent)] hover:bg-[#eef7f4]" download href={document.downloadUrl}>
+                      <span className="material-symbols-outlined text-base">download</span>
+                    </a>
+                  ) : (
+                    <span className="material-symbols-outlined shrink-0 text-base text-[var(--muted)]">download</span>
+                  )}
                 </div>
               ))
             ) : (
