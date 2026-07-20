@@ -1,6 +1,8 @@
 import PDFDocument from 'pdfkit';
 import type {SupabaseClient} from '@supabase/supabase-js';
 
+import {isRentChargeWithinLeasePeriod} from '@/lib/rent/period';
+
 export type RentExportRow = {
   charges_amount: number;
   due_date: string | null;
@@ -9,7 +11,9 @@ export type RentExportRow = {
   status: string;
   total_due: number;
   leases: {
+    end_date: string | null;
     property_id?: string;
+    start_date: string | null;
     properties: {
       name: string;
     } | null;
@@ -88,7 +92,7 @@ export async function fetchTaxExportData(input: {
   const range = yearRange(input.year);
   let rentQuery = input.supabase
     .from('rent_charges')
-    .select('period_month, due_date, rent_amount, charges_amount, total_due, status, leases!inner(property_id, properties(name), tenants(full_name), units(name))')
+    .select('period_month, due_date, rent_amount, charges_amount, total_due, status, leases!inner(property_id, start_date, end_date, properties(name), tenants(full_name), units(name))')
     .eq('workspace_id', input.workspaceId)
     .gte('period_month', range.start)
     .lt('period_month', range.end);
@@ -123,7 +127,7 @@ export async function fetchTaxExportData(input: {
   return {
     data: {
       expenses: expenses ?? [],
-      rentCharges: rentCharges ?? [],
+      rentCharges: (rentCharges ?? []).filter(isRentChargeWithinLeasePeriod),
       workspaceId: input.workspaceId,
       year: input.year
     }

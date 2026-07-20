@@ -3,6 +3,7 @@ import type {ReactNode} from 'react';
 import {getLocale, getTranslations} from 'next-intl/server';
 
 import {localizedPath} from '@/lib/navigation';
+import {isRentChargeWithinLeasePeriod} from '@/lib/rent/period';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {ReceiptUploadButton} from './receipt-upload-button';
@@ -39,6 +40,8 @@ type RentChargeRow = {
   status: string;
   total_due: number;
   leases: {
+    end_date: string | null;
+    start_date: string | null;
     properties: {
       name: string;
     } | null;
@@ -183,7 +186,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
 
   let rentQuery = supabase
     .from('rent_charges')
-    .select('period_month, due_date, rent_amount, charges_amount, total_due, status, leases!inner(property_id, properties(name), tenants(full_name))')
+    .select('period_month, due_date, rent_amount, charges_amount, total_due, status, leases!inner(property_id, start_date, end_date, properties(name), tenants(full_name))')
     .eq('workspace_id', workspaceId)
     .gte('period_month', range.start)
     .lt('period_month', range.end);
@@ -219,7 +222,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
 
   const {count: availableDocumentsCount} = await documentQuery;
   const expenseRows = expenses ?? [];
-  const rentRows = rentCharges ?? [];
+  const rentRows = (rentCharges ?? []).filter(isRentChargeWithinLeasePeriod);
   const signedExpenseRows = await Promise.all(
     expenseRows.map(async (expense) => {
       if (!expense.documents?.file_path) {
