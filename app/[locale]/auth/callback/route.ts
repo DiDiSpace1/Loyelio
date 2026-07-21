@@ -1,7 +1,7 @@
 import {NextResponse, type NextRequest} from 'next/server';
 
 import {getWorkspaceBilling} from '@/lib/billing/limits';
-import {syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
+import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
@@ -30,9 +30,13 @@ export async function GET(request: NextRequest, {params}: CallbackParams) {
       if (profile?.default_workspace_id) {
         const billing = await getWorkspaceBilling(supabase, profile.default_workspace_id);
 
-        if (billing?.stripe_subscription_id) {
+        if (billing?.stripe_customer_id || billing?.stripe_subscription_id) {
           try {
-            await syncWorkspaceBillingFromStripe(profile.default_workspace_id, billing.stripe_subscription_id);
+            if (billing.stripe_customer_id) {
+              await syncWorkspaceBillingFromStripeCustomer(profile.default_workspace_id, billing.stripe_customer_id);
+            } else if (billing.stripe_subscription_id) {
+              await syncWorkspaceBillingFromStripe(profile.default_workspace_id, billing.stripe_subscription_id);
+            }
           } catch (error) {
             console.error('Stripe billing sync on login failed', error);
           }

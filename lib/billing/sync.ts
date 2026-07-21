@@ -87,6 +87,64 @@ export async function syncWorkspaceBillingFromStripe(workspaceId: string, subscr
   return subscription;
 }
 
+function subscriptionRank(subscription: Stripe.Subscription) {
+  if (subscription.status === 'active') {
+    return 0;
+  }
+
+  if (subscription.status === 'trialing') {
+    return 1;
+  }
+
+  if (['past_due', 'unpaid'].includes(subscription.status)) {
+    return 2;
+  }
+
+  if (subscription.status === 'incomplete') {
+    return 3;
+  }
+
+  return 4;
+}
+
+export async function syncWorkspaceBillingFromStripeCustomer(workspaceId: string, customerId: string) {
+  const stripe = getStripe();
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    expand: ['data.schedule'],
+    limit: 100,
+    status: 'all'
+  });
+  const subscription = subscriptions.data.sort((a, b) => {
+    const rankDiff = subscriptionRank(a) - subscriptionRank(b);
+
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    return b.created - a.created;
+  })[0];
+  const admin = createSupabaseAdminClient();
+
+  if (!subscription) {
+    await admin
+      .from('workspace_billing')
+      .update({
+        current_period_end: null,
+        lifetime_access: false,
+        plan: 'free',
+        status: 'free',
+        stripe_subscription_id: null
+      })
+      .eq('workspace_id', workspaceId);
+
+    return null;
+  }
+
+  await syncWorkspaceBillingFromStripe(workspaceId, subscription.id);
+  return subscription;
+}
+
 export async function pendingPlanFromSchedule(subscription: Stripe.Subscription) {
   const scheduleValue = subscription.schedule;
   const scheduleId = typeof scheduleValue === 'string' ? scheduleValue : scheduleValue?.id;

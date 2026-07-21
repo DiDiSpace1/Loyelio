@@ -4,7 +4,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 import {redirect} from 'next/navigation';
 
 import {type BillingStatus, hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
-import {syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
+import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
@@ -59,9 +59,14 @@ export async function AppShell({children}: {children: React.ReactNode}) {
         .eq('workspace_id', profile.default_workspace_id)
         .maybeSingle<BillingStatus>();
 
-      if (billing?.stripe_subscription_id) {
+      if (billing?.stripe_customer_id || billing?.stripe_subscription_id) {
         try {
-          await syncWorkspaceBillingFromStripe(profile.default_workspace_id, billing.stripe_subscription_id);
+          if (billing.stripe_customer_id) {
+            await syncWorkspaceBillingFromStripeCustomer(profile.default_workspace_id, billing.stripe_customer_id);
+          } else if (billing.stripe_subscription_id) {
+            await syncWorkspaceBillingFromStripe(profile.default_workspace_id, billing.stripe_subscription_id);
+          }
+
           const {data: refreshedBilling} = await supabase
             .from('workspace_billing')
             .select('current_period_end, lifetime_access, plan, status, stripe_customer_id, stripe_subscription_id')

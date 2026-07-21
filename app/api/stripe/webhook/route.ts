@@ -3,7 +3,7 @@ import {NextResponse} from 'next/server';
 
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
 import {getStripe} from '@/lib/billing/stripe';
-import {subscriptionPlan} from '@/lib/billing/sync';
+import {subscriptionPlan, syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +63,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripe_subscription_id: null
     });
   } else {
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+
+    if (subscriptionId) {
+      await syncWorkspaceBillingFromStripe(workspaceId, subscriptionId);
+      return;
+    }
+
     await updateBillingByWorkspace(workspaceId, {
       plan: planValue(session.metadata?.plan),
       stripe_customer_id: customerId

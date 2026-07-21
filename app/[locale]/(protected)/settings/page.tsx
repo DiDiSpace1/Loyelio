@@ -4,7 +4,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 
 import {getPlanLimits, hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getDocumentStorageUsage, getPlanUsage, getWorkspaceBilling} from '@/lib/billing/limits';
-import {syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
+import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction, updateAccountSettingsAction} from './actions';
@@ -89,9 +89,14 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
   const {profile, supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
   let billing = await getWorkspaceBilling(supabase, workspaceId);
 
-  if (activeTab === 'abonnement' && billing?.stripe_subscription_id) {
+  if (activeTab === 'abonnement' && (billing?.stripe_customer_id || billing?.stripe_subscription_id)) {
     try {
-      await syncWorkspaceBillingFromStripe(workspaceId, billing.stripe_subscription_id);
+      if (billing.stripe_customer_id) {
+        await syncWorkspaceBillingFromStripeCustomer(workspaceId, billing.stripe_customer_id);
+      } else if (billing.stripe_subscription_id) {
+        await syncWorkspaceBillingFromStripe(workspaceId, billing.stripe_subscription_id);
+      }
+
       billing = await getWorkspaceBilling(supabase, workspaceId);
     } catch (error) {
       console.error('Stripe billing sync on settings failed', error);
