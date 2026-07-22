@@ -14,6 +14,8 @@ type SettingsPageProps = {
     checkout?: string;
     error?: string;
     saved?: string;
+    scheduled_at?: string;
+    scheduled_plan?: string;
     tab?: string;
   }>;
 };
@@ -125,7 +127,7 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
 
       <SettingsTabs activeTab={activeTab} labels={{abonnement: t('tabs.abonnement'), donnees: t('tabs.donnees'), profil: t('tabs.profil'), securite: t('tabs.securite')}} />
 
-      <StatusMessages checkout={params.checkout} error={params.error} saved={params.saved} />
+      <StatusMessages checkout={params.checkout} error={params.error} locale={locale} saved={params.saved} scheduledAt={params.scheduled_at} scheduledPlan={params.scheduled_plan} />
 
       {activeTab === 'profil' ? (
         <ProfileTab
@@ -186,14 +188,35 @@ function SettingsTabs({activeTab, labels}: {activeTab: SettingsTab; labels: Reco
   );
 }
 
-function StatusMessages({checkout, error, saved}: {checkout?: string; error?: string; saved?: string}) {
+function StatusMessages({
+  checkout,
+  error,
+  locale,
+  saved,
+  scheduledAt,
+  scheduledPlan
+}: {
+  checkout?: string;
+  error?: string;
+  locale: string;
+  saved?: string;
+  scheduledAt?: string;
+  scheduledPlan?: string;
+}) {
   const t = useTranslations('settings.status');
   const errorMessage = error && errorMessageKeys.has(error) ? t(`errors.${error}`) : t('billingError');
+  const scheduledTimestamp = Number(scheduledAt);
+  const scheduledDate = Number.isFinite(scheduledTimestamp) && scheduledTimestamp > 0 ? new Intl.DateTimeFormat(locale, {dateStyle: 'long'}).format(new Date(scheduledTimestamp * 1000)) : null;
+  const scheduledPlanLabel = planLabel(scheduledPlan);
 
   return (
     <>
       {checkout === 'success' ? <Message tone="success">{t('checkoutSuccess')}</Message> : null}
-      {checkout === 'scheduled' ? <Message tone="success">{t('checkoutScheduled')}</Message> : null}
+      {checkout === 'scheduled' ? (
+        <Message tone="success">
+          {scheduledDate ? t('checkoutScheduledWithDate', {date: scheduledDate, plan: scheduledPlanLabel}) : t('checkoutScheduled', {plan: scheduledPlanLabel})}
+        </Message>
+      ) : null}
       {checkout === 'cancelled' ? <Message tone="warning">{t('checkoutCancelled')}</Message> : null}
       {error ? <Message tone="danger">{errorMessage}</Message> : null}
       {saved === 'settings' ? <Message tone="success">{t('saved')}</Message> : null}

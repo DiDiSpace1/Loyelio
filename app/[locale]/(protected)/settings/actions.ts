@@ -29,6 +29,11 @@ function subscriptionTimestamp(subscription: Stripe.Subscription, key: 'current_
   return (subscription as Stripe.Subscription & Record<typeof key, number | undefined>)[key];
 }
 
+function appendParams(path: string, params: Record<string, string>) {
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}${new URLSearchParams(params).toString()}`;
+}
+
 export async function updateAccountSettingsAction(formData: FormData) {
   const currentLocale = value(formData, 'current_locale') || 'fr';
   const nextLocale = ['fr', 'en', 'zh'].includes(value(formData, 'locale')) ? value(formData, 'locale') : currentLocale;
@@ -138,8 +143,10 @@ export async function createCheckoutSessionAction(formData: FormData) {
   }
 
   if (billing?.stripe_subscription_id && hasPaidAccess(billing)) {
+    let scheduledAt;
+
     try {
-      await scheduleSubscriptionChange({
+      scheduledAt = await scheduleSubscriptionChange({
         billingInterval,
         locale,
         plan,
@@ -150,10 +157,10 @@ export async function createCheckoutSessionAction(formData: FormData) {
       });
     } catch (error) {
       console.error('Stripe subscription schedule failed', error);
-      redirect(`${safeReturnPath}${safeReturnPath.includes('?') ? '&' : '?'}error=plan_change_failed`);
+      redirect(appendParams(safeReturnPath, {error: 'plan_change_failed'}));
     }
 
-    redirect(`${safeReturnPath}${safeReturnPath.includes('?') ? '&' : '?'}checkout=scheduled`);
+    redirect(appendParams(safeReturnPath, {checkout: 'scheduled', scheduled_at: String(scheduledAt), scheduled_plan: plan}));
   }
 
   let session;
@@ -224,7 +231,13 @@ async function scheduleSubscriptionChange({
   const scheduleValue = subscription.schedule;
   const scheduleId = typeof scheduleValue === 'string' ? scheduleValue : scheduleValue?.id;
   const schedule = scheduleId ? await stripe.subscriptionSchedules.retrieve(scheduleId) : await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
+  const currentPhase = schedule.current_phase ?? schedule.phases.find((phase) => phase.start_date <= periodEnd && phase.end_date >= periodEnd);
+  const currentPhaseStart = currentPhase?.start_date ?? schedule.phases[0]?.start_date;
   const currentQuantity = currentItem.quantity ?? 1;
+
+  if (!currentPhaseStart) {
+    throw new Error('Subscription schedule has no current phase start date.');
+  }
 
   await stripe.subscriptionSchedules.update(schedule.id, {
     end_behavior: 'release',
@@ -247,7 +260,7 @@ async function scheduleSubscriptionChange({
           plan: current.plan,
           workspace_id: workspaceId
         },
-        start_date: 'now'
+        start_date: currentPhaseStart
       },
       {
         items: [
@@ -267,6 +280,8 @@ async function scheduleSubscriptionChange({
     ],
     proration_behavior: 'none'
   });
+
+  return periodEnd;
 }
 
 export async function createBillingPortalSessionAction(formData: FormData) {

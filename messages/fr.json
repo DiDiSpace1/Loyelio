@@ -673,7 +673,8 @@
     },
     "status": {
       "checkoutSuccess": "Paiement reçu. Le statut peut prendre quelques secondes à se synchroniser via Stripe.",
-      "checkoutScheduled": "Changement planifié. Votre forfait actuel reste actif jusqu'à la fin de la période en cours, puis le nouveau forfait prendra le relais.",
+      "checkoutScheduled": "Changement planifié. Votre forfait actuel reste actif jusqu'à la fin de la période en cours, puis le forfait {plan} prendra le relais.",
+      "checkoutScheduledWithDate": "Changement planifié. Votre forfait actuel reste actif jusqu'au {date}, puis le forfait {plan} prendra le relais.",
       "checkoutCancelled": "Paiement annulé. Vos données restent sur le plan gratuit.",
       "billingError": "Une action de facturation a échoué.",
       "errors": {

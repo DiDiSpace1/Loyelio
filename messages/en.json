@@ -673,7 +673,8 @@
     },
     "status": {
       "checkoutSuccess": "Payment received. The status may take a few seconds to sync through Stripe.",
-      "checkoutScheduled": "Plan change scheduled. Your current plan stays active until the end of the current period, then the new plan takes over.",
+      "checkoutScheduled": "Plan change scheduled. Your current plan stays active until the end of the current period, then the {plan} plan takes over.",
+      "checkoutScheduledWithDate": "Plan change scheduled. Your current plan stays active until {date}, then the {plan} plan takes over.",
       "checkoutCancelled": "Payment cancelled. Your data stays on the free plan.",
       "billingError": "A billing action failed.",
       "errors": {
