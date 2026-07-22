@@ -676,6 +676,15 @@
       "checkoutScheduled": "Changement planifié. Votre forfait actuel reste actif jusqu'à la fin de la période en cours, puis le nouveau forfait prendra le relais.",
       "checkoutCancelled": "Paiement annulé. Vos données restent sur le plan gratuit.",
       "billingError": "Une action de facturation a échoué.",
+      "errors": {
+        "billing_customer_missing": "Aucun client Stripe n'est encore associé à cet espace.",
+        "checkout_failed": "Impossible de créer la session Stripe. Réessayez dans un instant.",
+        "delete_confirmation": "Saisissez SUPPRIMER pour confirmer la suppression du compte.",
+        "delete_failed": "Impossible de supprimer le compte. Réessayez dans un instant.",
+        "plan_change_failed": "Impossible de planifier le changement de forfait. Réessayez dans un instant.",
+        "settings_failed": "Impossible d'enregistrer les paramètres du compte.",
+        "stripe_price_missing": "Les Price IDs Stripe ne sont pas configurés."
+      },
       "saved": "Paramètres enregistrés."
     },
     "subscription": {

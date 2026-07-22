@@ -676,6 +676,15 @@
       "checkoutScheduled": "Plan change scheduled. Your current plan stays active until the end of the current period, then the new plan takes over.",
       "checkoutCancelled": "Payment cancelled. Your data stays on the free plan.",
       "billingError": "A billing action failed.",
+      "errors": {
+        "billing_customer_missing": "No Stripe customer is associated with this workspace yet.",
+        "checkout_failed": "Unable to create the Stripe session. Please try again in a moment.",
+        "delete_confirmation": "Type DELETE to confirm account deletion.",
+        "delete_failed": "Unable to delete the account. Please try again in a moment.",
+        "plan_change_failed": "Unable to schedule the plan change. Please try again in a moment.",
+        "settings_failed": "Unable to save the account settings.",
+        "stripe_price_missing": "Stripe Price IDs are not configured."
+      },
       "saved": "Settings saved."
     },
     "subscription": {

@@ -676,6 +676,15 @@
       "checkoutScheduled": "套餐切换已安排。当前套餐会持续到本周期结束，之后自动切换到新套餐。",
       "checkoutCancelled": "付款已取消。您的数据仍保留在免费套餐中。",
       "billingError": "账单操作失败。",
+      "errors": {
+        "billing_customer_missing": "此工作区尚未关联 Stripe 客户。",
+        "checkout_failed": "无法创建 Stripe 会话。请稍后重试。",
+        "delete_confirmation": "请输入 SUPPRIMER 以确认删除账户。",
+        "delete_failed": "无法删除账户。请稍后重试。",
+        "plan_change_failed": "无法安排套餐切换。请稍后重试。",
+        "settings_failed": "无法保存账户设置。",
+        "stripe_price_missing": "尚未配置 Stripe Price ID。"
+      },
       "saved": "设置已保存。"
     },
     "subscription": {

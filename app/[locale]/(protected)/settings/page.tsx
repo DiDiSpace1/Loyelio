@@ -28,14 +28,15 @@ const planCards = [
   {documents: 1000, label: 'Portfolio', monthlyPrice: 12.9, plan: 'portfolio', properties: 20, storage: '4 GB', tenants: 80, yearlyPrice: 89}
 ] as const;
 
-const errorMessages: Record<string, string> = {
-  billing_customer_missing: 'Aucun client Stripe n est encore associe a cet espace.',
-  checkout_failed: 'Impossible de creer la session Stripe. Reessayez dans un instant.',
-  delete_confirmation: 'Saisissez SUPPRIMER pour confirmer la suppression du compte.',
-  delete_failed: 'Impossible de supprimer le compte. Reessayez dans un instant.',
-  settings_failed: 'Impossible d enregistrer les parametres du compte.',
-  stripe_price_missing: 'Les Price IDs Stripe ne sont pas configures.'
-};
+const errorMessageKeys = new Set([
+  'billing_customer_missing',
+  'checkout_failed',
+  'delete_confirmation',
+  'delete_failed',
+  'plan_change_failed',
+  'settings_failed',
+  'stripe_price_missing'
+]);
 
 function parseTab(value: string | undefined): SettingsTab {
   return tabs.includes(value as SettingsTab) ? (value as SettingsTab) : 'profil';
@@ -187,13 +188,14 @@ function SettingsTabs({activeTab, labels}: {activeTab: SettingsTab; labels: Reco
 
 function StatusMessages({checkout, error, saved}: {checkout?: string; error?: string; saved?: string}) {
   const t = useTranslations('settings.status');
+  const errorMessage = error && errorMessageKeys.has(error) ? t(`errors.${error}`) : t('billingError');
 
   return (
     <>
       {checkout === 'success' ? <Message tone="success">{t('checkoutSuccess')}</Message> : null}
       {checkout === 'scheduled' ? <Message tone="success">{t('checkoutScheduled')}</Message> : null}
       {checkout === 'cancelled' ? <Message tone="warning">{t('checkoutCancelled')}</Message> : null}
-      {error ? <Message tone="danger">{errorMessages[error] ?? t('billingError')}</Message> : null}
+      {error ? <Message tone="danger">{errorMessage}</Message> : null}
       {saved === 'settings' ? <Message tone="success">{t('saved')}</Message> : null}
     </>
   );

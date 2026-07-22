@@ -5,7 +5,7 @@ import {redirect} from 'next/navigation';
 
 import {getAppUrl, hasPaidAccess} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
-import {subscriptionPlan, syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
+import {subscriptionPlan, syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {getStripe, getStripePriceId} from '@/lib/billing/stripe';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
@@ -25,7 +25,7 @@ function billingIntervalValue(formData: FormData) {
   return value(formData, 'billing_interval') === 'monthly' ? 'monthly' : 'yearly';
 }
 
-function subscriptionTimestamp(subscription: Stripe.Subscription, key: 'current_period_end' | 'current_period_start') {
+function subscriptionTimestamp(subscription: Stripe.Subscription, key: 'current_period_end') {
   return (subscription as Stripe.Subscription & Record<typeof key, number | undefined>)[key];
 }
 
@@ -122,7 +122,20 @@ export async function createCheckoutSessionAction(formData: FormData) {
   const stripe = getStripe();
   const appUrl = getAppUrl();
   const returnUrl = `${appUrl}${safeReturnPath}`;
-  const billing = await getWorkspaceBilling(createSupabaseAdminClient(), workspaceId);
+  const admin = createSupabaseAdminClient();
+  let billing = await getWorkspaceBilling(admin, workspaceId);
+
+  try {
+    if (customerId) {
+      await syncWorkspaceBillingFromStripeCustomer(workspaceId, customerId);
+    } else if (billing?.stripe_subscription_id) {
+      await syncWorkspaceBillingFromStripe(workspaceId, billing.stripe_subscription_id);
+    }
+
+    billing = await getWorkspaceBilling(admin, workspaceId);
+  } catch (error) {
+    console.error('Stripe billing sync before checkout failed', error);
+  }
 
   if (billing?.stripe_subscription_id && hasPaidAccess(billing)) {
     try {
@@ -137,7 +150,7 @@ export async function createCheckoutSessionAction(formData: FormData) {
       });
     } catch (error) {
       console.error('Stripe subscription schedule failed', error);
-      redirect(`${safeReturnPath}${safeReturnPath.includes('?') ? '&' : '?'}error=checkout_failed`);
+      redirect(`${safeReturnPath}${safeReturnPath.includes('?') ? '&' : '?'}error=plan_change_failed`);
     }
 
     redirect(`${safeReturnPath}${safeReturnPath.includes('?') ? '&' : '?'}checkout=scheduled`);
@@ -200,11 +213,10 @@ async function scheduleSubscriptionChange({
 }) {
   const stripe = getStripe();
   const subscription = await syncWorkspaceBillingFromStripe(workspaceId, subscriptionId);
-  const periodStart = subscriptionTimestamp(subscription, 'current_period_start');
   const periodEnd = subscriptionTimestamp(subscription, 'current_period_end');
   const currentItem = subscription.items.data[0];
 
-  if (!periodStart || !periodEnd || !currentItem) {
+  if (!periodEnd || !currentItem) {
     throw new Error('Subscription has no current period or item.');
   }
 
@@ -212,6 +224,7 @@ async function scheduleSubscriptionChange({
   const scheduleValue = subscription.schedule;
   const scheduleId = typeof scheduleValue === 'string' ? scheduleValue : scheduleValue?.id;
   const schedule = scheduleId ? await stripe.subscriptionSchedules.retrieve(scheduleId) : await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
+  const currentQuantity = currentItem.quantity ?? 1;
 
   await stripe.subscriptionSchedules.update(schedule.id, {
     end_behavior: 'release',
@@ -226,7 +239,7 @@ async function scheduleSubscriptionChange({
         items: [
           {
             price: currentItem.price.id,
-            quantity: currentItem.quantity ?? 1
+            quantity: currentQuantity
           }
         ],
         metadata: {
@@ -234,13 +247,13 @@ async function scheduleSubscriptionChange({
           plan: current.plan,
           workspace_id: workspaceId
         },
-        start_date: periodStart
+        start_date: 'now'
       },
       {
         items: [
           {
             price: priceId,
-            quantity: currentItem.quantity ?? 1
+            quantity: currentQuantity
           }
         ],
         metadata: {
