@@ -22,6 +22,13 @@ const planPriceEnv = {
 type PlanKey = keyof typeof planPriceEnv;
 type BillingInterval = keyof (typeof planPriceEnv)['solo'];
 
+export type PendingReplacement = {
+  effectiveAt: number | null;
+  interval: BillingInterval;
+  plan: PlanKey;
+  subscriptionId: string;
+};
+
 function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
   const value =
     (subscription as Stripe.Subscription & {current_period_end?: number}).current_period_end ??
@@ -29,7 +36,7 @@ function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
 
-function pricePlan(priceId: string | null | undefined) {
+function pricePlan(priceId: string | null | undefined): {interval: BillingInterval; plan: PlanKey} | null {
   if (!priceId) {
     return null;
   }
@@ -45,7 +52,7 @@ function pricePlan(priceId: string | null | undefined) {
   return null;
 }
 
-function metadataPlan(metadata: Stripe.Metadata | null | undefined) {
+function metadataPlan(metadata: Stripe.Metadata | null | undefined): {interval: BillingInterval; plan: PlanKey} | null {
   const plan = metadata?.plan;
   const billingInterval = metadata?.billing_interval;
 
@@ -59,7 +66,7 @@ function metadataPlan(metadata: Stripe.Metadata | null | undefined) {
   };
 }
 
-export function subscriptionPlan(subscription: Stripe.Subscription) {
+export function subscriptionPlan(subscription: Stripe.Subscription): {interval: BillingInterval; plan: PlanKey} {
   const currentItem = subscription.items.data[0];
   return pricePlan(currentItem?.price.id) ?? metadataPlan(subscription.metadata) ?? {interval: 'yearly' as const, plan: 'solo' as const};
 }
@@ -145,6 +152,41 @@ export async function syncWorkspaceBillingFromStripeCustomer(workspaceId: string
 
   await syncWorkspaceBillingFromStripe(workspaceId, subscription.id);
   return subscription;
+}
+
+export async function pendingReplacementFromStripeCustomer(customerId: string, currentSubscriptionId: string | null | undefined) {
+  if (!currentSubscriptionId) {
+    return null;
+  }
+
+  const stripe = getStripe();
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    limit: 100,
+    status: 'all'
+  });
+  const pending = subscriptions.data
+    .filter(
+      (subscription) =>
+        subscription.metadata?.pending_replacement === 'true' &&
+        subscription.metadata?.replaces_subscription_id === currentSubscriptionId &&
+        ['incomplete', 'past_due', 'trialing'].includes(subscription.status)
+    )
+    .sort((a, b) => b.created - a.created)[0];
+
+  if (!pending) {
+    return null;
+  }
+
+  const current = subscriptionPlan(pending);
+  const trialEnd = (pending as Stripe.Subscription & {trial_end?: number | null}).trial_end;
+
+  return {
+    effectiveAt: trialEnd ?? null,
+    interval: current.interval,
+    plan: current.plan,
+    subscriptionId: pending.id
+  } satisfies PendingReplacement;
 }
 
 export async function pendingPlanFromSchedule(subscription: Stripe.Subscription) {

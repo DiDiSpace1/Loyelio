@@ -4,7 +4,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 
 import {getPlanLimits, hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getDocumentStorageUsage, getPlanUsage, getWorkspaceBilling} from '@/lib/billing/limits';
-import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
+import {pendingReplacementFromStripeCustomer, syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
@@ -94,6 +94,7 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
   const activeTab = parseTab(params.tab);
   const {profile, supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
   let billing = await getWorkspaceBilling(supabase, workspaceId);
+  let pendingReplacement: Awaited<ReturnType<typeof pendingReplacementFromStripeCustomer>> = null;
 
   if (activeTab === 'abonnement' && (billing?.stripe_customer_id || billing?.stripe_subscription_id)) {
     try {
@@ -104,6 +105,10 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
       }
 
       billing = await getWorkspaceBilling(supabase, workspaceId);
+
+      if (billing?.stripe_customer_id && billing.stripe_subscription_id) {
+        pendingReplacement = await pendingReplacementFromStripeCustomer(billing.stripe_customer_id, billing.stripe_subscription_id);
+      }
     } catch (error) {
       console.error('Stripe billing sync on settings failed', error);
     }
@@ -113,6 +118,8 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
   const paid = hasPaidAccess(billing);
   const currentPlan = paid ? normalizeBillingPlan(billing?.plan) : 'free';
   const currentLimits = getPlanLimits(currentPlan);
+  const scheduledAt = params.checkout === 'scheduled' ? params.scheduled_at : pendingReplacement?.effectiveAt ? String(pendingReplacement.effectiveAt) : undefined;
+  const scheduledPlan = params.checkout === 'scheduled' ? params.scheduled_plan : pendingReplacement?.plan;
   const [propertyUsage, tenantUsage, documentUsage, storageUsage] = await Promise.all([
     getPlanUsage(supabase, workspaceId, 'properties'),
     getPlanUsage(supabase, workspaceId, 'tenants'),
@@ -158,8 +165,8 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
           documentUsage={documentUsage}
           locale={locale}
           propertyUsage={propertyUsage}
-          scheduledAt={params.checkout === 'scheduled' ? params.scheduled_at : undefined}
-          scheduledPlan={params.checkout === 'scheduled' ? params.scheduled_plan : undefined}
+          scheduledAt={scheduledAt}
+          scheduledPlan={scheduledPlan}
           storageUsage={storageUsage}
           tenantUsage={tenantUsage}
           limits={currentLimits}
