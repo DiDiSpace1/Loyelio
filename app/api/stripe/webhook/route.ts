@@ -3,7 +3,7 @@ import {NextResponse} from 'next/server';
 
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
 import {getStripe} from '@/lib/billing/stripe';
-import {subscriptionPlan, syncWorkspaceBillingFromStripe} from '@/lib/billing/sync';
+import {subscriptionPlan, syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 
 export const runtime = 'nodejs';
 
@@ -80,6 +80,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
   const workspaceId = subscription.metadata?.workspace_id;
+
+  if (subscription.metadata?.pending_replacement === 'true' && subscription.status === 'trialing') {
+    return;
+  }
+
   const currentPlan = subscriptionPlan(subscription);
   const values = {
     current_period_end: subscriptionPeriodEnd(subscription),
@@ -101,6 +106,15 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
   const billing = await getBillingByCustomer(customerId);
+
+  if (subscription.metadata?.pending_replacement_subscription_id || subscription.metadata?.pending_replacement === 'true') {
+    const workspaceId = subscription.metadata?.workspace_id;
+
+    if (workspaceId) {
+      await syncWorkspaceBillingFromStripeCustomer(workspaceId, customerId);
+      return;
+    }
+  }
 
   if (billing?.stripe_subscription_id !== subscription.id) {
     return;

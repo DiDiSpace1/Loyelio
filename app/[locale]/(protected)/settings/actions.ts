@@ -5,7 +5,7 @@ import {redirect} from 'next/navigation';
 
 import {getAppUrl, hasPaidAccess} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
-import {subscriptionPlan, syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
+import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} from '@/lib/billing/sync';
 import {getStripe, getStripePriceId} from '@/lib/billing/stripe';
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
@@ -27,6 +27,15 @@ function billingIntervalValue(formData: FormData) {
 
 function subscriptionTimestamp(subscription: Stripe.Subscription, key: 'current_period_end') {
   return (subscription as Stripe.Subscription & Record<typeof key, number | undefined>)[key];
+}
+
+function subscriptionCustomerId(subscription: Stripe.Subscription) {
+  return typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+}
+
+function subscriptionPaymentMethodId(subscription: Stripe.Subscription) {
+  const paymentMethod = subscription.default_payment_method;
+  return typeof paymentMethod === 'string' ? paymentMethod : paymentMethod?.id;
 }
 
 function appendParams(path: string, params: Record<string, string>) {
@@ -293,200 +302,99 @@ async function scheduleSubscriptionChange({
     throw new Error('Subscription has no current period or item.');
   }
 
-  const current = subscriptionPlan(subscription);
-  const scheduleValue = subscription.schedule;
-  const scheduleId = typeof scheduleValue === 'string' ? scheduleValue : scheduleValue?.id;
-  let schedule: Stripe.SubscriptionSchedule;
+  const customerId = subscriptionCustomerId(subscription);
+  const currentQuantity = currentItem.quantity ?? 1;
+  const paymentMethodId = subscriptionPaymentMethodId(subscription);
 
   try {
-    schedule = scheduleId ? await stripe.subscriptionSchedules.retrieve(scheduleId) : await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      limit: 100,
+      status: 'all'
+    });
+    const existingPendingSubscriptions = subscriptions.data.filter(
+      (candidate) =>
+        candidate.id !== subscription.id &&
+        candidate.metadata?.pending_replacement === 'true' &&
+        candidate.metadata?.replaces_subscription_id === subscription.id &&
+        ['incomplete', 'past_due', 'trialing'].includes(candidate.status)
+    );
+
+    await Promise.all(existingPendingSubscriptions.map((candidate) => stripe.subscriptions.cancel(candidate.id)));
   } catch (error) {
-    console.error('Stripe subscription schedule retrieve/create failed', {
+    console.error('Stripe pending replacement cleanup failed', {
       details: stripeErrorDetails(error),
-      existingScheduleId: scheduleId,
-      stage: 'retrieve_or_create_schedule',
+      stage: 'cleanup_pending_replacement_subscriptions',
       subscriptionId: subscription.id,
       workspaceId
     });
     throw error;
   }
 
-  console.info('Stripe subscription schedule change requested', {
-    billingInterval,
-    currentPlan: current.plan,
-    currentPriceId: currentItem.price.id,
-    periodEnd,
-    plan,
-    priceId,
-    scheduleId: schedule.id,
-    subscriptionId: subscription.id,
-    subscriptionStatus: subscription.status,
-    workspaceId
-  });
-
-  await updateSubscriptionSchedule({
-    billingInterval,
-    currentInterval: current.interval,
-    currentPlan: current.plan,
-    periodEnd,
-    plan,
-    priceId,
-    schedule,
-    subscriptionItem: currentItem,
-    workspaceId
-  }).catch(async (error) => {
-    if (!scheduleId) {
-      throw error;
-    }
-
-    console.error('Stripe subscription schedule update failed, recreating schedule', {
-      details: stripeErrorDetails(error),
-      scheduleId,
-      stage: 'recreate_schedule_after_update_failure',
-      subscriptionId: subscription.id,
-      workspaceId
+  try {
+    const pendingSubscription = await stripe.subscriptions.create({
+      customer: customerId,
+      ...(paymentMethodId ? {default_payment_method: paymentMethodId} : {}),
+      items: [
+        {
+          price: priceId,
+          quantity: currentQuantity
+        }
+      ],
+      metadata: {
+        billing_interval: billingInterval,
+        pending_billing_interval: billingInterval,
+        pending_plan: plan,
+        pending_replacement: 'true',
+        plan,
+        replaces_subscription_id: subscription.id,
+        workspace_id: workspaceId
+      },
+      payment_settings: {
+        save_default_payment_method: 'on_subscription'
+      },
+      trial_end: periodEnd,
+      trial_settings: {
+        end_behavior: {
+          missing_payment_method: 'cancel'
+        }
+      }
     });
 
-    try {
-      await stripe.subscriptionSchedules.release(scheduleId);
-    } catch (releaseError) {
-      console.error('Stripe subscription schedule release failed', {
-        details: stripeErrorDetails(releaseError),
-        scheduleId,
-        stage: 'release_existing_schedule',
-        subscriptionId: subscription.id,
-        workspaceId
-      });
-      throw releaseError;
-    }
+    await stripe.subscriptions.update(subscription.id, {
+      cancel_at_period_end: true,
+      metadata: {
+        pending_billing_interval: billingInterval,
+        pending_plan: plan,
+        pending_replacement_subscription_id: pendingSubscription.id,
+        workspace_id: workspaceId
+      }
+    });
 
-    let nextSchedule: Stripe.SubscriptionSchedule;
-
-    try {
-      nextSchedule = await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
-    } catch (createError) {
-      console.error('Stripe subscription schedule recreate failed', {
-        details: stripeErrorDetails(createError),
-        stage: 'recreate_schedule',
-        subscriptionId: subscription.id,
-        workspaceId
-      });
-      throw createError;
-    }
-
-    await updateSubscriptionSchedule({
+    console.info('Stripe subscription replacement scheduled', {
       billingInterval,
-      currentInterval: current.interval,
-      currentPlan: current.plan,
+      currentPriceId: currentItem.price.id,
+      pendingSubscriptionId: pendingSubscription.id,
       periodEnd,
       plan,
       priceId,
-      schedule: nextSchedule,
-      subscriptionItem: currentItem,
+      subscriptionId: subscription.id,
       workspaceId
     });
-  });
-
-  return periodEnd;
-}
-
-async function updateSubscriptionSchedule({
-  billingInterval,
-  currentInterval,
-  currentPlan,
-  periodEnd,
-  plan,
-  priceId,
-  schedule,
-  subscriptionItem,
-  workspaceId
-}: {
-  billingInterval: string;
-  currentInterval: string;
-  currentPlan: string;
-  periodEnd: number;
-  plan: string;
-  priceId: string;
-  schedule: Stripe.SubscriptionSchedule;
-  subscriptionItem: Stripe.SubscriptionItem;
-  workspaceId: string;
-}) {
-  const stripe = getStripe();
-  const currentPhase = schedule.current_phase ?? schedule.phases.find((phase) => phase.start_date <= periodEnd && phase.end_date >= periodEnd);
-  const currentPhaseStart = currentPhase?.start_date ?? schedule.phases[0]?.start_date;
-  const currentQuantity = subscriptionItem.quantity ?? 1;
-
-  if (!currentPhaseStart) {
-    throw new Error('Subscription schedule has no current phase start date.');
-  }
-
-  const updateParams = (startDate: number | 'now'): Stripe.SubscriptionScheduleUpdateParams => ({
-    end_behavior: 'release',
-    metadata: {
-      pending_billing_interval: billingInterval,
-      pending_plan: plan,
-      workspace_id: workspaceId
-    },
-    phases: [
-      {
-        end_date: periodEnd,
-        items: [
-          {
-            price: subscriptionItem.price.id,
-            quantity: currentQuantity
-          }
-        ],
-        metadata: {
-          billing_interval: currentInterval,
-          plan: currentPlan,
-          workspace_id: workspaceId
-        },
-        start_date: startDate
-      },
-      {
-        items: [
-          {
-            price: priceId,
-            quantity: currentQuantity
-          }
-        ],
-        metadata: {
-          billing_interval: billingInterval,
-          plan,
-          workspace_id: workspaceId
-        },
-        proration_behavior: 'none',
-        start_date: periodEnd
-      }
-    ],
-    proration_behavior: 'none'
-  });
-
-  try {
-    await stripe.subscriptionSchedules.update(schedule.id, updateParams(currentPhaseStart));
   } catch (error) {
-    console.error('Stripe subscription schedule update with current phase start failed, retrying from now', {
-      currentPhaseStart,
+    console.error('Stripe subscription replacement scheduling failed', {
       details: stripeErrorDetails(error),
       periodEnd,
-      scheduleId: schedule.id,
-      stage: 'update_schedule_current_start',
+      plan,
+      priceId,
+      stage: 'schedule_replacement_subscription',
+      subscriptionId: subscription.id,
       workspaceId
     });
-
-    try {
-      await stripe.subscriptionSchedules.update(schedule.id, updateParams('now'));
-    } catch (retryError) {
-      console.error('Stripe subscription schedule update from now failed', {
-        details: stripeErrorDetails(retryError),
-        periodEnd,
-        scheduleId: schedule.id,
-        stage: 'update_schedule_now',
-        workspaceId
-      });
-      throw retryError;
-    }
+    throw error;
   }
+
+  return periodEnd;
 }
 
 export async function createBillingPortalSessionAction(formData: FormData) {
