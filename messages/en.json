@@ -695,6 +695,8 @@
       "active": "Active",
       "plan": "{plan} plan",
       "currentPlanDescription": "Your current plan controls limits for properties, tenants, documents, storage and photos.",
+      "scheduledInline": "The switch to the {plan} plan is confirmed and will take effect at the end of the current period.",
+      "scheduledInlineWithDate": "The switch to the {plan} plan is confirmed and will take effect on {date}.",
       "currentPlanButton": "Current plan",
       "choosePlan": "Choose {plan}",
       "included": "Included in your offer",

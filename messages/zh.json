@@ -695,6 +695,8 @@
       "active": "有效",
       "plan": "{plan} 套餐",
       "currentPlanDescription": "您当前的套餐决定了房产、租客、文档、存储和照片的限额。",
+      "scheduledInline": "已成功切换至 {plan} 套餐，将于当前周期结束时生效。",
+      "scheduledInlineWithDate": "已成功切换至 {plan} 套餐，将于 {date} 生效。",
       "currentPlanButton": "当前套餐",
       "choosePlan": "选择 {plan}",
       "included": "您的方案包含以下内容",

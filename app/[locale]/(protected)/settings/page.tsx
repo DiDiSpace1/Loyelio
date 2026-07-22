@@ -158,6 +158,8 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
           documentUsage={documentUsage}
           locale={locale}
           propertyUsage={propertyUsage}
+          scheduledAt={params.checkout === 'scheduled' ? params.scheduled_at : undefined}
+          scheduledPlan={params.checkout === 'scheduled' ? params.scheduled_plan : undefined}
           storageUsage={storageUsage}
           tenantUsage={tenantUsage}
           limits={currentLimits}
@@ -318,6 +320,8 @@ function SubscriptionTab({
   limits,
   locale,
   propertyUsage,
+  scheduledAt,
+  scheduledPlan,
   storageUsage,
   tenantUsage
 }: {
@@ -328,12 +332,17 @@ function SubscriptionTab({
   limits: ReturnType<typeof getPlanLimits>;
   locale: string;
   propertyUsage: number;
+  scheduledAt?: string;
+  scheduledPlan?: string;
   storageUsage: number;
   tenantUsage: number;
 }) {
   const t = useTranslations('settings.subscription');
   const currentPlanLabel = planLabel(currentPlan);
   const currentPeriodEndLabel = currentPeriodEnd ? new Intl.DateTimeFormat(locale, {dateStyle: 'long'}).format(new Date(currentPeriodEnd)) : t('unknownDate');
+  const scheduledTimestamp = Number(scheduledAt);
+  const scheduledDateLabel = Number.isFinite(scheduledTimestamp) && scheduledTimestamp > 0 ? new Intl.DateTimeFormat(locale, {dateStyle: 'long'}).format(new Date(scheduledTimestamp * 1000)) : null;
+  const scheduledPlanLabel = scheduledPlan ? planLabel(scheduledPlan) : null;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -351,6 +360,11 @@ function SubscriptionTab({
               <p className="text-3xl font-semibold text-[var(--accent)]">{currentPlan === 'free' ? '0 EUR' : currentPlanLabel}</p>
               <h3 className="mt-5 text-xl font-semibold">{t('plan', {plan: currentPlanLabel})}</h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-[#33413f]">{t('currentPlanDescription')}</p>
+              {scheduledPlanLabel ? (
+                <p className="mt-4 max-w-md rounded-lg border border-[#b8d8c5] bg-[#f0fbf3] px-4 py-3 text-sm font-medium leading-6 text-[#087a55]">
+                  {scheduledDateLabel ? t('scheduledInlineWithDate', {date: scheduledDateLabel, plan: scheduledPlanLabel}) : t('scheduledInline', {plan: scheduledPlanLabel})}
+                </p>
+              ) : null}
             </div>
             <div className="rounded-lg border border-[var(--line)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#33413f]">{t('included')}</p>

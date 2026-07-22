@@ -695,6 +695,8 @@
       "active": "Actif",
       "plan": "Plan {plan}",
       "currentPlanDescription": "Votre forfait actuel contrôle les limites de biens, locataires, documents, stockage et photos.",
+      "scheduledInline": "Le changement vers le forfait {plan} est confirmé et prendra effet à la fin de la période en cours.",
+      "scheduledInlineWithDate": "Le changement vers le forfait {plan} est confirmé et prendra effet le {date}.",
       "currentPlanButton": "Forfait actuel",
       "choosePlan": "Choisir {plan}",
       "included": "Inclus dans votre offre",

@@ -55,8 +55,10 @@ export function PlanChangeForm({
   const confirmedRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedInterval, setSelectedInterval] = useState('yearly');
   const [isPending, startTransition] = useTransition();
+  const isBusy = isPending || isSubmitting;
   const switchDate = formatDate(currentPeriodEnd, locale);
   const selectedPrice = selectedInterval === 'monthly' ? monthlyPrice : yearlyPrice;
   const priceSuffix = selectedInterval === 'monthly' ? monthlyPriceSuffix : labels.yearlyPriceSuffix;
@@ -93,7 +95,8 @@ export function PlanChangeForm({
               <h2 className="text-xl font-semibold">{labels.title}</h2>
               <button
                 aria-label={labels.cancel}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#17201e] text-xl leading-none hover:bg-[#f0f5f2]"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#17201e] text-xl leading-none hover:bg-[#f0f5f2] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isBusy}
                 onClick={() => setIsOpen(false)}
                 type="button"
               >
@@ -118,15 +121,15 @@ export function PlanChangeForm({
             </div>
 
             <div className="mt-8 flex justify-end gap-3">
-              <button className="min-h-10 rounded-full border border-[var(--line)] px-5 text-sm font-medium hover:bg-[#f0f5f2]" onClick={() => setIsOpen(false)} type="button">
+              <button className="min-h-10 rounded-full border border-[var(--line)] px-5 text-sm font-medium hover:bg-[#f0f5f2] disabled:cursor-not-allowed disabled:opacity-50" disabled={isBusy} onClick={() => setIsOpen(false)} type="button">
                 {labels.cancel}
               </button>
               <button
-                className="min-h-10 rounded-full bg-[#111] px-5 text-sm font-semibold text-white disabled:opacity-60"
-                disabled={isPending}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#111] px-5 text-sm font-semibold text-white disabled:opacity-70"
+                disabled={isBusy}
                 onClick={() => {
                   confirmedRef.current = true;
-                  setIsOpen(false);
+                  setIsSubmitting(true);
                   startTransition(() => {
                     formRef.current?.requestSubmit();
                   });
@@ -134,6 +137,7 @@ export function PlanChangeForm({
                 type="button"
               >
                 {labels.confirm}
+                {isBusy ? <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" /> : null}
               </button>
             </div>
           </div>
