@@ -231,15 +231,71 @@ async function scheduleSubscriptionChange({
   const scheduleValue = subscription.schedule;
   const scheduleId = typeof scheduleValue === 'string' ? scheduleValue : scheduleValue?.id;
   const schedule = scheduleId ? await stripe.subscriptionSchedules.retrieve(scheduleId) : await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
+  await updateSubscriptionSchedule({
+    billingInterval,
+    currentInterval: current.interval,
+    currentPlan: current.plan,
+    periodEnd,
+    plan,
+    priceId,
+    schedule,
+    subscriptionItem: currentItem,
+    workspaceId
+  }).catch(async (error) => {
+    if (!scheduleId) {
+      throw error;
+    }
+
+    console.error('Stripe subscription schedule update failed, recreating schedule', error);
+    await stripe.subscriptionSchedules.release(scheduleId);
+    const nextSchedule = await stripe.subscriptionSchedules.create({from_subscription: subscription.id});
+    await updateSubscriptionSchedule({
+      billingInterval,
+      currentInterval: current.interval,
+      currentPlan: current.plan,
+      periodEnd,
+      plan,
+      priceId,
+      schedule: nextSchedule,
+      subscriptionItem: currentItem,
+      workspaceId
+    });
+  });
+
+  return periodEnd;
+}
+
+async function updateSubscriptionSchedule({
+  billingInterval,
+  currentInterval,
+  currentPlan,
+  periodEnd,
+  plan,
+  priceId,
+  schedule,
+  subscriptionItem,
+  workspaceId
+}: {
+  billingInterval: string;
+  currentInterval: string;
+  currentPlan: string;
+  periodEnd: number;
+  plan: string;
+  priceId: string;
+  schedule: Stripe.SubscriptionSchedule;
+  subscriptionItem: Stripe.SubscriptionItem;
+  workspaceId: string;
+}) {
+  const stripe = getStripe();
   const currentPhase = schedule.current_phase ?? schedule.phases.find((phase) => phase.start_date <= periodEnd && phase.end_date >= periodEnd);
   const currentPhaseStart = currentPhase?.start_date ?? schedule.phases[0]?.start_date;
-  const currentQuantity = currentItem.quantity ?? 1;
+  const currentQuantity = subscriptionItem.quantity ?? 1;
 
   if (!currentPhaseStart) {
     throw new Error('Subscription schedule has no current phase start date.');
   }
 
-  await stripe.subscriptionSchedules.update(schedule.id, {
+  const updateParams = (startDate: number | 'now'): Stripe.SubscriptionScheduleUpdateParams => ({
     end_behavior: 'release',
     metadata: {
       pending_billing_interval: billingInterval,
@@ -251,16 +307,16 @@ async function scheduleSubscriptionChange({
         end_date: periodEnd,
         items: [
           {
-            price: currentItem.price.id,
+            price: subscriptionItem.price.id,
             quantity: currentQuantity
           }
         ],
         metadata: {
-          billing_interval: current.interval,
-          plan: current.plan,
+          billing_interval: currentInterval,
+          plan: currentPlan,
           workspace_id: workspaceId
         },
-        start_date: currentPhaseStart
+        start_date: startDate
       },
       {
         items: [
@@ -281,7 +337,12 @@ async function scheduleSubscriptionChange({
     proration_behavior: 'none'
   });
 
-  return periodEnd;
+  try {
+    await stripe.subscriptionSchedules.update(schedule.id, updateParams(currentPhaseStart));
+  } catch (error) {
+    console.error('Stripe subscription schedule update with current phase start failed, retrying from now', error);
+    await stripe.subscriptionSchedules.update(schedule.id, updateParams('now'));
+  }
 }
 
 export async function createBillingPortalSessionAction(formData: FormData) {

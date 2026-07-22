@@ -8,6 +8,7 @@ import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} 
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction, updateAccountSettingsAction} from './actions';
+import {PlanChangeForm} from './PlanChangeForm';
 
 type SettingsPageProps = {
   searchParams: Promise<{
@@ -150,6 +151,7 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
       {activeTab === 'abonnement' ? (
         <SubscriptionTab
           billingCustomerId={billing?.stripe_customer_id ?? null}
+          currentPeriodEnd={billing?.current_period_end ?? null}
           currentPlan={currentPlan}
           documentUsage={documentUsage}
           locale={locale}
@@ -306,6 +308,7 @@ function ProfileTab({
 
 function SubscriptionTab({
   billingCustomerId,
+  currentPeriodEnd,
   currentPlan,
   documentUsage,
   limits,
@@ -315,6 +318,7 @@ function SubscriptionTab({
   tenantUsage
 }: {
   billingCustomerId: string | null;
+  currentPeriodEnd: string | null;
   currentPlan: string;
   documentUsage: number;
   limits: ReturnType<typeof getPlanLimits>;
@@ -325,6 +329,7 @@ function SubscriptionTab({
 }) {
   const t = useTranslations('settings.subscription');
   const currentPlanLabel = planLabel(currentPlan);
+  const currentPeriodEndLabel = currentPeriodEnd ? new Intl.DateTimeFormat(locale, {dateStyle: 'long'}).format(new Date(currentPeriodEnd)) : t('unknownDate');
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -362,6 +367,7 @@ function SubscriptionTab({
           <div className="grid gap-4 p-6 md:grid-cols-3">
             {planCards.map((plan) => {
               const isCurrent = plan.plan === currentPlan;
+              const targetPlanLabel = plan.label;
               const cardContent = (
                 <>
                   {!isCurrent ? (
@@ -403,9 +409,29 @@ function SubscriptionTab({
                   {cardContent}
                 </div>
               ) : (
-                <form action={createCheckoutSessionAction} className="rounded-lg border border-[var(--line)] p-4" key={plan.plan}>
+                <PlanChangeForm
+                  action={createCheckoutSessionAction}
+                  className="rounded-lg border border-[var(--line)] p-4"
+                  currentPeriodEnd={currentPeriodEnd}
+                  description={t('confirmChangeDescription', {currentPlan: currentPlanLabel, date: currentPeriodEndLabel, plan: targetPlanLabel})}
+                  key={plan.plan}
+                  labels={{
+                    cancel: t('cancelChange'),
+                    confirm: t('confirmChange'),
+                    startsOn: t('startsOn'),
+                    title: t('confirmChangeTitle'),
+                    unknownDate: t('unknownDate'),
+                    yearlyPriceSuffix: t('yearlyPriceSuffix')
+                  }}
+                  locale={locale}
+                  monthlyPrice={formatMoney(plan.monthlyPrice, locale)}
+                  monthlyPriceSuffix={t('monthlyPriceSuffix')}
+                  requiresConfirmation={currentPlan !== 'free'}
+                  targetPlanLabel={targetPlanLabel}
+                  yearlyPrice={formatMoney(plan.yearlyPrice, locale)}
+                >
                   {cardContent}
-                </form>
+                </PlanChangeForm>
               );
             })}
           </div>
