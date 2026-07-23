@@ -227,12 +227,25 @@ Current reminder settings are stored on `leases`:
 - `rent_reminder_days_before`
 - `last_rent_reminder_sent_at`
 
-The next technical step is to add:
+Implemented technical pieces:
 
-- a Vercel Cron route such as `/api/cron/rent-reminders`
-- an email provider integration
-- a sending log table
+- Vercel Cron route: `/api/cron/rent-reminders`
+- daily schedule: `0 6 * * *`
+- Resend email integration through `RESEND_KEY`
+- sending log table: `rent_reminder_logs`
 - duplicate-send protection per lease and month
+
+Required production environment variables:
+
+- `CRON_SECRET`
+- `RESEND_KEY`
+- `RENT_REMINDER_FROM_EMAIL`
+
+Remaining reminder work:
+
+- Portfolio reminder center
+- sending history UI
+- failed reminder retry UI
 
 ## Dashboard Strategy
 
