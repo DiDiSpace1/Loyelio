@@ -639,6 +639,17 @@
     "paidAt": "付款日期",
     "paymentMethod": "付款方式",
     "apply": "应用更新",
+    "confirm": {
+      "title": "确认批量更新",
+      "copy": "请在修改租金记录前确认本次批量操作。",
+      "noSelection": "请至少选择一个租约后再应用批量更新。",
+      "selectedCount": "已选租约",
+      "targetStatus": "目标状态",
+      "paymentDate": "付款日期",
+      "receiptWarning": "将租金标记为已付款时，Portfolio 工作区可能会自动生成收据。",
+      "cancel": "取消",
+      "confirm": "确认"
+    },
     "unknownTenant": "租客",
     "unknownProperty": "房产",
     "empty": "该月份没有有效租约。",

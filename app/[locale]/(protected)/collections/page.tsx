@@ -7,6 +7,7 @@ import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {CollectionSelectionControls} from './collection-selection-controls';
+import {CollectionSubmitConfirmation} from './collection-submit-confirmation';
 import {updateCollectionsAction} from './actions';
 
 type Relation<T> = T | T[] | null;
@@ -238,9 +239,22 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                 <option value="other">{t('methods.other')}</option>
               </select>
             </label>
-            <button className="focus-ring min-h-11 self-end rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
-              {t('apply')}
-            </button>
+            <CollectionSubmitConfirmation
+              formId={COLLECTION_FORM_ID}
+              initialSelected={initialSelected}
+              labels={{
+                apply: t('apply'),
+                cancel: t('confirm.cancel'),
+                confirm: t('confirm.confirm'),
+                copy: t('confirm.copy'),
+                noSelection: t('confirm.noSelection'),
+                paymentDate: t('confirm.paymentDate'),
+                receiptWarning: t('confirm.receiptWarning'),
+                selectedCount: t('confirm.selectedCount'),
+                targetStatus: t('confirm.targetStatus'),
+                title: t('confirm.title')
+              }}
+            />
           </div>
         </div>
         <div className="overflow-x-auto">

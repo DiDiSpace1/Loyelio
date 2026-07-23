@@ -639,6 +639,17 @@
     "paidAt": "Payment date",
     "paymentMethod": "Payment method",
     "apply": "Apply updates",
+    "confirm": {
+      "title": "Confirm batch update",
+      "copy": "Review this batch operation before updating rent records.",
+      "noSelection": "Select at least one lease before applying a batch update.",
+      "selectedCount": "Selected leases",
+      "targetStatus": "Target status",
+      "paymentDate": "Payment date",
+      "receiptWarning": "Paid rents may automatically generate receipts for Portfolio workspaces.",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
     "unknownTenant": "Tenant",
     "unknownProperty": "Property",
     "empty": "No active lease for this month.",

@@ -639,6 +639,17 @@
     "paidAt": "Date de paiement",
     "paymentMethod": "Mode de paiement",
     "apply": "Appliquer",
+    "confirm": {
+      "title": "Confirmer la mise à jour",
+      "copy": "Vérifiez cette opération en lot avant de modifier les loyers.",
+      "noSelection": "Sélectionnez au moins un bail avant d'appliquer une mise à jour en lot.",
+      "selectedCount": "Baux sélectionnés",
+      "targetStatus": "Statut cible",
+      "paymentDate": "Date de paiement",
+      "receiptWarning": "Les loyers payés peuvent générer automatiquement des quittances pour les espaces Portfolio.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    },
     "unknownTenant": "Locataire",
     "unknownProperty": "Bien",
     "empty": "Aucun bail actif pour ce mois.",
