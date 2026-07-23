@@ -30,11 +30,11 @@ type LeaseRow = {
 
 type CollectionsPageProps = {
   searchParams: Promise<{
-    error?: string;
+    collection_error?: string;
+    collection_success?: string;
     month?: string;
     receipts?: string;
     skipped?: string;
-    success?: string;
     updated?: string;
   }>;
 };
@@ -148,8 +148,8 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const expectedTotal = rows.reduce((sum, row) => sum + row.totalDue, 0);
   const collectedTotal = rows.reduce((sum, row) => sum + row.paid, 0);
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
-  const success = params.success === 'collections_updated';
-  const errorKey = params.error && ['collections_load_failed', 'collections_missing', 'portfolio_required'].includes(params.error) ? params.error : null;
+  const success = params.collection_success === 'collections_updated';
+  const errorKey = params.collection_error && ['collections_load_failed', 'collections_missing', 'portfolio_required'].includes(params.collection_error) ? params.collection_error : null;
 
   return (
     <>

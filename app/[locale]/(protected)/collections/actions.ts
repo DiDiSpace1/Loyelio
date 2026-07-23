@@ -85,7 +85,7 @@ export async function updateCollectionsAction(formData: FormData) {
   const returnHref = collectionHref(locale, month);
 
   if (!periodMonth || !selectedLeaseIds.length || !['paid', 'partial', 'unpaid'].includes(nextStatus)) {
-    redirect(withParams(returnHref, {error: 'collections_missing'}));
+    redirect(withParams(returnHref, {collection_error: 'collections_missing'}));
   }
 
   const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -93,7 +93,7 @@ export async function updateCollectionsAction(formData: FormData) {
   const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
 
   if (!hasPortfolioAccess) {
-    redirect(withParams(returnHref, {error: 'portfolio_required'}));
+    redirect(withParams(returnHref, {collection_error: 'portfolio_required'}));
   }
 
   const {data: leases, error: leaseError} = await supabase
@@ -105,7 +105,7 @@ export async function updateCollectionsAction(formData: FormData) {
     .returns<LeaseRow[]>();
 
   if (leaseError || !leases?.length) {
-    redirect(withParams(returnHref, {error: 'collections_load_failed'}));
+    redirect(withParams(returnHref, {collection_error: 'collections_load_failed'}));
   }
 
   let updated = 0;
@@ -228,5 +228,5 @@ export async function updateCollectionsAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/tax'));
   revalidatePath(localizedPath(locale, '/tenants'));
   revalidatePath(localizedPath(locale, '/transactions'));
-  redirect(withParams(returnHref, {receipts, skipped, success: 'collections_updated', updated}));
+  redirect(withParams(returnHref, {collection_success: 'collections_updated', receipts, skipped, updated}));
 }
