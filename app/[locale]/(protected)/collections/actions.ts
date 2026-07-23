@@ -149,6 +149,7 @@ export async function updateCollectionsAction(formData: FormData) {
       targetStatus = 'partial';
     }
 
+    const statusForUpsert = amountToInsert > 0 ? (existingCharge?.status ?? 'unpaid') : targetStatus;
     const {data: rentCharge, error: chargeError} = await supabase
       .from('rent_charges')
       .upsert(
@@ -158,7 +159,7 @@ export async function updateCollectionsAction(formData: FormData) {
           lease_id: lease.id,
           period_month: periodMonth,
           rent_amount: rentAmount,
-          status: targetStatus,
+          status: statusForUpsert,
           total_due: totalDue,
           workspace_id: workspaceId
         },
@@ -172,16 +173,37 @@ export async function updateCollectionsAction(formData: FormData) {
       continue;
     }
 
-    if (amountToInsert > 0) {
-      const {error: paymentError} = await supabase.from('rent_payments').insert({
-        amount: amountToInsert,
-        paid_at: paidAt,
-        payment_method: paymentMethod(value(formData, 'payment_method')),
-        rent_charge_id: rentCharge.id,
-        workspace_id: workspaceId
-      });
+    let insertedPaymentId: string | null = null;
 
-      if (paymentError) {
+    if (amountToInsert > 0) {
+      const {data: payment, error: paymentError} = await supabase
+        .from('rent_payments')
+        .insert({
+          amount: amountToInsert,
+          paid_at: paidAt,
+          payment_method: paymentMethod(value(formData, 'payment_method')),
+          rent_charge_id: rentCharge.id,
+          workspace_id: workspaceId
+        })
+        .select('id')
+        .single<{id: string}>();
+
+      if (paymentError || !payment) {
+        skipped += 1;
+        continue;
+      }
+
+      insertedPaymentId = payment.id;
+    }
+
+    if (statusForUpsert !== targetStatus) {
+      const {error: statusError} = await supabase.from('rent_charges').update({status: targetStatus}).eq('id', rentCharge.id).eq('workspace_id', workspaceId);
+
+      if (statusError) {
+        if (insertedPaymentId) {
+          await supabase.from('rent_payments').delete().eq('id', insertedPaymentId).eq('workspace_id', workspaceId);
+        }
+
         skipped += 1;
         continue;
       }
