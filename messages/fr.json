@@ -38,8 +38,9 @@
     "properties": "Biens",
     "tenants": "Locataires",
     "bail": "Bail",
-    "transactions": "Transactions",
-      "documents": "Documents",
+        "transactions": "Transactions",
+        "collections": "Encaissements",
+        "documents": "Documents",
       "reminders": "Rappels",
       "tasks": "Tâches",
       "tax": "Comptabilité",
@@ -609,6 +610,60 @@
         "retry_missing_email": "Ce locataire n'a pas d'adresse email.",
         "retry_missing_log": "Aucun rappel échoué n'a été trouvé pour ce bail.",
       "update_failed": "Impossible de mettre à jour les rappels sélectionnés."
+    }
+  },
+  "collections": {
+    "title": "Encaissements mensuels",
+    "subtitle": "Mettez à jour le statut des loyers de plusieurs baux actifs depuis un seul tableau.",
+    "lockedTitle": "Encaissements Portfolio",
+    "lockedCopy": "Les encaissements mensuels en lot sont inclus dans Portfolio. Ils permettent de mettre à jour les statuts, enregistrer les paiements et déclencher l'automatisation des quittances.",
+    "upgradeAction": "Voir les forfaits",
+    "month": "Mois",
+    "refresh": "Actualiser",
+    "success": "{updated} baux mis à jour. {receipts} quittances générées. {skipped} lignes ignorées.",
+    "metrics": {
+      "expected": "Attendu",
+      "collected": "Encaissé",
+      "paid": "Payés",
+      "toFollow": "À suivre"
+    },
+    "tableTitle": "Baux actifs",
+    "tableCopy": "Utilisez la colonne de sélection pour choisir les baux à mettre à jour sur le mois choisi.",
+    "bulkStatus": "Statut",
+    "paidAt": "Date de paiement",
+    "paymentMethod": "Mode de paiement",
+    "apply": "Appliquer",
+    "unknownTenant": "Locataire",
+    "unknownProperty": "Bien",
+    "empty": "Aucun bail actif pour ce mois.",
+    "columns": {
+      "select": "Sélection",
+      "tenant": "Locataire",
+      "property": "Bien",
+      "rent": "Loyer",
+      "charges": "Charges",
+      "total": "Total",
+      "paid": "Payé",
+      "partialAmount": "Montant partiel",
+      "status": "Statut"
+    },
+    "status": {
+      "paid": "Payé",
+      "partial": "Partiel",
+      "unpaid": "Impayé"
+    },
+    "methods": {
+      "bank_transfer": "Virement bancaire",
+      "cash": "Espèces",
+      "cheque": "Chèque",
+      "card": "Carte",
+      "other": "Autre"
+    },
+    "errors": {
+      "collections_load_failed": "Impossible de charger les baux sélectionnés.",
+      "collections_missing": "Sélectionnez au moins un bail et un statut valide.",
+      "loadFailed": "Impossible de charger les encaissements mensuels.",
+      "portfolio_required": "Ce workflow en lot nécessite Portfolio."
     }
   },
   "tasks": {

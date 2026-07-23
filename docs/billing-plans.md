@@ -60,7 +60,7 @@ This is the important part: higher forfaits should unlock stronger capabilities,
 | Tax export | No | Basic CSV export | CSV + ZIP package with PDF summary and receipts | CSV + ZIP package with PDF summary and receipts |
 | Dashboard | Basic dashboard | Basic dashboard | Professional Plus dashboard | Professional Portfolio dashboard |
 | Rent reminders | No | No | Per-tenant / per-lease reminders | Per-tenant reminders + batch reminder center |
-| Batch management | No | No | Limited batch workflows | Portfolio batch workflows |
+| Batch management | No | No | Limited batch workflows | Portfolio batch workflows, including monthly rent collection updates |
 | Priority support | No | Standard paid support | Priority support | Priority support |
 
 ## What Each Forfait Means
@@ -177,6 +177,7 @@ Currently implemented:
 - Portfolio has a reminder center for batch reminder management
 - Portfolio can retry failed reminder sends from the reminder center
 - Portfolio automatically generates a quittance when a rent month is marked as paid
+- Portfolio has a monthly rent collection center for updating payment status across active leases
 - Portfolio can download successful batch-generated quittances as a ZIP archive
 - Portfolio can batch-send generated quittances to tenants by email
 - Portfolio has a task center for failed reminders, overdue rents, missing emails, expiring leases and missing receipts
@@ -190,6 +191,14 @@ Planned Portfolio-only differentiation:
 Product logic:
 
 Portfolio should feel like "control many tenants at once".
+
+The monthly collection center is the Portfolio operational hub for recurring rent follow-up:
+
+- select a rent month
+- review every active lease / occupancy record
+- see expected rent, charges, total due, paid amount and current status
+- batch mark selected leases as paid, partially paid or unpaid
+- trigger automatic quittance generation when selected rents are marked as paid
 
 Upgrade trigger:
 

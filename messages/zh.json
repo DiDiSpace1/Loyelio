@@ -38,8 +38,9 @@
     "properties": "房产",
     "tenants": "租客",
     "bail": "租约",
-    "transactions": "交易记录",
-      "documents": "文档",
+        "transactions": "交易记录",
+        "collections": "收租管理",
+        "documents": "文档",
       "reminders": "提醒中心",
       "tasks": "任务中心",
       "tax": "税务",
@@ -609,6 +610,60 @@
         "retry_missing_email": "该租客没有邮箱地址。",
         "retry_missing_log": "未找到该租约的失败提醒记录。",
       "update_failed": "无法更新所选提醒。"
+    }
+  },
+  "collections": {
+    "title": "月度收租管理",
+    "subtitle": "在一个表格中批量更新多个有效租约的租金付款状态。",
+    "lockedTitle": "Portfolio 收租管理",
+    "lockedCopy": "月度批量收租包含在 Portfolio 套餐中。你可以批量更新租金状态、记录付款，并触发自动生成收据。",
+    "upgradeAction": "查看套餐",
+    "month": "月份",
+    "refresh": "刷新",
+    "success": "已更新 {updated} 个租约。生成 {receipts} 份收据。跳过 {skipped} 行。",
+    "metrics": {
+      "expected": "应收",
+      "collected": "已收",
+      "paid": "已付款",
+      "toFollow": "待跟进"
+    },
+    "tableTitle": "有效租约",
+    "tableCopy": "使用选择列勾选需要在当前月份更新的租约。",
+    "bulkStatus": "设置状态",
+    "paidAt": "付款日期",
+    "paymentMethod": "付款方式",
+    "apply": "应用更新",
+    "unknownTenant": "租客",
+    "unknownProperty": "房产",
+    "empty": "该月份没有有效租约。",
+    "columns": {
+      "select": "选择",
+      "tenant": "租客",
+      "property": "房产",
+      "rent": "租金",
+      "charges": "费用",
+      "total": "合计",
+      "paid": "已付",
+      "partialAmount": "部分付款金额",
+      "status": "状态"
+    },
+    "status": {
+      "paid": "已付款",
+      "partial": "部分付款",
+      "unpaid": "未付款"
+    },
+    "methods": {
+      "bank_transfer": "银行转账",
+      "cash": "现金",
+      "cheque": "支票",
+      "card": "银行卡",
+      "other": "其他"
+    },
+    "errors": {
+      "collections_load_failed": "无法读取所选租约。",
+      "collections_missing": "请至少选择一个租约，并选择有效状态。",
+      "loadFailed": "无法加载月度收租数据。",
+      "portfolio_required": "该批量流程需要 Portfolio 套餐。"
     }
   },
   "tasks": {

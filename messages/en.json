@@ -38,8 +38,9 @@
     "properties": "Properties",
     "tenants": "Tenants",
     "bail": "Lease",
-    "transactions": "Transactions",
-      "documents": "Documents",
+        "transactions": "Transactions",
+        "collections": "Collections",
+        "documents": "Documents",
       "reminders": "Reminders",
       "tasks": "Tasks",
       "tax": "Comptabilité",
@@ -609,6 +610,60 @@
         "retry_missing_email": "This tenant does not have an email address.",
         "retry_missing_log": "No failed reminder was found for this lease.",
       "update_failed": "Unable to update selected reminders."
+    }
+  },
+  "collections": {
+    "title": "Monthly collections",
+    "subtitle": "Update rent payment status for many active leases in one place.",
+    "lockedTitle": "Portfolio collections",
+    "lockedCopy": "Monthly batch collections are included in Portfolio. They let you update rent status, record payments and trigger receipt automation across active leases.",
+    "upgradeAction": "View plans",
+    "month": "Month",
+    "refresh": "Refresh",
+    "success": "{updated} leases updated. {receipts} receipts generated. {skipped} rows skipped.",
+    "metrics": {
+      "expected": "Expected",
+      "collected": "Collected",
+      "paid": "Paid",
+      "toFollow": "To follow"
+    },
+    "tableTitle": "Active leases",
+    "tableCopy": "Use the checkbox column to choose the leases to update for the selected month.",
+    "bulkStatus": "Set status",
+    "paidAt": "Payment date",
+    "paymentMethod": "Payment method",
+    "apply": "Apply updates",
+    "unknownTenant": "Tenant",
+    "unknownProperty": "Property",
+    "empty": "No active lease for this month.",
+    "columns": {
+      "select": "Select",
+      "tenant": "Tenant",
+      "property": "Property",
+      "rent": "Rent",
+      "charges": "Charges",
+      "total": "Total",
+      "paid": "Paid",
+      "partialAmount": "Partial amount",
+      "status": "Status"
+    },
+    "status": {
+      "paid": "Paid",
+      "partial": "Partial",
+      "unpaid": "Unpaid"
+    },
+    "methods": {
+      "bank_transfer": "Bank transfer",
+      "cash": "Cash",
+      "cheque": "Cheque",
+      "card": "Card",
+      "other": "Other"
+    },
+    "errors": {
+      "collections_load_failed": "Unable to load selected leases.",
+      "collections_missing": "Select at least one lease and a valid status.",
+      "loadFailed": "Unable to load monthly collections.",
+      "portfolio_required": "This batch workflow requires Portfolio."
     }
   },
   "tasks": {

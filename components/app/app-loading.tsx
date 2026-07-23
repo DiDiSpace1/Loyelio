@@ -1,4 +1,4 @@
-const navItems = ['dashboard', 'properties', 'tenants', 'bail', 'transactions', 'documents', 'tax', 'settings'];
+const navItems = ['dashboard', 'properties', 'tenants', 'bail', 'transactions', 'collections', 'documents', 'tax', 'settings'];
 
 export function AppLoadingShell() {
   return (
