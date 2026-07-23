@@ -39,9 +39,10 @@
     "tenants": "租客",
     "bail": "租约",
     "transactions": "交易记录",
-    "documents": "文档",
-    "reminders": "提醒中心",
-    "tax": "税务",
+      "documents": "文档",
+      "reminders": "提醒中心",
+      "tasks": "任务中心",
+      "tax": "税务",
     "settings": "设置"
   },
   "landing": {
@@ -607,8 +608,62 @@
         "retry_failed": "无法重新发送该提醒。请稍后重试。",
         "retry_missing_email": "该租客没有邮箱地址。",
         "retry_missing_log": "未找到该租约的失败提醒记录。",
-        "update_failed": "无法更新所选提醒。"
-      }
+      "update_failed": "无法更新所选提醒。"
+    }
+  },
+  "tasks": {
+    "title": "任务中心",
+    "subtitle": "集中处理房源组合里的关键事项，不需要逐个打开租客检查。",
+    "lockedTitle": "Portfolio 任务中心",
+    "lockedCopy": "任务中心包含在 Portfolio 套餐中。它会集中显示提醒失败、逾期租金、即将到期租约和缺失文档。",
+    "upgradeAction": "查看套餐",
+    "openReminders": "打开提醒中心",
+    "loadFailed": "部分任务加载失败。",
+    "unknownTenant": "租客",
+    "unknownProperty": "房源",
+    "listTitle": "待处理事项",
+    "listCopy": "任务根据现有租约、租金、提醒和收据实时计算。",
+    "empty": "目前没有优先任务。",
+    "metrics": {
+      "total": "总数",
+      "high": "高优先级",
+      "medium": "需关注",
+      "low": "低优先级"
+    },
+    "priority": {
+      "high": "紧急",
+      "medium": "需关注",
+      "low": "待补充"
+    },
+    "types": {
+      "document": "文档",
+      "lease": "租约",
+      "payment": "租金",
+      "reminder": "提醒",
+      "tenant": "租客"
+    },
+    "titles": {
+      "failedReminder": "租金提醒发送失败",
+      "missingEmail": "租客邮箱缺失",
+      "leaseExpiring": "租约即将到期",
+      "overdueRent": "租金需要跟进",
+      "missingReceipt": "缺少收据"
+    },
+    "descriptions": {
+      "failedReminder": "最近一次提醒未能成功发送。",
+      "missingEmail": "补充邮箱后才能使用自动提醒和文档发送。",
+      "leaseExpiring": "该租约将在 {date} 结束。",
+      "partialPayment": "{month} 检测到部分付款。",
+      "unpaidRent": "{month} 检测到未付款租金。",
+      "missingReceipt": "{month} 租金已支付，但尚未归档收据。"
+    },
+    "actions": {
+      "retryReminder": "重新发送",
+      "completeTenant": "去补充",
+      "reviewLease": "查看租约",
+      "openRent": "查看租金",
+      "generateReceipt": "生成收据"
+    }
   },
   "documents": {
     "title": "文档",

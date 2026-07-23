@@ -177,11 +177,12 @@ Currently implemented:
 - Portfolio can retry failed reminder sends from the reminder center
 - Portfolio automatically generates a quittance when a rent month is marked as paid
 - Portfolio can download successful batch-generated quittances as a ZIP archive
+- Portfolio has a task center for failed reminders, overdue rents, missing emails, expiring leases and missing receipts
 - Portfolio has the highest limits
 
 Planned Portfolio-only differentiation:
 
-- portfolio-level task center
+- none currently listed
 
 Product logic:
 

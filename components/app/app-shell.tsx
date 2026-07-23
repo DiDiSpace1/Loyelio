@@ -19,6 +19,7 @@ const navItems = [
   {href: '/transactions', key: 'transactions'},
   {href: '/documents', key: 'documents'},
   {href: '/reminders', key: 'reminders'},
+  {href: '/tasks', key: 'tasks'},
   {href: '/tax', key: 'tax'},
   {href: '/settings', key: 'settings'}
 ] as const;
@@ -113,7 +114,7 @@ export async function AppShell({children}: {children: React.ReactNode}) {
           <SidebarNav
             helpLabel={common('help')}
             items={navItems
-              .filter((item) => item.key !== 'reminders' || userPlan === 'portfolio')
+              .filter((item) => !['reminders', 'tasks'].includes(item.key) || userPlan === 'portfolio')
               .map((item) => ({...item, href: localizedPath(locale, item.href), label: t(item.key)}))}
             languageLabel={common('language')}
             locale={locale}
@@ -129,7 +130,7 @@ export async function AppShell({children}: {children: React.ReactNode}) {
             <span>{common('appName')}</span>
           </div>
           <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {navItems.filter((item) => item.key !== 'reminders' || userPlan === 'portfolio').map((item) => (
+            {navItems.filter((item) => !['reminders', 'tasks'].includes(item.key) || userPlan === 'portfolio').map((item) => (
               <Link className="shrink-0 rounded-md border border-[var(--line)] px-3 py-2 text-xs" href={localizedPath(locale, item.href)} key={item.key}>
                 {t(item.key)}
               </Link>

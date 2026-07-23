@@ -39,9 +39,10 @@
     "tenants": "Locataires",
     "bail": "Bail",
     "transactions": "Transactions",
-    "documents": "Documents",
-    "reminders": "Rappels",
-    "tax": "Comptabilité",
+      "documents": "Documents",
+      "reminders": "Rappels",
+      "tasks": "Tâches",
+      "tax": "Comptabilité",
     "settings": "Paramètres"
   },
   "landing": {
@@ -607,8 +608,62 @@
         "retry_failed": "Impossible de renvoyer ce rappel. Réessayez dans un instant.",
         "retry_missing_email": "Ce locataire n'a pas d'adresse email.",
         "retry_missing_log": "Aucun rappel échoué n'a été trouvé pour ce bail.",
-        "update_failed": "Impossible de mettre à jour les rappels sélectionnés."
-      }
+      "update_failed": "Impossible de mettre à jour les rappels sélectionnés."
+    }
+  },
+  "tasks": {
+    "title": "Centre de tâches",
+    "subtitle": "Priorisez les actions opérationnelles de votre portefeuille sans ouvrir chaque locataire un par un.",
+    "lockedTitle": "Centre de tâches Portfolio",
+    "lockedCopy": "Le centre de tâches est disponible avec Portfolio. Il regroupe les relances échouées, loyers en retard, baux à surveiller et documents manquants.",
+    "upgradeAction": "Voir les forfaits",
+    "openReminders": "Ouvrir les rappels",
+    "loadFailed": "Impossible de charger certaines tâches.",
+    "unknownTenant": "Locataire",
+    "unknownProperty": "Bien",
+    "listTitle": "Actions à traiter",
+    "listCopy": "Les tâches sont calculées à partir des baux, loyers, rappels et quittances existants.",
+    "empty": "Aucune tâche prioritaire pour le moment.",
+    "metrics": {
+      "total": "Total",
+      "high": "Priorité haute",
+      "medium": "À surveiller",
+      "low": "Faible priorité"
+    },
+    "priority": {
+      "high": "Urgent",
+      "medium": "À surveiller",
+      "low": "À compléter"
+    },
+    "types": {
+      "document": "Document",
+      "lease": "Bail",
+      "payment": "Loyer",
+      "reminder": "Rappel",
+      "tenant": "Locataire"
+    },
+    "titles": {
+      "failedReminder": "Rappel de loyer échoué",
+      "missingEmail": "Email locataire manquant",
+      "leaseExpiring": "Bail bientôt terminé",
+      "overdueRent": "Loyer à suivre",
+      "missingReceipt": "Quittance manquante"
+    },
+    "descriptions": {
+      "failedReminder": "Le dernier rappel n'a pas pu être envoyé.",
+      "missingEmail": "Ajoutez un email pour permettre les rappels automatiques et les envois de documents.",
+      "leaseExpiring": "Ce bail se termine le {date}.",
+      "partialPayment": "Paiement partiel détecté pour {month}.",
+      "unpaidRent": "Loyer non payé détecté pour {month}.",
+      "missingReceipt": "Le loyer de {month} est payé mais aucune quittance n'est archivée."
+    },
+    "actions": {
+      "retryReminder": "Réessayer",
+      "completeTenant": "Compléter",
+      "reviewLease": "Voir le bail",
+      "openRent": "Voir le loyer",
+      "generateReceipt": "Générer"
+    }
   },
   "documents": {
     "title": "Documents",

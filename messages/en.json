@@ -39,9 +39,10 @@
     "tenants": "Tenants",
     "bail": "Lease",
     "transactions": "Transactions",
-    "documents": "Documents",
-    "reminders": "Reminders",
-    "tax": "Comptabilité",
+      "documents": "Documents",
+      "reminders": "Reminders",
+      "tasks": "Tasks",
+      "tax": "Comptabilité",
     "settings": "Settings"
   },
   "landing": {
@@ -607,8 +608,62 @@
         "retry_failed": "Unable to resend this reminder. Try again in a moment.",
         "retry_missing_email": "This tenant does not have an email address.",
         "retry_missing_log": "No failed reminder was found for this lease.",
-        "update_failed": "Unable to update selected reminders."
-      }
+      "update_failed": "Unable to update selected reminders."
+    }
+  },
+  "tasks": {
+    "title": "Task center",
+    "subtitle": "Prioritize portfolio operations without opening every tenant one by one.",
+    "lockedTitle": "Portfolio task center",
+    "lockedCopy": "The task center is included in Portfolio. It groups failed reminders, late rents, leases to watch and missing documents.",
+    "upgradeAction": "View plans",
+    "openReminders": "Open reminders",
+    "loadFailed": "Some tasks could not be loaded.",
+    "unknownTenant": "Tenant",
+    "unknownProperty": "Property",
+    "listTitle": "Actions to handle",
+    "listCopy": "Tasks are calculated from existing leases, rent charges, reminders and receipts.",
+    "empty": "No priority task for the moment.",
+    "metrics": {
+      "total": "Total",
+      "high": "High priority",
+      "medium": "Watch",
+      "low": "Low priority"
+    },
+    "priority": {
+      "high": "Urgent",
+      "medium": "Watch",
+      "low": "To complete"
+    },
+    "types": {
+      "document": "Document",
+      "lease": "Lease",
+      "payment": "Rent",
+      "reminder": "Reminder",
+      "tenant": "Tenant"
+    },
+    "titles": {
+      "failedReminder": "Rent reminder failed",
+      "missingEmail": "Tenant email missing",
+      "leaseExpiring": "Lease ending soon",
+      "overdueRent": "Rent to follow up",
+      "missingReceipt": "Receipt missing"
+    },
+    "descriptions": {
+      "failedReminder": "The latest reminder could not be sent.",
+      "missingEmail": "Add an email to enable automatic reminders and document sending.",
+      "leaseExpiring": "This lease ends on {date}.",
+      "partialPayment": "Partial payment detected for {month}.",
+      "unpaidRent": "Unpaid rent detected for {month}.",
+      "missingReceipt": "The rent for {month} is paid but no receipt is archived."
+    },
+    "actions": {
+      "retryReminder": "Retry",
+      "completeTenant": "Complete",
+      "reviewLease": "View lease",
+      "openRent": "View rent",
+      "generateReceipt": "Generate"
+    }
   },
   "documents": {
     "title": "Documents",
