@@ -42,11 +42,15 @@ type CollectionsPageProps = {
     skipped_save_failed?: string;
     skipped_zero_amount?: string;
     updated?: string;
+    view?: string;
   }>;
 };
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 const COLLECTION_FORM_ID = 'portfolio-collections-form';
+const COLLECTION_VIEWS = ['all', 'open', 'unpaid', 'partial', 'paid'] as const;
+
+type CollectionView = (typeof COLLECTION_VIEWS)[number];
 
 function relationOne<T>(value: Relation<T>) {
   return Array.isArray(value) ? (value[0] ?? null) : value;
@@ -69,6 +73,15 @@ function addMonths(month: string, offset: number) {
 
 function selectedMonth(value?: string) {
   return value && MONTH_PATTERN.test(value) ? value : currentMonth();
+}
+
+function selectedView(value?: string): CollectionView {
+  return COLLECTION_VIEWS.includes(value as CollectionView) ? (value as CollectionView) : 'all';
+}
+
+function viewHref(locale: string, month: string, view: CollectionView) {
+  const query = new URLSearchParams({month, view});
+  return `${localizedPath(locale, '/collections')}?${query.toString()}`;
 }
 
 function leaseCoversMonth(lease: LeaseRow, month: string) {
@@ -107,6 +120,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const locale = await getLocale();
   const params = await searchParams;
   const month = selectedMonth(params.month);
+  const view = selectedView(params.view);
   const periodMonth = monthStart(month);
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const billing = await getWorkspaceBilling(supabase, workspaceId);
@@ -159,8 +173,15 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const unpaidCount = rows.length - paidCount - partialCount;
   const expectedTotal = rows.reduce((sum, row) => sum + row.totalDue, 0);
   const collectedTotal = rows.reduce((sum, row) => sum + row.paid, 0);
+  const visibleRows = rows.filter((row) => {
+    if (view === 'open') {
+      return row.status !== 'paid';
+    }
+
+    return view === 'all' || row.status === view;
+  });
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
-  const initialSelected = rows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
+  const initialSelected = visibleRows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
   const success = params.collection_success === 'collections_updated';
   const skippedReasons = [
     {count: countParam(params.skipped_zero_amount), label: t('skipReasons.zeroAmount')},
@@ -179,6 +200,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
         <form className="flex flex-wrap items-end gap-3" method="get">
+          <input name="view" type="hidden" value={view} />
           <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t('month')}
             <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#171d1c]" defaultValue={month} name="month" type="month" />
@@ -215,14 +237,45 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
         <MetricCard label={t('metrics.toFollow')} tone={unpaidCount + partialCount > 0 ? 'danger' : 'neutral'} value={(unpaidCount + partialCount).toString()} />
       </section>
 
+      <nav aria-label={t('views.label')} className="mt-6 flex flex-wrap gap-2">
+        {COLLECTION_VIEWS.map((viewKey) => {
+          const active = view === viewKey;
+          const count =
+            viewKey === 'all'
+              ? rows.length
+              : viewKey === 'open'
+                ? unpaidCount + partialCount
+                : viewKey === 'paid'
+                  ? paidCount
+                  : viewKey === 'partial'
+                    ? partialCount
+                    : unpaidCount;
+
+          return (
+            <Link
+              aria-current={active ? 'page' : undefined}
+              className={`focus-ring inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-sm font-semibold ${
+                active ? 'border-[var(--accent)] bg-[#e8f5f1] text-[var(--accent)]' : 'border-[var(--line)] bg-white text-[#34413e] hover:bg-[#f5faf8]'
+              }`}
+              href={viewHref(locale, month, viewKey)}
+              key={viewKey}
+            >
+              {t(`views.${viewKey}`)}
+              <span className={`tabular-nums ${active ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}>{count}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       <form action={updateCollectionsAction} className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm" id={COLLECTION_FORM_ID}>
         <input name="locale" type="hidden" value={locale} />
         <input name="month" type="hidden" value={month} />
+        <input name="view" type="hidden" value={view} />
         <div className="grid gap-4 border-b border-[var(--line-soft)] p-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <h2 className="text-lg font-semibold text-[#171d1c]">{t('tableTitle')}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t('tableCopy')}</p>
-            {rows.length ? (
+            {visibleRows.length ? (
               <div className="mt-4">
                 <CollectionSelectionControls
                   formId={COLLECTION_FORM_ID}
@@ -233,7 +286,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                     selectAll: t('selection.selectAll'),
                     selected: t('selection.selected')
                   }}
-                  total={rows.length}
+                  total={visibleRows.length}
                 />
               </div>
             ) : null}
@@ -295,8 +348,8 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line-soft)]">
-              {rows.length ? (
-                rows.map((row) => {
+              {visibleRows.length ? (
+                visibleRows.map((row) => {
                   const tenant = relationOne(row.lease.tenants);
                   const property = relationOne(row.lease.properties);
                   const unit = relationOne(row.lease.units);
@@ -328,7 +381,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
               ) : (
                 <tr>
                   <td className="px-5 py-10 text-center text-sm text-[var(--muted)]" colSpan={9}>
-                    {t('empty')}
+                    {rows.length ? t('emptyFiltered') : t('empty')}
                   </td>
                 </tr>
               )}

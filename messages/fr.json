@@ -634,6 +634,14 @@
       "paid": "Payés",
       "toFollow": "À suivre"
     },
+    "views": {
+      "label": "Filtrer les encaissements",
+      "all": "Tous",
+      "open": "À suivre",
+      "unpaid": "Impayés",
+      "partial": "Partiels",
+      "paid": "Payés"
+    },
     "tableTitle": "Baux actifs",
     "tableCopy": "Utilisez la colonne de sélection pour choisir les baux à mettre à jour sur le mois choisi.",
     "selection": {
@@ -660,6 +668,7 @@
     "unknownTenant": "Locataire",
     "unknownProperty": "Bien",
     "empty": "Aucun bail actif pour ce mois.",
+    "emptyFiltered": "Aucun bail ne correspond à ce filtre.",
     "columns": {
       "select": "Sélection",
       "tenant": "Locataire",

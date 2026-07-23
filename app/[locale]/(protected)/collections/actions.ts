@@ -41,11 +41,15 @@ function moneyValue(formData: FormData, key: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function collectionHref(locale: string, month: string) {
+function collectionHref(locale: string, month: string, view: string) {
   const params = new URLSearchParams();
 
   if (/^\d{4}-\d{2}$/.test(month)) {
     params.set('month', month);
+  }
+
+  if (['all', 'open', 'unpaid', 'partial', 'paid'].includes(view)) {
+    params.set('view', view);
   }
 
   const query = params.toString();
@@ -82,7 +86,7 @@ export async function updateCollectionsAction(formData: FormData) {
   const selectedLeaseIds = formData.getAll('lease_ids').filter((id): id is string => typeof id === 'string' && Boolean(id));
   const nextStatus = value(formData, 'status');
   const paidAt = value(formData, 'paid_at') || new Date().toISOString().slice(0, 10);
-  const returnHref = collectionHref(locale, month);
+  const returnHref = collectionHref(locale, month, value(formData, 'view'));
 
   if (!periodMonth || !selectedLeaseIds.length || !['paid', 'partial', 'unpaid'].includes(nextStatus)) {
     redirect(withParams(returnHref, {collection_error: 'collections_missing'}));

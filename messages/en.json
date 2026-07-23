@@ -634,6 +634,14 @@
       "paid": "Paid",
       "toFollow": "To follow"
     },
+    "views": {
+      "label": "Filter collections",
+      "all": "All",
+      "open": "To follow",
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "paid": "Paid"
+    },
     "tableTitle": "Active leases",
     "tableCopy": "Use the checkbox column to choose the leases to update for the selected month.",
     "selection": {
@@ -660,6 +668,7 @@
     "unknownTenant": "Tenant",
     "unknownProperty": "Property",
     "empty": "No active lease for this month.",
+    "emptyFiltered": "No lease matches this filter.",
     "columns": {
       "select": "Select",
       "tenant": "Tenant",

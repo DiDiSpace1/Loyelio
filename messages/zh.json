@@ -634,6 +634,14 @@
       "paid": "已付款",
       "toFollow": "待跟进"
     },
+    "views": {
+      "label": "筛选收租记录",
+      "all": "全部",
+      "open": "待处理",
+      "unpaid": "未付款",
+      "partial": "部分付款",
+      "paid": "已付款"
+    },
     "tableTitle": "有效租约",
     "tableCopy": "使用选择列勾选需要在当前月份更新的租约。",
     "selection": {
@@ -660,6 +668,7 @@
     "unknownTenant": "租客",
     "unknownProperty": "房产",
     "empty": "该月份没有有效租约。",
+    "emptyFiltered": "当前筛选条件下没有租约。",
     "columns": {
       "select": "选择",
       "tenant": "租客",
