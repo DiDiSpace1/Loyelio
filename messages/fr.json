@@ -629,6 +629,12 @@
     },
     "tableTitle": "Baux actifs",
     "tableCopy": "Utilisez la colonne de sélection pour choisir les baux à mettre à jour sur le mois choisi.",
+    "selection": {
+      "selected": "{selected}/{total} sélectionnés",
+      "selectAll": "Tout sélectionner",
+      "onlyOpen": "Impayés ou partiels",
+      "clear": "Tout désélectionner"
+    },
     "bulkStatus": "Statut",
     "paidAt": "Date de paiement",
     "paymentMethod": "Mode de paiement",

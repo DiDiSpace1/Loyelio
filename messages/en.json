@@ -629,6 +629,12 @@
     },
     "tableTitle": "Active leases",
     "tableCopy": "Use the checkbox column to choose the leases to update for the selected month.",
+    "selection": {
+      "selected": "{selected}/{total} selected",
+      "selectAll": "Select all",
+      "onlyOpen": "Only unpaid or partial",
+      "clear": "Clear"
+    },
     "bulkStatus": "Set status",
     "paidAt": "Payment date",
     "paymentMethod": "Payment method",

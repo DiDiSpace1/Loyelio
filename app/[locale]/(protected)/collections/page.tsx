@@ -6,6 +6,7 @@ import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
+import {CollectionSelectionControls} from './collection-selection-controls';
 import {updateCollectionsAction} from './actions';
 
 type Relation<T> = T | T[] | null;
@@ -40,6 +41,7 @@ type CollectionsPageProps = {
 };
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
+const COLLECTION_FORM_ID = 'portfolio-collections-form';
 
 function relationOne<T>(value: Relation<T>) {
   return Array.isArray(value) ? (value[0] ?? null) : value;
@@ -148,6 +150,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const expectedTotal = rows.reduce((sum, row) => sum + row.totalDue, 0);
   const collectedTotal = rows.reduce((sum, row) => sum + row.paid, 0);
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
+  const initialSelected = rows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
   const success = params.collection_success === 'collections_updated';
   const errorKey = params.collection_error && ['collections_load_failed', 'collections_missing', 'portfolio_required'].includes(params.collection_error) ? params.collection_error : null;
 
@@ -189,13 +192,28 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
         <MetricCard label={t('metrics.toFollow')} tone={unpaidCount + partialCount > 0 ? 'danger' : 'neutral'} value={(unpaidCount + partialCount).toString()} />
       </section>
 
-      <form action={updateCollectionsAction} className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
+      <form action={updateCollectionsAction} className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm" id={COLLECTION_FORM_ID}>
         <input name="locale" type="hidden" value={locale} />
         <input name="month" type="hidden" value={month} />
         <div className="grid gap-4 border-b border-[var(--line-soft)] p-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <h2 className="text-lg font-semibold text-[#171d1c]">{t('tableTitle')}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t('tableCopy')}</p>
+            {rows.length ? (
+              <div className="mt-4">
+                <CollectionSelectionControls
+                  formId={COLLECTION_FORM_ID}
+                  initialSelected={initialSelected}
+                  labels={{
+                    clear: t('selection.clear'),
+                    onlyOpen: t('selection.onlyOpen'),
+                    selectAll: t('selection.selectAll'),
+                    selected: t('selection.selected')
+                  }}
+                  total={rows.length}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[150px_150px_160px_auto]">
             <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -251,7 +269,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                   return (
                     <tr className="align-middle hover:bg-[#fbfdfc]" key={row.lease.id}>
                       <td className="px-5 py-4">
-                        <input aria-label={t('columns.select')} className="h-4 w-4 accent-[var(--accent)]" defaultChecked={defaultChecked} name="lease_ids" type="checkbox" value={row.lease.id} />
+                        <input aria-label={t('columns.select')} className="h-4 w-4 accent-[var(--accent)]" data-collection-status={row.status} defaultChecked={defaultChecked} name="lease_ids" type="checkbox" value={row.lease.id} />
                       </td>
                       <td className="px-4 py-4 font-semibold text-[#171d1c]">{tenant?.full_name ?? t('unknownTenant')}</td>
                       <td className="px-4 py-4">

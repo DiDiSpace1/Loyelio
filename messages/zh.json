@@ -629,6 +629,12 @@
     },
     "tableTitle": "有效租约",
     "tableCopy": "使用选择列勾选需要在当前月份更新的租约。",
+    "selection": {
+      "selected": "已选择 {selected}/{total}",
+      "selectAll": "全选",
+      "onlyOpen": "仅未付/部分付款",
+      "clear": "取消全选"
+    },
     "bulkStatus": "设置状态",
     "paidAt": "付款日期",
     "paymentMethod": "付款方式",
