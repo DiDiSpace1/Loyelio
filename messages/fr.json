@@ -629,6 +629,14 @@
       "saveFailed": "la mise à jour n'a pas pu être enregistrée",
       "zeroAmount": "le bail n'a pas de montant de loyer"
     },
+    "result": {
+      "title": "Détail de la mise à jour",
+      "copy": "Vérifiez les baux mis à jour et ceux qui nécessitent encore une action.",
+      "updated": "Mis à jour ({count})",
+      "failed": "À traiter ({count})",
+      "noneUpdated": "Aucun bail n'a été mis à jour.",
+      "noneFailed": "Aucun problème détecté."
+    },
     "metrics": {
       "expected": "Attendu",
       "collected": "Encaissé",

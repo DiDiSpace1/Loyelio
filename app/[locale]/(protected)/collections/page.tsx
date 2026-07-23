@@ -37,6 +37,9 @@ type CollectionsPageProps = {
     collection_success?: string;
     month?: string;
     receipts?: string;
+    result_skipped?: string;
+    result_status?: string;
+    result_updated_ids?: string;
     skipped?: string;
     skipped_existing_paid?: string;
     skipped_invalid_amount?: string;
@@ -53,6 +56,9 @@ const COLLECTION_VIEWS = ['all', 'open', 'unpaid', 'partial', 'paid'] as const;
 
 type CollectionView = (typeof COLLECTION_VIEWS)[number];
 type CollectionStatus = 'paid' | 'partial' | 'unpaid';
+type SkipReason = 'existingPaid' | 'invalidAmount' | 'saveFailed' | 'zeroAmount';
+
+const SKIP_REASONS: SkipReason[] = ['existingPaid', 'invalidAmount', 'saveFailed', 'zeroAmount'];
 
 function relationOne<T>(value: Relation<T>) {
   return Array.isArray(value) ? (value[0] ?? null) : value;
@@ -124,6 +130,22 @@ function statusTone(status: string) {
 function countParam(value: string | undefined) {
   const parsed = Number.parseInt(value ?? '0', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function resultIds(value: string | undefined) {
+  return [...new Set((value ?? '').split(',').filter(Boolean))];
+}
+
+function skippedResult(value: string | undefined) {
+  return (value ?? '')
+    .split(',')
+    .map((item) => {
+      const separator = item.lastIndexOf(':');
+      const leaseId = item.slice(0, separator);
+      const reason = item.slice(separator + 1) as SkipReason;
+      return separator > 0 && SKIP_REASONS.includes(reason) ? {leaseId, reason} : null;
+    })
+    .filter((item): item is {leaseId: string; reason: SkipReason} => Boolean(item));
 }
 
 export default async function CollectionsPage({searchParams}: CollectionsPageProps) {
@@ -200,6 +222,17 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
     {count: countParam(params.skipped_invalid_amount), label: t('skipReasons.invalidAmount')},
     {count: countParam(params.skipped_save_failed), label: t('skipReasons.saveFailed')}
   ].filter((reason) => reason.count > 0);
+  const rowByLeaseId = new Map(rows.map((row) => [row.lease.id, row]));
+  const updatedRows = resultIds(params.result_updated_ids)
+    .map((leaseId) => rowByLeaseId.get(leaseId))
+    .filter((row): row is (typeof rows)[number] => Boolean(row));
+  const failedRows = skippedResult(params.result_skipped)
+    .map((result) => {
+      const row = rowByLeaseId.get(result.leaseId);
+      return row ? {...result, row} : null;
+    })
+    .filter((result): result is {leaseId: string; reason: SkipReason; row: (typeof rows)[number]} => Boolean(result));
+  const resultStatus = collectionStatus(params.result_status);
   const errorKey = params.collection_error && ['collections_load_failed', 'collections_missing', 'portfolio_required'].includes(params.collection_error) ? params.collection_error : null;
 
   return (
@@ -239,6 +272,39 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
             </ul>
           ) : null}
         </div>
+      ) : null}
+
+      {success && (updatedRows.length || failedRows.length) ? (
+        <section className="mt-4 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
+          <div className="border-b border-[var(--line-soft)] px-5 py-4">
+            <h2 className="text-base font-semibold text-[#171d1c]">{t('result.title')}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t('result.copy')}</p>
+          </div>
+          <div className="grid gap-6 p-5 lg:grid-cols-2">
+            <ResultList
+              empty={t('result.noneUpdated')}
+              items={updatedRows.map((row) => ({
+                detail: t(`status.${resultStatus}`),
+                key: row.lease.id,
+                property: relationOne(row.lease.properties)?.name ?? t('unknownProperty'),
+                tenant: relationOne(row.lease.tenants)?.full_name ?? t('unknownTenant')
+              }))}
+              title={t('result.updated', {count: updatedRows.length})}
+              tone="success"
+            />
+            <ResultList
+              empty={t('result.noneFailed')}
+              items={failedRows.map(({reason, row}) => ({
+                detail: t(`skipReasons.${reason}`),
+                key: row.lease.id,
+                property: relationOne(row.lease.properties)?.name ?? t('unknownProperty'),
+                tenant: relationOne(row.lease.tenants)?.full_name ?? t('unknownTenant')
+              }))}
+              title={t('result.failed', {count: failedRows.length})}
+              tone="warning"
+            />
+          </div>
+        </section>
       ) : null}
 
       {error || errorKey ? (
@@ -440,6 +506,41 @@ function MetricCard({label, tone = 'neutral', value}: {label: string; tone?: 'ac
     <div className="rounded-xl border border-[var(--line-soft)] bg-white p-5 shadow-sm">
       <p className="text-xs font-semibold uppercase text-[var(--muted)]">{label}</p>
       <p className={`mt-3 text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function ResultList({
+  empty,
+  items,
+  title,
+  tone
+}: {
+  empty: string;
+  items: Array<{detail: string; key: string; property: string; tenant: string}>;
+  title: string;
+  tone: 'success' | 'warning';
+}) {
+  const toneClass = tone === 'success' ? 'bg-[#e4f7ed] text-[#087a55]' : 'bg-[#fff4db] text-[#9a5a00]';
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-[#171d1c]">{title}</h3>
+      {items.length ? (
+        <div className="mt-3 max-h-72 divide-y divide-[var(--line-soft)] overflow-y-auto rounded-lg border border-[var(--line-soft)]">
+          {items.map((item) => (
+            <div className="flex items-center justify-between gap-4 p-3" key={item.key}>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[#171d1c]">{item.tenant}</p>
+                <p className="mt-1 truncate text-xs text-[var(--muted)]">{item.property}</p>
+              </div>
+              <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${toneClass}`}>{item.detail}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-lg bg-[#f8fbfa] p-3 text-sm text-[var(--muted)]">{empty}</p>
+      )}
     </div>
   );
 }

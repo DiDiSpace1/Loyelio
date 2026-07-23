@@ -629,6 +629,14 @@
       "saveFailed": "the update could not be saved",
       "zeroAmount": "the lease has no rent amount"
     },
+    "result": {
+      "title": "Update details",
+      "copy": "Review which leases were updated and which ones still need attention.",
+      "updated": "Updated ({count})",
+      "failed": "Needs attention ({count})",
+      "noneUpdated": "No lease was updated.",
+      "noneFailed": "No issue was detected."
+    },
     "metrics": {
       "expected": "Expected",
       "collected": "Collected",

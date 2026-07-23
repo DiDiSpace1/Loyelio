@@ -31,6 +31,8 @@ type LeaseRow = {
   tenant_id: string | null;
 };
 
+type SkipReason = 'existingPaid' | 'invalidAmount' | 'saveFailed' | 'zeroAmount';
+
 function value(formData: FormData, key: string) {
   const raw = formData.get(key);
   return typeof raw === 'string' ? raw.trim() : '';
@@ -122,6 +124,13 @@ export async function updateCollectionsAction(formData: FormData) {
     saveFailed: 0,
     zeroAmount: 0
   };
+  const skippedRows: Array<{leaseId: string; reason: SkipReason}> = [];
+  const updatedLeaseIds: string[] = [];
+
+  function recordSkip(leaseId: string, reason: SkipReason) {
+    skipped[reason] += 1;
+    skippedRows.push({leaseId, reason});
+  }
 
   for (const lease of leases) {
     const rentAmount = Number(lease.monthly_rent ?? 0);
@@ -131,12 +140,12 @@ export async function updateCollectionsAction(formData: FormData) {
     const existingPaid = paidTotal(existingCharge);
 
     if (totalDue <= 0) {
-      skipped.zeroAmount += 1;
+      recordSkip(lease.id, 'zeroAmount');
       continue;
     }
 
     if (nextStatus === 'unpaid' && existingPaid > 0) {
-      skipped.existingPaid += 1;
+      recordSkip(lease.id, 'existingPaid');
       continue;
     }
 
@@ -152,7 +161,7 @@ export async function updateCollectionsAction(formData: FormData) {
       const desiredPaid = moneyValue(formData, isSingleUpdate ? 'single_amount' : `amount_${lease.id}`);
 
       if (desiredPaid <= 0 || desiredPaid >= totalDue || existingPaid >= desiredPaid) {
-        skipped.invalidAmount += 1;
+        recordSkip(lease.id, 'invalidAmount');
         continue;
       }
 
@@ -180,7 +189,7 @@ export async function updateCollectionsAction(formData: FormData) {
       .single<{id: string}>();
 
     if (chargeError || !rentCharge) {
-      skipped.saveFailed += 1;
+      recordSkip(lease.id, 'saveFailed');
       continue;
     }
 
@@ -200,7 +209,7 @@ export async function updateCollectionsAction(formData: FormData) {
         .single<{id: string}>();
 
       if (paymentError || !payment) {
-        skipped.saveFailed += 1;
+        recordSkip(lease.id, 'saveFailed');
         continue;
       }
 
@@ -215,7 +224,7 @@ export async function updateCollectionsAction(formData: FormData) {
           await supabase.from('rent_payments').delete().eq('id', insertedPaymentId).eq('workspace_id', workspaceId);
         }
 
-        skipped.saveFailed += 1;
+        recordSkip(lease.id, 'saveFailed');
         continue;
       }
     }
@@ -252,6 +261,7 @@ export async function updateCollectionsAction(formData: FormData) {
     }
 
     updated += 1;
+    updatedLeaseIds.push(lease.id);
   }
 
   revalidatePath(localizedPath(locale, '/collections'));
@@ -271,6 +281,9 @@ export async function updateCollectionsAction(formData: FormData) {
       skipped_invalid_amount: skipped.invalidAmount,
       skipped_save_failed: skipped.saveFailed,
       skipped_zero_amount: skipped.zeroAmount,
+      result_skipped: skippedRows.map((row) => `${row.leaseId}:${row.reason}`).join(','),
+      result_status: nextStatus,
+      result_updated_ids: updatedLeaseIds.join(','),
       updated
     })
   );

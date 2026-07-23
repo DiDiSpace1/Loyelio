@@ -629,6 +629,14 @@
       "saveFailed": "保存更新失败",
       "zeroAmount": "租约没有租金金额"
     },
+    "result": {
+      "title": "更新明细",
+      "copy": "查看哪些租约已更新，以及哪些记录仍需要处理。",
+      "updated": "更新成功（{count}）",
+      "failed": "需要处理（{count}）",
+      "noneUpdated": "没有租约被更新。",
+      "noneFailed": "未发现问题。"
+    },
     "metrics": {
       "expected": "应收",
       "collected": "已收",
