@@ -17,6 +17,11 @@ const DISMISS_KEY = 'loyelio:name-onboarding-dismissed';
 export function NameOnboardingPrompt({copy, cta, dismiss, href, shouldShow, title}: NameOnboardingPromptProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const dismissForSession = () => {
+    sessionStorage.setItem(DISMISS_KEY, 'true');
+    setIsOpen(false);
+  };
+
   useEffect(() => {
     if (!shouldShow) {
       return;
@@ -39,11 +44,8 @@ export function NameOnboardingPrompt({copy, cta, dismiss, href, shouldShow, titl
           </div>
           <button
             aria-label={dismiss}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] text-sm hover:bg-[#f0f5f2]"
-            onClick={() => {
-              sessionStorage.setItem(DISMISS_KEY, 'true');
-              setIsOpen(false);
-            }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#17201e] text-xl leading-none text-[#17201e] hover:bg-[#f0f5f2]"
+            onClick={dismissForSession}
             type="button"
           >
             x
@@ -52,15 +54,17 @@ export function NameOnboardingPrompt({copy, cta, dismiss, href, shouldShow, titl
         <div className="mt-6 flex justify-end gap-3">
           <button
             className="min-h-10 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f0f5f2]"
-            onClick={() => {
-              sessionStorage.setItem(DISMISS_KEY, 'true');
-              setIsOpen(false);
-            }}
+            onClick={dismissForSession}
             type="button"
           >
             {dismiss}
           </button>
-          <Link className="inline-flex min-h-10 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white" href={href} style={{color: '#ffffff'}}>
+          <Link
+            className="inline-flex min-h-10 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white"
+            href={href}
+            onClick={dismissForSession}
+            style={{color: '#ffffff'}}
+          >
             {cta}
           </Link>
         </div>
