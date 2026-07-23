@@ -37,6 +37,10 @@ type CollectionsPageProps = {
     month?: string;
     receipts?: string;
     skipped?: string;
+    skipped_existing_paid?: string;
+    skipped_invalid_amount?: string;
+    skipped_save_failed?: string;
+    skipped_zero_amount?: string;
     updated?: string;
   }>;
 };
@@ -91,6 +95,11 @@ function statusTone(status: string) {
   }
 
   return 'bg-[#fdecec] text-[#ba1a1a]';
+}
+
+function countParam(value: string | undefined) {
+  const parsed = Number.parseInt(value ?? '0', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 export default async function CollectionsPage({searchParams}: CollectionsPageProps) {
@@ -153,6 +162,12 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
   const initialSelected = rows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
   const success = params.collection_success === 'collections_updated';
+  const skippedReasons = [
+    {count: countParam(params.skipped_zero_amount), label: t('skipReasons.zeroAmount')},
+    {count: countParam(params.skipped_existing_paid), label: t('skipReasons.existingPaid')},
+    {count: countParam(params.skipped_invalid_amount), label: t('skipReasons.invalidAmount')},
+    {count: countParam(params.skipped_save_failed), label: t('skipReasons.saveFailed')}
+  ].filter((reason) => reason.count > 0);
   const errorKey = params.collection_error && ['collections_load_failed', 'collections_missing', 'portfolio_required'].includes(params.collection_error) ? params.collection_error : null;
 
   return (
@@ -176,7 +191,14 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
 
       {success ? (
         <div className="mt-6 rounded-lg border border-[#b8e5cf] bg-[#edf8f1] p-4 text-sm leading-6 text-[#087a55]">
-          {t('success', {receipts: Number(params.receipts ?? 0), skipped: Number(params.skipped ?? 0), updated: Number(params.updated ?? 0)})}
+          <p>{t('success', {receipts: Number(params.receipts ?? 0), skipped: Number(params.skipped ?? 0), updated: Number(params.updated ?? 0)})}</p>
+          {skippedReasons.length ? (
+            <ul className="mt-2 grid gap-1 text-xs leading-5 text-[#245449]">
+              {skippedReasons.map((reason) => (
+                <li key={reason.label}>{t('skipReasonLine', {count: reason.count, reason: reason.label})}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 

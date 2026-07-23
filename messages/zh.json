@@ -621,6 +621,13 @@
     "month": "月份",
     "refresh": "刷新",
     "success": "已更新 {updated} 个租约。生成 {receipts} 份收据。跳过 {skipped} 行。",
+    "skipReasonLine": "跳过 {count} 行：{reason}",
+    "skipReasons": {
+      "existingPaid": "已经存在付款记录",
+      "invalidAmount": "部分付款金额不合理",
+      "saveFailed": "保存更新失败",
+      "zeroAmount": "租约没有租金金额"
+    },
     "metrics": {
       "expected": "应收",
       "collected": "已收",

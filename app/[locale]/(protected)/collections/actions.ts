@@ -110,7 +110,12 @@ export async function updateCollectionsAction(formData: FormData) {
 
   let updated = 0;
   let receipts = 0;
-  let skipped = 0;
+  const skipped = {
+    existingPaid: 0,
+    invalidAmount: 0,
+    saveFailed: 0,
+    zeroAmount: 0
+  };
 
   for (const lease of leases) {
     const rentAmount = Number(lease.monthly_rent ?? 0);
@@ -120,12 +125,12 @@ export async function updateCollectionsAction(formData: FormData) {
     const existingPaid = paidTotal(existingCharge);
 
     if (totalDue <= 0) {
-      skipped += 1;
+      skipped.zeroAmount += 1;
       continue;
     }
 
     if (nextStatus === 'unpaid' && existingPaid > 0) {
-      skipped += 1;
+      skipped.existingPaid += 1;
       continue;
     }
 
@@ -141,7 +146,7 @@ export async function updateCollectionsAction(formData: FormData) {
       const desiredPaid = moneyValue(formData, `amount_${lease.id}`);
 
       if (desiredPaid <= 0 || desiredPaid >= totalDue || existingPaid >= desiredPaid) {
-        skipped += 1;
+        skipped.invalidAmount += 1;
         continue;
       }
 
@@ -169,7 +174,7 @@ export async function updateCollectionsAction(formData: FormData) {
       .single<{id: string}>();
 
     if (chargeError || !rentCharge) {
-      skipped += 1;
+      skipped.saveFailed += 1;
       continue;
     }
 
@@ -189,7 +194,7 @@ export async function updateCollectionsAction(formData: FormData) {
         .single<{id: string}>();
 
       if (paymentError || !payment) {
-        skipped += 1;
+        skipped.saveFailed += 1;
         continue;
       }
 
@@ -204,7 +209,7 @@ export async function updateCollectionsAction(formData: FormData) {
           await supabase.from('rent_payments').delete().eq('id', insertedPaymentId).eq('workspace_id', workspaceId);
         }
 
-        skipped += 1;
+        skipped.saveFailed += 1;
         continue;
       }
     }
@@ -250,5 +255,17 @@ export async function updateCollectionsAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/tax'));
   revalidatePath(localizedPath(locale, '/tenants'));
   revalidatePath(localizedPath(locale, '/transactions'));
-  redirect(withParams(returnHref, {collection_success: 'collections_updated', receipts, skipped, updated}));
+  const skippedTotal = Object.values(skipped).reduce((sum, count) => sum + count, 0);
+  redirect(
+    withParams(returnHref, {
+      collection_success: 'collections_updated',
+      receipts,
+      skipped: skippedTotal,
+      skipped_existing_paid: skipped.existingPaid,
+      skipped_invalid_amount: skipped.invalidAmount,
+      skipped_save_failed: skipped.saveFailed,
+      skipped_zero_amount: skipped.zeroAmount,
+      updated
+    })
+  );
 }

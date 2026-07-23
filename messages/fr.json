@@ -621,6 +621,13 @@
     "month": "Mois",
     "refresh": "Actualiser",
     "success": "{updated} baux mis à jour. {receipts} quittances générées. {skipped} lignes ignorées.",
+    "skipReasonLine": "{count} ignoré(s) : {reason}",
+    "skipReasons": {
+      "existingPaid": "un paiement existe déjà",
+      "invalidAmount": "le montant partiel est invalide",
+      "saveFailed": "la mise à jour n'a pas pu être enregistrée",
+      "zeroAmount": "le bail n'a pas de montant de loyer"
+    },
     "metrics": {
       "expected": "Attendu",
       "collected": "Encaissé",

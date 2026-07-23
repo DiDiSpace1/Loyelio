@@ -621,6 +621,13 @@
     "month": "Month",
     "refresh": "Refresh",
     "success": "{updated} leases updated. {receipts} receipts generated. {skipped} rows skipped.",
+    "skipReasonLine": "{count} skipped: {reason}",
+    "skipReasons": {
+      "existingPaid": "a payment already exists",
+      "invalidAmount": "the partial payment amount is invalid",
+      "saveFailed": "the update could not be saved",
+      "zeroAmount": "the lease has no rent amount"
+    },
     "metrics": {
       "expected": "Expected",
       "collected": "Collected",
