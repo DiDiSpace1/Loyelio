@@ -105,46 +105,6 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(date);
 }
 
-function frenchDateToIso(value: string) {
-  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  const [, day, month, year] = match;
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
-
-function monthToDisplayDate(value: string) {
-  if (!value) {
-    return '';
-  }
-
-  const [year, month] = value.split('-');
-
-  if (!year || !month) {
-    return value;
-  }
-
-  return `01/${month.padStart(2, '0')}/${year}`;
-}
-
-function monthEndDisplayDate(value: string) {
-  if (!value) {
-    return '';
-  }
-
-  const [year, month] = value.split('-').map(Number);
-
-  if (!year || !month) {
-    return value;
-  }
-
-  const end = new Date(Date.UTC(year, month, 0));
-  return new Intl.DateTimeFormat('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(end);
-}
-
 function monthEndIsoDate(value: string) {
   if (!value) {
     return '';
@@ -157,16 +117,6 @@ function monthEndIsoDate(value: string) {
   }
 
   return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
-}
-
-function displayDateToMonth(value: string) {
-  const isoDate = frenchDateToIso(value);
-
-  if (!isoDate) {
-    return null;
-  }
-
-  return isoDate.slice(0, 7);
 }
 
 function monthLabel(value: string) {
