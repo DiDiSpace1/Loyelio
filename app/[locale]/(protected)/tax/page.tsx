@@ -2,6 +2,8 @@ import Link from 'next/link';
 import type {ReactNode} from 'react';
 import {getLocale, getTranslations} from 'next-intl/server';
 
+import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
+import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {localizedPath} from '@/lib/navigation';
 import {isRentChargeWithinLeasePeriod} from '@/lib/rent/period';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -256,6 +258,11 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
   const missingReceipts = signedExpenseRows.filter((row) => row.receipt_status === 'missing' || !row.documents?.file_path);
   const cashBalance = receivedRevenue - recordedExpenses;
   const exportQuery = new URLSearchParams({year: String(year)});
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const paid = hasPaidAccess(billing);
+  const currentPlan = paid ? normalizeBillingPlan(billing?.plan) : 'free';
+  const canExportCsv = paid;
+  const canExportZip = ['plus', 'portfolio'].includes(currentPlan);
 
   if (propertyId) {
     exportQuery.set('property_id', propertyId);
@@ -271,14 +278,15 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
             <p className="mt-1 text-xs font-medium text-[#3d4947]">{t('period', {year})}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link className="focus-ring inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--line)] bg-white px-4 text-sm font-medium text-[#3d4947] hover:bg-[#f0f5f2]" href={`/api/tax/export?${exportQuery.toString()}`}>
+            <Link className={['focus-ring inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--line)] bg-white px-4 text-sm font-medium text-[#3d4947] hover:bg-[#f0f5f2]', !canExportCsv ? 'opacity-70' : ''].join(' ')} href={canExportCsv ? `/api/tax/export?${exportQuery.toString()}` : localizedPath(locale, '/settings?tab=abonnement')}>
               <Icon>download</Icon>
               {t('exportCsv')}
             </Link>
-            <Link className="focus-ring inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white hover:bg-[#005049]" href={`/api/tax/export.zip?${exportQuery.toString()}`} style={{color: '#ffffff'}}>
+            <Link className={['focus-ring inline-flex min-h-10 items-center gap-2 rounded-md px-4 text-sm font-semibold hover:bg-[#005049]', canExportZip ? 'bg-[var(--accent)] text-white' : 'border border-[var(--line)] bg-white text-[#3d4947] opacity-80'].join(' ')} href={canExportZip ? `/api/tax/export.zip?${exportQuery.toString()}` : localizedPath(locale, '/settings?tab=abonnement')} style={canExportZip ? {color: '#ffffff'} : undefined}>
               <Icon>folder_zip</Icon>
               {t('exportZip')}
             </Link>
+            {!canExportCsv ? <p className="basis-full text-xs text-[var(--muted)]">{t('csvUpgradeNote')}</p> : !canExportZip ? <p className="basis-full text-xs text-[var(--muted)]">{t('zipUpgradeNote')}</p> : null}
           </div>
         </div>
 

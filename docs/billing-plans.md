@@ -57,7 +57,7 @@ This is the important part: higher forfaits should unlock stronger capabilities,
 | Property photos | No | 5 per property | 10 per property | 20 per property |
 | Document upload | 10 docs / 50 MB | 150 docs / 500 MB | 400 docs / 1.5 GB | 1000 docs / 4 GB |
 | Quittance generation | No | Single manual generation | Single + batch generation | Single + batch + automatic generation after paid rent |
-| Tax export | No | Basic export | Export with better dashboard context | Portfolio-scale export workflow |
+| Tax export | No | Basic CSV export | CSV + ZIP package with PDF summary and receipts | CSV + ZIP package with PDF summary and receipts |
 | Dashboard | Basic dashboard | Basic dashboard | Professional Plus dashboard | Professional Portfolio dashboard |
 | Rent reminders | No | No | Per-tenant / per-lease reminders | Per-tenant reminders + batch reminder center |
 | Batch management | No | No | Limited batch workflows | Portfolio batch workflows |
@@ -103,7 +103,7 @@ Included:
 - 500 MB storage
 - property photos
 - single manual quittance generation
-- basic tax export
+- basic CSV tax export
 
 Not included:
 
@@ -136,6 +136,7 @@ Included:
 - professional Plus dashboard
 - batch quittance generation
 - rent reminders per tenant / active lease
+- tax ZIP export with PDF summary and supporting receipts
 - higher photo and document limits
 
 Current Plus-only / Plus-and-above capabilities:
@@ -179,6 +180,7 @@ Currently implemented:
 - Portfolio can download successful batch-generated quittances as a ZIP archive
 - Portfolio can batch-send generated quittances to tenants by email
 - Portfolio has a task center for failed reminders, overdue rents, missing emails, expiring leases and missing receipts
+- Portfolio has tax ZIP export with PDF summary and supporting receipts
 - Portfolio has the highest limits
 
 Planned Portfolio-only differentiation:

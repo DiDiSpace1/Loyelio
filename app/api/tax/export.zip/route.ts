@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import {NextResponse, type NextRequest} from 'next/server';
 
-import {hasPaidAccess} from '@/lib/billing/config';
+import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 import {buildTaxCsv, buildTaxPdf, fetchTaxExportData, getWorkspaceIdForUser, parseExportYear} from '@/lib/tax/export';
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     const billing = await getWorkspaceBilling(supabase, workspaceId);
 
-    if (!hasPaidAccess(billing)) {
+    if (!hasPaidAccess(billing) || !['plus', 'portfolio'].includes(normalizeBillingPlan(billing?.plan))) {
       return NextResponse.redirect(new URL('/tax?error=billing_required', request.url));
     }
 
