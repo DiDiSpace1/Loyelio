@@ -531,7 +531,17 @@
       "recentCharges": "Latest rent charges",
       "noCharges": "No rent charge generated.",
       "notes": "Notes",
-      "noNotes": "No notes yet."
+      "noNotes": "No notes yet.",
+      "leaseStatus": {
+        "active": "Active",
+        "draft": "Draft",
+        "ended": "Ended"
+      },
+      "chargeStatus": {
+        "paid": "Paid",
+        "partial": "Partially paid",
+        "unpaid": "Unpaid"
+      }
     }
   },
   "documents": {

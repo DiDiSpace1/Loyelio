@@ -531,7 +531,17 @@
       "recentCharges": "最近账单",
       "noCharges": "暂无生成的账单。",
       "notes": "备注",
-      "noNotes": "暂无备注。"
+      "noNotes": "暂无备注。",
+      "leaseStatus": {
+        "active": "有效",
+        "draft": "草稿",
+        "ended": "已结束"
+      },
+      "chargeStatus": {
+        "paid": "已支付",
+        "partial": "部分支付",
+        "unpaid": "未支付"
+      }
     }
   },
   "documents": {

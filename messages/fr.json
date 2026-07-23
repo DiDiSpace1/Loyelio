@@ -531,7 +531,17 @@
       "recentCharges": "Dernières échéances",
       "noCharges": "Aucune échéance générée.",
       "notes": "Notes",
-      "noNotes": "Aucune note pour le moment."
+      "noNotes": "Aucune note pour le moment.",
+      "leaseStatus": {
+        "active": "Actif",
+        "draft": "Brouillon",
+        "ended": "Terminé"
+      },
+      "chargeStatus": {
+        "paid": "Payé",
+        "partial": "Partiellement payé",
+        "unpaid": "Impayé"
+      }
     }
   },
   "documents": {

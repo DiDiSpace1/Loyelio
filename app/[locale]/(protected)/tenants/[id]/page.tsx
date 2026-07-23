@@ -39,6 +39,10 @@ function money(value: number | null | undefined) {
   return value || value === 0 ? `${Number(value).toLocaleString('fr-FR')} EUR` : '-';
 }
 
+function leaseDateRange(startDate: string, endDate: string | null) {
+  return [startDate, endDate].filter(Boolean).join(' - ');
+}
+
 export default async function TenantDetailPage({params}: TenantDetailPageProps) {
   const {id} = await params;
   const locale = await getLocale();
@@ -71,7 +75,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dde1ff] text-lg font-bold uppercase text-[#3755c3]">{initials(tenant.full_name)}</div>
             <div>
               <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{tenant.full_name}</h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">{[tenant.email, tenant.phone].filter(Boolean).join(' ¡¤ ') || t('contactMissing')}</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">{[tenant.email, tenant.phone].filter(Boolean).join(' - ') || t('contactMissing')}</p>
             </div>
           </div>
         </div>
@@ -81,7 +85,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
       </div>
 
       <section className="mt-8 grid gap-4 md:grid-cols-4">
-        <InfoCard label={common('status')} value={activeLease?.status ?? t('noLease')} />
+        <InfoCard label={common('status')} value={activeLease ? t(`leaseStatus.${activeLease.status}`) : t('noLease')} />
         <InfoCard label={t('occupiedProperty')} value={activeLease?.properties?.name ?? '-'} />
         <InfoCard label={t('rent')} value={money(activeLease?.monthly_rent)} />
         <InfoCard label={t('deposit')} value={money(activeLease?.deposit_amount)} />
@@ -107,7 +111,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
                   <div className="grid gap-3 p-5 md:grid-cols-[1fr_auto]" key={lease.id}>
                     <div>
                       <p className="font-medium">{lease.properties?.name ?? t('propertyFallback')}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{[lease.units?.name, lease.start_date, lease.end_date].filter(Boolean).join(' ¡¤ ')}</p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{[lease.units?.name, leaseDateRange(lease.start_date, lease.end_date)].filter(Boolean).join(' - ')}</p>
                     </div>
                     <div className="text-sm font-semibold tabular-nums">{money(lease.monthly_rent)}</div>
                   </div>
@@ -131,7 +135,7 @@ export default async function TenantDetailPage({params}: TenantDetailPageProps) 
                     <div className="flex items-center justify-between p-5" key={charge.period_month}>
                       <div>
                         <p className="font-medium">{charge.period_month.slice(0, 7)}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">{charge.status}</p>
+                        <p className="mt-1 text-sm text-[var(--muted)]">{t(`chargeStatus.${charge.status}`)}</p>
                       </div>
                       <div className="text-sm font-semibold tabular-nums">{money(charge.total_due)}</div>
                     </div>
