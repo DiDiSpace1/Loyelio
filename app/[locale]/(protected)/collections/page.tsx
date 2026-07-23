@@ -84,6 +84,11 @@ function viewHref(locale: string, month: string, view: CollectionView) {
   return `${localizedPath(locale, '/collections')}?${query.toString()}`;
 }
 
+function exportHref(locale: string, month: string, view: CollectionView) {
+  const query = new URLSearchParams({locale, month, view});
+  return `/api/collections/export?${query.toString()}`;
+}
+
 function leaseCoversMonth(lease: LeaseRow, month: string) {
   const start = monthStart(month);
   const nextMonth = monthStart(addMonths(month, 1));
@@ -155,7 +160,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
       const totalDue = rentAmount + chargesAmount;
       const charge = lease.rent_charges.find((row) => row.period_month === periodMonth) ?? null;
       const paid = (charge?.rent_payments ?? []).filter(isRentPayment).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
-      const status = charge?.status ?? 'unpaid';
+      const status = charge?.status === 'paid' || charge?.status === 'partial' ? charge.status : 'unpaid';
       return {
         charge,
         chargesAmount,
@@ -199,16 +204,22 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
           <h1 className="mt-3 text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
-        <form className="flex flex-wrap items-end gap-3" method="get">
-          <input name="view" type="hidden" value={view} />
-          <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            {t('month')}
-            <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#171d1c]" defaultValue={month} name="month" type="month" />
-          </label>
-          <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" type="submit">
-            {t('refresh')}
-          </button>
-        </form>
+        <div className="flex flex-wrap items-end gap-3">
+          <form className="flex flex-wrap items-end gap-3" method="get">
+            <input name="view" type="hidden" value={view} />
+            <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              {t('month')}
+              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#171d1c]" defaultValue={month} name="month" type="month" />
+            </label>
+            <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" type="submit">
+              {t('refresh')}
+            </button>
+          </form>
+          <Link className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" href={exportHref(locale, month, view)}>
+            <span className="material-symbols-outlined text-[20px]">download</span>
+            {t('export')}
+          </Link>
+        </div>
       </div>
 
       {success ? (

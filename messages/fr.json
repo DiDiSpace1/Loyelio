@@ -620,6 +620,7 @@
     "upgradeAction": "Voir les forfaits",
     "month": "Mois",
     "refresh": "Actualiser",
+    "export": "Exporter en CSV",
     "success": "{updated} baux mis à jour. {receipts} quittances générées. {skipped} lignes ignorées.",
     "skipReasonLine": "{count} ignoré(s) : {reason}",
     "skipReasons": {

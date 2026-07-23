@@ -620,6 +620,7 @@
     "upgradeAction": "View plans",
     "month": "Month",
     "refresh": "Refresh",
+    "export": "Export CSV",
     "success": "{updated} leases updated. {receipts} receipts generated. {skipped} rows skipped.",
     "skipReasonLine": "{count} skipped: {reason}",
     "skipReasons": {

@@ -620,6 +620,7 @@
     "upgradeAction": "查看套餐",
     "month": "月份",
     "refresh": "刷新",
+    "export": "导出 CSV",
     "success": "已更新 {updated} 个租约。生成 {receipts} 份收据。跳过 {skipped} 行。",
     "skipReasonLine": "跳过 {count} 行：{reason}",
     "skipReasons": {
