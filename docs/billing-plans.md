@@ -207,12 +207,10 @@ Currently implemented:
 
 Remaining Portfolio roadmap:
 
-1. Add a durable collection activity history instead of showing only the latest result through redirect state.
-2. Add an audit log recording who changed a rent status, when it changed and the previous value.
-3. Add batch tenant operations beyond reminders, such as assigning tags, updating contact completeness and archiving ended occupancies.
-4. Add saved collection views and reusable filters for larger portfolios.
-5. Add an optional monthly collection report PDF in addition to CSV.
-6. Add a dedicated in-app priority support entry point for Plus and Portfolio.
+1. Add batch tenant operations beyond reminders, such as assigning tags, updating contact completeness and archiving ended occupancies.
+2. Add saved collection views and reusable filters for larger portfolios.
+3. Add an optional monthly collection report PDF in addition to CSV.
+4. Add a dedicated in-app priority support entry point for Plus and Portfolio.
 
 Product logic:
 
@@ -228,6 +226,7 @@ The monthly collection center is the Portfolio operational hub for recurring ren
 - filter the table by payment status
 - export the current month and filter as CSV
 - review detailed success and failure results after an update
+- review a durable audit history with actor, source, previous status, new status and collected amount
 - trigger automatic quittance generation when selected rents are marked as paid
 
 Upgrade trigger:
@@ -339,16 +338,16 @@ Status meanings:
 | Portfolio receipt ZIP and batch email | Complete | Add per-recipient delivery reporting later |
 | Portfolio task center | Complete | Add task completion history later |
 | Portfolio monthly collection center | Complete | Core workflow, filters, single and batch updates, CSV and result details are implemented |
-| Collection audit history | Planned | Requires a durable activity model and migration |
+| Collection audit history | Complete | Migration, event recording and monthly history display are implemented |
 | Broader Portfolio tenant batch management | Planned | Define the first safe batch fields and confirmation rules |
 | In-app priority support workflow | Planned | Define support channel, response target and routing |
 
 Recommended implementation order:
 
-1. Add durable collection audit history and activity display.
-2. Add receipt email delivery results per tenant.
-3. Add broader Portfolio tenant batch operations.
-4. Add the in-app priority support entry point.
+1. Add receipt email delivery results per tenant.
+2. Add broader Portfolio tenant batch operations.
+3. Add the in-app priority support entry point.
+4. Add saved views, monthly PDF reports and broader activity history.
 
 ## Stripe Mapping
 

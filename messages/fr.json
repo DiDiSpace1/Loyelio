@@ -632,6 +632,18 @@
       "noneUpdated": "Aucun bail n'a été mis à jour.",
       "noneFailed": "Aucun problème détecté."
     },
+    "history": {
+      "title": "Historique des encaissements",
+      "copy": "Dernières modifications de statut de loyer pour le mois sélectionné.",
+      "empty": "Aucune activité d'encaissement enregistrée pour ce mois.",
+      "by": "Par {actor}",
+      "unknownActor": "Membre de l'espace",
+      "sources": {
+        "batch": "Mise à jour en lot",
+        "single": "Mise à jour rapide",
+        "tenant": "Mise à jour du loyer"
+      }
+    },
     "metrics": {
       "expected": "Attendu",
       "collected": "Encaissé",

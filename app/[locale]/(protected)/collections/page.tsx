@@ -31,6 +31,23 @@ type LeaseRow = {
   units: Relation<{name: string | null}>;
 };
 
+type CollectionEventRow = {
+  actor_user_id: string | null;
+  amount_after: number | null;
+  amount_before: number | null;
+  created_at: string;
+  id: string;
+  lease_id: string;
+  leases: Relation<{
+    properties: Relation<{name: string}>;
+    tenants: Relation<{full_name: string}>;
+  }>;
+  new_status: string;
+  previous_status: string | null;
+  profiles: Relation<{email: string | null; full_name: string | null}>;
+  source: string;
+};
+
 type CollectionsPageProps = {
   searchParams: Promise<{
     collection_error?: string;
@@ -115,6 +132,10 @@ function formatMoney(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {currency: 'EUR', maximumFractionDigits: 0, style: 'currency'}).format(value);
 }
 
+function formatDateTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value));
+}
+
 function statusTone(status: string) {
   if (status === 'paid') {
     return 'bg-[#e4f7ed] text-[#087a55]';
@@ -179,6 +200,14 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
     .eq('status', 'active')
     .order('start_date', {ascending: true})
     .returns<LeaseRow[]>();
+  const {data: collectionEvents} = await supabase
+    .from('rent_collection_events')
+    .select('id, lease_id, actor_user_id, source, previous_status, new_status, amount_before, amount_after, created_at, profiles(full_name, email), leases(tenants(full_name), properties(name))')
+    .eq('workspace_id', workspaceId)
+    .eq('period_month', periodMonth)
+    .order('created_at', {ascending: false})
+    .limit(50)
+    .returns<CollectionEventRow[]>();
 
   const rows = (leases ?? [])
     .filter((lease) => leaseCoversMonth(lease, month))
@@ -495,6 +524,49 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
           </table>
         </div>
       </form>
+
+      <section className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
+        <div className="border-b border-[var(--line-soft)] p-5">
+          <h2 className="text-lg font-semibold text-[#171d1c]">{t('history.title')}</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t('history.copy')}</p>
+        </div>
+        {collectionEvents?.length ? (
+          <div className="max-h-[420px] divide-y divide-[var(--line-soft)] overflow-y-auto">
+            {collectionEvents.map((event) => {
+              const lease = relationOne(event.leases);
+              const tenant = relationOne(lease?.tenants ?? null);
+              const property = relationOne(lease?.properties ?? null);
+              const actor = relationOne(event.profiles);
+              const previousStatus = event.previous_status ? collectionStatus(event.previous_status) : null;
+              const newStatus = collectionStatus(event.new_status);
+
+              return (
+                <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" key={event.id}>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-[#171d1c]">{tenant?.full_name ?? t('unknownTenant')}</p>
+                      <span className="text-xs text-[var(--muted)]">{property?.name ?? t('unknownProperty')}</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                      {t('history.by', {actor: actor?.full_name || actor?.email || t('history.unknownActor')})} · {formatDateTime(event.created_at, locale)} · {t(`history.sources.${event.source === 'batch' || event.source === 'tenant' ? event.source : 'single'}`)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                    {previousStatus ? <span className="rounded-md bg-[#f0f3f2] px-2.5 py-1 text-xs font-semibold text-[#53615e]">{t(`status.${previousStatus}`)}</span> : null}
+                    <span className="material-symbols-outlined text-[18px] text-[var(--muted)]">arrow_forward</span>
+                    <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${statusTone(newStatus)}`}>{t(`status.${newStatus}`)}</span>
+                    <span className="ml-1 text-xs font-semibold tabular-nums text-[#53615e]">
+                      {formatMoney(Number(event.amount_before ?? 0), locale)} → {formatMoney(Number(event.amount_after ?? 0), locale)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="p-5 text-sm text-[var(--muted)]">{t('history.empty')}</p>
+        )}
+      </section>
     </>
   );
 }

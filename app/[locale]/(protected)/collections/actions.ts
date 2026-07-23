@@ -5,6 +5,7 @@ import {redirect} from 'next/navigation';
 
 import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
+import {normalizedCollectionStatus, recordRentCollectionEvent} from '@/lib/collections/audit';
 import {localizedPath} from '@/lib/navigation';
 import {createQuittanceDocument} from '@/lib/quittance/service';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -96,7 +97,7 @@ export async function updateCollectionsAction(formData: FormData) {
     redirect(withParams(returnHref, {collection_error: 'collections_missing'}));
   }
 
-  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {profile, supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
   const billing = await getWorkspaceBilling(supabase, workspaceId);
   const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
 
@@ -227,6 +228,24 @@ export async function updateCollectionsAction(formData: FormData) {
         recordSkip(lease.id, 'saveFailed');
         continue;
       }
+    }
+
+    const audit = await recordRentCollectionEvent(supabase, {
+      actorUserId: user.id,
+      amountAfter: existingPaid + amountToInsert,
+      amountBefore: existingPaid,
+      leaseId: lease.id,
+      newStatus: normalizedCollectionStatus(targetStatus),
+      paymentAmount: amountToInsert,
+      periodMonth,
+      previousStatus: existingCharge ? normalizedCollectionStatus(existingCharge.status) : null,
+      rentChargeId: rentCharge.id,
+      source: isSingleUpdate ? 'single' : 'batch',
+      workspaceId
+    });
+
+    if (audit.error) {
+      console.error('Rent collection audit insert failed', {error: audit.error, leaseId: lease.id, periodMonth, workspaceId});
     }
 
     if (targetStatus === 'paid' && lease.property_id && lease.tenant_id) {

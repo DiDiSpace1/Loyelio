@@ -632,6 +632,18 @@
       "noneUpdated": "No lease was updated.",
       "noneFailed": "No issue was detected."
     },
+    "history": {
+      "title": "Collection activity",
+      "copy": "Recent rent status changes for the selected month.",
+      "empty": "No collection activity has been recorded for this month.",
+      "by": "By {actor}",
+      "unknownActor": "Workspace member",
+      "sources": {
+        "batch": "Batch update",
+        "single": "Quick update",
+        "tenant": "Tenant rent update"
+      }
+    },
     "metrics": {
       "expected": "Expected",
       "collected": "Collected",

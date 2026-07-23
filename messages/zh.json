@@ -632,6 +632,18 @@
       "noneUpdated": "没有租约被更新。",
       "noneFailed": "未发现问题。"
     },
+    "history": {
+      "title": "收租操作历史",
+      "copy": "查看所选月份最近的租金状态修改记录。",
+      "empty": "该月份尚未记录收租操作。",
+      "by": "操作人：{actor}",
+      "unknownActor": "工作区成员",
+      "sources": {
+        "batch": "批量更新",
+        "single": "快速更新",
+        "tenant": "租客租金更新"
+      }
+    },
     "metrics": {
       "expected": "应收",
       "collected": "已收",

@@ -4,6 +4,7 @@ import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 
 import {canCreateResource, canUseAutoQuittance, canUseRentReminders, getWorkspaceBilling} from '@/lib/billing/limits';
+import {normalizedCollectionStatus, recordRentCollectionEvent} from '@/lib/collections/audit';
 import {localizedPath} from '@/lib/navigation';
 import {createQuittanceDocument} from '@/lib/quittance/service';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
@@ -252,7 +253,7 @@ export async function updateRentStatusAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/tenants')}?error=partial_amount_missing`);
   }
 
-  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {profile, supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: lease, error: leaseError} = await supabase
     .from('leases')
     .select('id, tenant_id, property_id, monthly_rent, charges_amount')
@@ -265,6 +266,15 @@ export async function updateRentStatusAction(formData: FormData) {
   }
 
   const totalDue = Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0);
+  const {data: existingCharge} = await supabase
+    .from('rent_charges')
+    .select('id, status, rent_payments(amount, notes)')
+    .eq('lease_id', leaseId)
+    .eq('period_month', periodMonth)
+    .maybeSingle<{id: string; rent_payments: {amount: number | null; notes: string | null}[]; status: string}>();
+  const amountBefore = (existingCharge?.rent_payments ?? [])
+    .filter((payment) => !payment.notes?.startsWith('[[loyelio:revenue_type=deposit]]') && !payment.notes?.startsWith('[[loyelio:revenue_type=other]]'))
+    .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
   const {data: rentCharge, error} = await supabase
     .from('rent_charges')
     .upsert(
@@ -287,18 +297,23 @@ export async function updateRentStatusAction(formData: FormData) {
   }
 
   let successStatus = 'rent_status_updated';
+  let paymentAmount = 0;
 
   if (status === 'partial' || status === 'paid') {
     const amount = status === 'paid' ? totalDue : paidAmount;
     const paidAt = new Date().toISOString().slice(0, 10);
 
-    await supabase.from('rent_payments').insert({
+    const {error: paymentError} = await supabase.from('rent_payments').insert({
       amount,
       paid_at: paidAt,
       payment_method: 'bank_transfer',
       rent_charge_id: rentCharge.id,
       workspace_id: workspaceId
     });
+
+    if (!paymentError) {
+      paymentAmount = amount;
+    }
 
     if (status === 'paid' && lease.property_id && lease.tenant_id) {
       const billing = await getWorkspaceBilling(supabase, workspaceId);
@@ -335,6 +350,24 @@ export async function updateRentStatusAction(formData: FormData) {
         }
       }
     }
+  }
+
+  const audit = await recordRentCollectionEvent(supabase, {
+    actorUserId: user.id,
+    amountAfter: amountBefore + paymentAmount,
+    amountBefore,
+    leaseId,
+    newStatus: normalizedCollectionStatus(status),
+    paymentAmount,
+    periodMonth,
+    previousStatus: existingCharge ? normalizedCollectionStatus(existingCharge.status) : null,
+    rentChargeId: rentCharge.id,
+    source: 'tenant',
+    workspaceId
+  });
+
+  if (audit.error) {
+    console.error('Tenant rent audit insert failed', {error: audit.error, leaseId, periodMonth, workspaceId});
   }
 
   revalidatePath(localizedPath(locale, '/tenants'));
