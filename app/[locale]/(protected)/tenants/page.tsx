@@ -36,12 +36,15 @@ type TenantsPageProps = {
     month?: string;
     new?: string;
     q?: string;
+    success?: string;
     view?: string;
   }>;
 };
 
 const MONTH_PARAM_PATTERN = /^\d{4}-\d{2}$/;
 const TENANT_VIEWS = new Set(['all', 'active', 'unassigned', 'expiring', 'overdue']);
+const errorMessageKeys = new Set(['plan_limit', 'test_reminder_failed', 'test_reminder_missing_email', 'test_reminder_missing_lease']);
+const successMessageKeys = new Set(['test_reminder_sent']);
 
 function isoMonth(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -174,9 +177,15 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
         </div>
       ) : null}
 
-      {params.error === 'plan_limit' ? (
+      {params.error && errorMessageKeys.has(params.error) ? (
         <div className="mt-6 rounded-lg border border-[#f0d6b6] bg-[#fff8ec] p-4 text-sm leading-6 text-[#7a4a11]">
-          {t('errors.planLimit')}
+          {t(`errors.${params.error}`)}
+        </div>
+      ) : null}
+
+      {params.success && successMessageKeys.has(params.success) ? (
+        <div className="mt-6 rounded-lg border border-[#b8e5cf] bg-[#edf8f1] p-4 text-sm leading-6 text-[#087a55]">
+          {t(`success.${params.success}`)}
         </div>
       ) : null}
 

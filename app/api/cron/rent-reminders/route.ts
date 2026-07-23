@@ -1,13 +1,13 @@
 import {NextResponse} from 'next/server';
 
 import {normalizeBillingPlan} from '@/lib/billing/config';
+import {sendRentReminderEmail} from '@/lib/reminders/email';
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
 const TIME_ZONE = 'Europe/Paris';
 const REMINDER_TYPE = 'rent_due';
-const DEFAULT_FROM_EMAIL = 'Loyelio <noreply@loyelio.com>';
 
 type Relation<T> = T | T[] | null;
 
@@ -177,86 +177,20 @@ function findReminderCandidate(lease: LeaseRow, todayIso: string): ReminderCandi
   return null;
 }
 
-function formatMoney(value: number) {
-  return `${Number(value).toLocaleString('fr-FR')} EUR`;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {dateStyle: 'long', timeZone: 'UTC'}).format(parseIsoDate(value));
-}
-
-function formatMonth(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {month: 'long', timeZone: 'UTC', year: 'numeric'}).format(parseIsoDate(value));
-}
-
-function emailContent(candidate: ReminderCandidate, workspace: WorkspaceRow | null, owner: ProfileRow | null) {
+async function sendReminderEmail(candidate: ReminderCandidate, workspace: WorkspaceRow | null, owner: ProfileRow | null) {
   const tenant = relationOne(candidate.lease.tenants);
   const property = relationOne(candidate.lease.properties);
   const unit = relationOne(candidate.lease.units);
-  const tenantName = tenant?.full_name ?? 'locataire';
-  const propertyLabel = [property?.name, unit?.name].filter(Boolean).join(' - ') || workspace?.name || 'votre logement';
-  const ownerName = owner?.full_name || workspace?.name || 'Votre bailleur';
-  const monthLabel = formatMonth(candidate.reminderMonth);
-  const dueDate = formatDate(candidate.dueDate);
-  const amount = formatMoney(candidate.totalDue);
 
-  const subject = `Rappel de loyer - ${monthLabel}`;
-  const text = [
-    `Bonjour ${tenantName},`,
-    '',
-    `Nous vous rappelons que le loyer de ${monthLabel} pour ${propertyLabel} est à régler le ${dueDate}.`,
-    `Montant attendu : ${amount}.`,
-    '',
-    `Merci de procéder au paiement selon les modalités prévues dans votre bail.`,
-    '',
-    `Cordialement,`,
-    ownerName
-  ].join('\n');
-  const html = `
-    <p>Bonjour ${tenantName},</p>
-    <p>Nous vous rappelons que le loyer de <strong>${monthLabel}</strong> pour <strong>${propertyLabel}</strong> est à régler le <strong>${dueDate}</strong>.</p>
-    <p>Montant attendu : <strong>${amount}</strong>.</p>
-    <p>Merci de procéder au paiement selon les modalités prévues dans votre bail.</p>
-    <p>Cordialement,<br>${ownerName}</p>
-  `;
-
-  return {html, subject, text};
-}
-
-async function sendReminderEmail(candidate: ReminderCandidate, workspace: WorkspaceRow | null, owner: ProfileRow | null) {
-  const apiKey = process.env.RESEND_KEY;
-  const tenant = relationOne(candidate.lease.tenants);
-
-  if (!apiKey) {
-    throw new Error('Missing RESEND_KEY.');
-  }
-
-  if (!tenant?.email) {
-    throw new Error('Tenant email is missing.');
-  }
-
-  const content = emailContent(candidate, workspace, owner);
-  const response = await fetch('https://api.resend.com/emails', {
-    body: JSON.stringify({
-      from: process.env.RENT_REMINDER_FROM_EMAIL || DEFAULT_FROM_EMAIL,
-      html: content.html,
-      subject: content.subject,
-      text: content.text,
-      to: tenant.email
-    }),
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    method: 'POST'
+  return sendRentReminderEmail({
+    amount: candidate.totalDue,
+    dueDate: candidate.dueDate,
+    ownerName: owner?.full_name || workspace?.name || 'Votre bailleur',
+    propertyLabel: [property?.name, unit?.name].filter(Boolean).join(' - ') || workspace?.name || 'votre logement',
+    reminderMonth: candidate.reminderMonth,
+    tenantEmail: tenant?.email ?? '',
+    tenantName: tenant?.full_name ?? 'locataire'
   });
-  const result = (await response.json().catch(() => ({}))) as {id?: string; message?: string};
-
-  if (!response.ok) {
-    throw new Error(result.message || `Resend returned ${response.status}.`);
-  }
-
-  return result.id ?? null;
 }
 
 function canWorkspaceUseReminders(billing: BillingRow | null | undefined) {
