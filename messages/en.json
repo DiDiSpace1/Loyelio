@@ -45,7 +45,8 @@
       "reminders": "Reminders",
       "tasks": "Tasks",
       "tax": "Comptabilité",
-    "settings": "Settings"
+    "settings": "Settings",
+    "support": "Priority support"
   },
   "landing": {
     "navFeatures": "Features",
@@ -938,6 +939,34 @@
     "officeTitle": "Based in Paris, France",
     "faqTitle": "Check our FAQ",
     "faqCopy": "More than 80% of questions are answered in our help center."
+  },
+  "prioritySupport": {
+    "title": "Priority support",
+    "subtitle": "Create a tracked request without leaving Loyelio.",
+    "lockedTitle": "Priority support for Plus and Portfolio",
+    "lockedCopy": "Upgrade to contact support from the app, keep a ticket history and receive a defined response target.",
+    "upgrade": "View plans",
+    "slaPlus": "Target: reply within 1 business day",
+    "slaPortfolio": "Target: reply within 4 business hours",
+    "newTicket": "New request",
+    "category": "Category",
+    "subject": "Subject",
+    "message": "Message",
+    "submit": "Send request",
+    "history": "Recent requests",
+    "empty": "No support request yet.",
+    "categories": {"technical": "Technical", "billing": "Billing", "documents": "Documents", "tax": "Tax", "other": "Other"},
+    "status": {"open": "Open", "in_progress": "In progress", "resolved": "Resolved", "closed": "Closed"},
+    "notification": {"pending": "Notification pending", "sent": "Team notified", "failed": "Notification delayed"},
+    "success": {
+      "created": "Your request was recorded and the support team was notified.",
+      "created_notification_failed": "Your request was recorded. The notification is delayed, but the ticket remains visible here."
+    },
+    "errors": {
+      "missing_fields": "Complete the category, subject and message.",
+      "upgrade_required": "Plus or Portfolio is required for priority support.",
+      "create_failed": "Unable to create the request. Apply the support ticket migration and try again."
+    }
   },
   "settings": {
     "title": "Settings",

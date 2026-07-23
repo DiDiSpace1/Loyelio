@@ -29,6 +29,7 @@ const iconPaths: Record<string, string[]> = {
 };
 
 export function SidebarNav({
+  helpHref,
   helpLabel,
   items,
   languageLabel,
@@ -36,6 +37,7 @@ export function SidebarNav({
   logoutLabel,
   locale
 }: {
+  helpHref: string;
   helpLabel: string;
   items: NavItem[];
   languageLabel: string;
@@ -93,10 +95,10 @@ export function SidebarNav({
             ))}
           </select>
         </label>
-        <button className="focus-ring flex min-h-9 items-center gap-3 rounded-md px-3 text-left text-[12px] font-medium text-[#253331] hover:bg-[#eef7f4]" type="button">
+        <Link className="focus-ring flex min-h-9 items-center gap-3 rounded-md px-3 text-left text-[12px] font-medium text-[#253331] hover:bg-[#eef7f4]" href={helpHref}>
           <NavIcon name="help" />
           <span>{helpLabel}</span>
-        </button>
+        </Link>
         <form action={logoutAction} method="post">
           <button className="focus-ring flex min-h-9 w-full items-center gap-3 rounded-md px-3 text-left text-[12px] font-medium text-[#253331] hover:bg-[#eef7f4]" type="submit">
             <NavIcon name="logout" />

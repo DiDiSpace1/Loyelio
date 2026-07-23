@@ -45,7 +45,8 @@
       "reminders": "提醒中心",
       "tasks": "任务中心",
       "tax": "税务",
-    "settings": "设置"
+    "settings": "设置",
+    "support": "优先支持"
   },
   "landing": {
     "navFeatures": "功能",
@@ -938,6 +939,34 @@
     "officeTitle": "总部位于法国巴黎",
     "faqTitle": "查看我们的常见问题",
     "faqCopy": "超过 80% 的问题都能在我们的帮助中心找到答案。"
+  },
+  "prioritySupport": {
+    "title": "优先支持",
+    "subtitle": "无需离开 Loyelio，即可创建并跟踪支持请求。",
+    "lockedTitle": "Plus 与 Portfolio 优先支持",
+    "lockedCopy": "升级后可在应用内联系支持团队、保留工单历史，并获得明确的目标回复时间。",
+    "upgrade": "查看套餐",
+    "slaPlus": "目标：1 个工作日内回复",
+    "slaPortfolio": "目标：4 个工作小时内回复",
+    "newTicket": "新建请求",
+    "category": "分类",
+    "subject": "主题",
+    "message": "问题描述",
+    "submit": "提交请求",
+    "history": "最近请求",
+    "empty": "暂无支持请求。",
+    "categories": {"technical": "技术问题", "billing": "订阅与账单", "documents": "文档", "tax": "税务", "other": "其他"},
+    "status": {"open": "待处理", "in_progress": "处理中", "resolved": "已解决", "closed": "已关闭"},
+    "notification": {"pending": "等待通知", "sent": "已通知团队", "failed": "通知延迟"},
+    "success": {
+      "created": "请求已保存，并已通知支持团队。",
+      "created_notification_failed": "请求已保存。通知暂时延迟，但工单会继续保留在此处。"
+    },
+    "errors": {
+      "missing_fields": "请填写分类、主题和问题描述。",
+      "upgrade_required": "优先支持需要 Plus 或 Portfolio 套餐。",
+      "create_failed": "无法创建请求。请应用支持工单迁移后重试。"
+    }
   },
   "settings": {
     "title": "设置",

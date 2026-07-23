@@ -340,12 +340,11 @@ Status meanings:
 | Portfolio monthly collection center | Complete | Core workflow, filters, single and batch updates, CSV and result details are implemented |
 | Collection audit history | Complete | Migration, event recording and monthly history display are implemented |
 | Broader Portfolio tenant batch management | Complete | Visible-row selection, confirmed batch activation/deactivation and reminder-center handoff are implemented; destructive batch deletion is intentionally excluded |
-| In-app priority support workflow | Planned | Define support channel, response target and routing |
+| In-app priority support workflow | Complete | Plus and Portfolio can create durable in-app tickets with email routing, visible history and tier-specific response targets |
 
 Recommended implementation order:
 
-1. Add the in-app priority support entry point.
-2. Add saved views, monthly PDF reports and broader activity history.
+1. Add saved views, monthly PDF reports and broader activity history.
 
 ## Stripe Mapping
 

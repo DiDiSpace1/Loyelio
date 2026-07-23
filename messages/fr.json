@@ -45,7 +45,8 @@
       "reminders": "Rappels",
       "tasks": "Tâches",
       "tax": "Comptabilité",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "support": "Support prioritaire"
   },
   "landing": {
     "navFeatures": "Fonctionnalités",
@@ -938,6 +939,34 @@
     "officeTitle": "Basés à Paris, France",
     "faqTitle": "Consultez notre FAQ",
     "faqCopy": "Plus de 80% des questions trouvent leur réponse dans notre centre d'aide."
+  },
+  "prioritySupport": {
+    "title": "Support prioritaire",
+    "subtitle": "Créez une demande suivie sans quitter Loyelio.",
+    "lockedTitle": "Support prioritaire Plus et Portfolio",
+    "lockedCopy": "Passez à une offre supérieure pour contacter le support dans l'application, conserver l'historique et bénéficier d'un délai de réponse cible.",
+    "upgrade": "Voir les offres",
+    "slaPlus": "Objectif : réponse sous 1 jour ouvré",
+    "slaPortfolio": "Objectif : réponse sous 4 heures ouvrées",
+    "newTicket": "Nouvelle demande",
+    "category": "Catégorie",
+    "subject": "Objet",
+    "message": "Message",
+    "submit": "Envoyer la demande",
+    "history": "Demandes récentes",
+    "empty": "Aucune demande de support.",
+    "categories": {"technical": "Technique", "billing": "Facturation", "documents": "Documents", "tax": "Fiscalité", "other": "Autre"},
+    "status": {"open": "Ouverte", "in_progress": "En cours", "resolved": "Résolue", "closed": "Fermée"},
+    "notification": {"pending": "Notification en attente", "sent": "Équipe prévenue", "failed": "Notification retardée"},
+    "success": {
+      "created": "Votre demande est enregistrée et l'équipe support a été prévenue.",
+      "created_notification_failed": "Votre demande est enregistrée. La notification est retardée, mais le ticket reste visible ici."
+    },
+    "errors": {
+      "missing_fields": "Renseignez la catégorie, l'objet et le message.",
+      "upgrade_required": "Plus ou Portfolio est requis pour le support prioritaire.",
+      "create_failed": "Impossible de créer la demande. Appliquez la migration des tickets puis réessayez."
+    }
   },
   "settings": {
     "title": "Paramètres",

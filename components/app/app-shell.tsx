@@ -22,7 +22,8 @@ const navItems = [
   {href: '/reminders', key: 'reminders'},
   {href: '/tasks', key: 'tasks'},
   {href: '/tax', key: 'tax'},
-  {href: '/settings', key: 'settings'}
+  {href: '/settings', key: 'settings'},
+  {href: '/support', key: 'support'}
 ] as const;
 
 function forfaitLabel(billing: BillingStatus | null) {
@@ -113,9 +114,14 @@ export async function AppShell({children}: {children: React.ReactNode}) {
         ) : null}
         {userEmail ? (
           <SidebarNav
+            helpHref={localizedPath(locale, '/support')}
             helpLabel={common('help')}
             items={navItems
-              .filter((item) => !['collections', 'reminders', 'tasks'].includes(item.key) || userPlan === 'portfolio')
+              .filter((item) => {
+                if (['collections', 'reminders', 'tasks'].includes(item.key)) return userPlan === 'portfolio';
+                if (item.key === 'support') return userPlan === 'plus' || userPlan === 'portfolio';
+                return true;
+              })
               .map((item) => ({...item, href: localizedPath(locale, item.href), label: t(item.key)}))}
             languageLabel={common('language')}
             locale={locale}
@@ -131,7 +137,11 @@ export async function AppShell({children}: {children: React.ReactNode}) {
             <span>{common('appName')}</span>
           </div>
           <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {navItems.filter((item) => !['collections', 'reminders', 'tasks'].includes(item.key) || userPlan === 'portfolio').map((item) => (
+            {navItems.filter((item) => {
+              if (['collections', 'reminders', 'tasks'].includes(item.key)) return userPlan === 'portfolio';
+              if (item.key === 'support') return userPlan === 'plus' || userPlan === 'portfolio';
+              return true;
+            }).map((item) => (
               <Link className="shrink-0 rounded-md border border-[var(--line)] px-3 py-2 text-xs" href={localizedPath(locale, item.href)} key={item.key}>
                 {t(item.key)}
               </Link>
