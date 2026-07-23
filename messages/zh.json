@@ -579,11 +579,12 @@
     "status": "提醒",
     "nextReminder": "下次提醒",
     "lastSend": "最近发送",
-    "enabled": "已开启",
-    "disabled": "已关闭",
-    "sent": "已发送",
-    "failed": "发送失败",
-    "missingEmail": "缺少邮箱",
+      "enabled": "已开启",
+      "disabled": "已关闭",
+      "sent": "已发送",
+      "failed": "发送失败",
+      "retry": "重新发送",
+      "missingEmail": "缺少邮箱",
     "empty": "暂无可管理的有效租约。",
     "footerSummary": "已选择 {selected} / {count} 份有效租约。",
     "metrics": {
@@ -592,18 +593,22 @@
       "failed": "发送失败",
       "missingEmail": "缺少邮箱"
     },
-    "success": {
-      "enable": "已开启所选提醒。",
-      "disable": "已关闭所选提醒。",
-      "update_settings": "提醒设置已更新。"
-    },
+      "success": {
+        "enable": "已开启所选提醒。",
+        "disable": "已关闭所选提醒。",
+        "retry_sent": "失败的提醒已重新发送给租客。",
+        "update_settings": "提醒设置已更新。"
+      },
     "errors": {
       "invalid_operation": "提醒操作无效。",
-      "loadFailed": "无法加载提醒数据。",
-      "no_selection": "请至少选择一份租约。",
-      "portfolio_required": "需要 Portfolio 套餐才能使用提醒中心。",
-      "update_failed": "无法更新所选提醒。"
-    }
+        "loadFailed": "无法加载提醒数据。",
+        "no_selection": "请至少选择一份租约。",
+        "portfolio_required": "需要 Portfolio 套餐才能使用提醒中心。",
+        "retry_failed": "无法重新发送该提醒。请稍后重试。",
+        "retry_missing_email": "该租客没有邮箱地址。",
+        "retry_missing_log": "未找到该租约的失败提醒记录。",
+        "update_failed": "无法更新所选提醒。"
+      }
   },
   "documents": {
     "title": "文档",

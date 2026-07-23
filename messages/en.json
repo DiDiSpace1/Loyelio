@@ -579,11 +579,12 @@
     "status": "Reminder",
     "nextReminder": "Next reminder",
     "lastSend": "Last send",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "sent": "Sent",
-    "failed": "Failed",
-    "missingEmail": "Email missing",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "sent": "Sent",
+      "failed": "Failed",
+      "retry": "Retry",
+      "missingEmail": "Email missing",
     "empty": "No active lease to manage.",
     "footerSummary": "{selected} selected out of {count} active leases.",
     "metrics": {
@@ -592,18 +593,22 @@
       "failed": "Failed sends",
       "missingEmail": "Missing emails"
     },
-    "success": {
-      "enable": "Selected reminders have been enabled.",
-      "disable": "Selected reminders have been disabled.",
-      "update_settings": "Reminder settings have been updated."
-    },
+      "success": {
+        "enable": "Selected reminders have been enabled.",
+        "disable": "Selected reminders have been disabled.",
+        "retry_sent": "The failed reminder was sent to the tenant again.",
+        "update_settings": "Reminder settings have been updated."
+      },
     "errors": {
       "invalid_operation": "The requested reminder action is invalid.",
-      "loadFailed": "Unable to load reminder data.",
-      "no_selection": "Select at least one lease.",
-      "portfolio_required": "Portfolio is required to use the reminder center.",
-      "update_failed": "Unable to update selected reminders."
-    }
+        "loadFailed": "Unable to load reminder data.",
+        "no_selection": "Select at least one lease.",
+        "portfolio_required": "Portfolio is required to use the reminder center.",
+        "retry_failed": "Unable to resend this reminder. Try again in a moment.",
+        "retry_missing_email": "This tenant does not have an email address.",
+        "retry_missing_log": "No failed reminder was found for this lease.",
+        "update_failed": "Unable to update selected reminders."
+      }
   },
   "documents": {
     "title": "Documents",

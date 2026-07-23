@@ -581,9 +581,10 @@
     "lastSend": "Dernier envoi",
     "enabled": "Activé",
     "disabled": "Désactivé",
-    "sent": "Envoyé",
-    "failed": "Échec",
-    "missingEmail": "Email manquant",
+      "sent": "Envoyé",
+      "failed": "Échec",
+      "retry": "Renvoyer",
+      "missingEmail": "Email manquant",
     "empty": "Aucun bail actif à gérer.",
     "footerSummary": "{selected} sélectionné(s) sur {count} baux actifs.",
     "metrics": {
@@ -592,18 +593,22 @@
       "failed": "Envois échoués",
       "missingEmail": "Emails manquants"
     },
-    "success": {
-      "enable": "Les rappels sélectionnés ont été activés.",
-      "disable": "Les rappels sélectionnés ont été désactivés.",
-      "update_settings": "Les paramètres de rappel ont été mis à jour."
-    },
-    "errors": {
-      "invalid_operation": "L'action de rappel demandée est invalide.",
-      "loadFailed": "Impossible de charger les rappels.",
-      "no_selection": "Sélectionnez au moins un bail.",
-      "portfolio_required": "Portfolio est requis pour utiliser le centre de rappels.",
-      "update_failed": "Impossible de mettre à jour les rappels sélectionnés."
-    }
+      "success": {
+        "enable": "Les rappels sélectionnés ont été activés.",
+        "disable": "Les rappels sélectionnés ont été désactivés.",
+        "retry_sent": "Le rappel échoué a été renvoyé au locataire.",
+        "update_settings": "Les paramètres de rappel ont été mis à jour."
+      },
+      "errors": {
+        "invalid_operation": "L'action de rappel demandée est invalide.",
+        "loadFailed": "Impossible de charger les rappels.",
+        "no_selection": "Sélectionnez au moins un bail.",
+        "portfolio_required": "Portfolio est requis pour utiliser le centre de rappels.",
+        "retry_failed": "Impossible de renvoyer ce rappel. Réessayez dans un instant.",
+        "retry_missing_email": "Ce locataire n'a pas d'adresse email.",
+        "retry_missing_log": "Aucun rappel échoué n'a été trouvé pour ce bail.",
+        "update_failed": "Impossible de mettre à jour les rappels sélectionnés."
+      }
   },
   "documents": {
     "title": "Documents",

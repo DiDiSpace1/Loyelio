@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {useMemo, useState} from 'react';
 import {useTranslations} from 'next-intl';
 
-import {updateReminderCenterAction} from './actions';
+import {retryFailedReminderAction, updateReminderCenterAction} from './actions';
 
 export type ReminderCenterRow = {
   daysBefore: number;
@@ -149,9 +149,20 @@ export function ReminderCenterClient({locale, rows}: {locale: string; rows: Remi
                     ) : null}
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <Link className="text-sm font-semibold text-[var(--accent)]" href={`/${locale}/tenants/${row.tenantId}/edit`}>
-                      {common('edit')}
-                    </Link>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      {row.latestStatus === 'failed' ? (
+                        <form action={retryFailedReminderAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input name="lease_id" type="hidden" value={row.id} />
+                          <button className="text-sm font-semibold text-[#ba1a1a] hover:text-[#8f1212]" type="submit">
+                            {t('retry')}
+                          </button>
+                        </form>
+                      ) : null}
+                      <Link className="text-sm font-semibold text-[var(--accent)]" href={`/${locale}/tenants/${row.tenantId}/edit`}>
+                        {common('edit')}
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))

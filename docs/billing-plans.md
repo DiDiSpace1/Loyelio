@@ -174,13 +174,13 @@ Currently implemented:
 - Portfolio can use batch quittance generation
 - Portfolio can use rent reminders
 - Portfolio has a reminder center for batch reminder management
+- Portfolio can retry failed reminder sends from the reminder center
+- Portfolio automatically generates a quittance when a rent month is marked as paid
 - Portfolio has the highest limits
 
 Planned Portfolio-only differentiation:
 
-- failed reminder retry
 - batch document download ZIP
-- automatic quittance generation after rent is marked as paid
 - portfolio-level task center
 
 Product logic:
@@ -199,7 +199,7 @@ Upgrade trigger:
 | --- | --- | --- | --- | --- |
 | Generate quittance | No | Yes, manually one by one | Yes | Yes |
 | Batch quittance generation | No | No | Yes | Yes |
-| Automatic quittance after marking rent paid | No | No | No | Planned |
+| Automatic quittance after marking rent paid | No | No | No | Yes |
 
 Recommended product language:
 
@@ -215,8 +215,9 @@ Recommended product language:
 | Toggle reminder on tenant list | Locked | Locked | Yes | Yes |
 | Configure reminder day | No | No | Yes | Yes |
 | Configure reminder lead time | No | No | Yes | Yes |
-| Batch reminder center | No | No | No | Planned |
-| Sending history | No | No | No | Planned |
+| Batch reminder center | No | No | No | Yes |
+| Sending history | No | No | No | Yes |
+| Failed reminder retry | No | No | No | Yes |
 
 Current reminder settings are stored on `leases`:
 
@@ -246,9 +247,6 @@ Implemented Portfolio reminder center:
 - bulk reminder lead-time editing
 - sending history display
 - missing-email and failed-send counters
-
-Remaining reminder work:
-
 - failed reminder retry UI
 
 ## Dashboard Strategy
