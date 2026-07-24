@@ -7,6 +7,7 @@ import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {CollectionSelectAllCheckbox, CollectionSelectionControls} from './collection-selection-controls';
+import {CollectionMonthPicker} from './collection-month-picker';
 import {CollectionRowActions} from './collection-row-actions';
 import {CollectionSubmitConfirmation} from './collection-submit-confirmation';
 import {CollectionViewController} from './collection-view-controller';
@@ -302,16 +303,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <form action={localizedPath(locale, '/collections')} className="flex flex-wrap items-end gap-3" method="get">
-            <input data-collection-view-input name="view" type="hidden" value={view} />
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              {t('month')}
-              <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#171d1c]" defaultValue={month} name="month" type="month" />
-            </label>
-            <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" type="submit">
-              {t('refresh')}
-            </button>
-          </form>
+          <CollectionMonthPicker action={localizedPath(locale, '/collections')} initialMonth={month} initialView={view} label={t('month')} />
           <a className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" data-collection-export href={exportHref(locale, month, view)}>
             <span className="material-symbols-outlined text-[20px]">download</span>
             {t('export')}
