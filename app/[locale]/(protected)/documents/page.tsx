@@ -6,6 +6,7 @@ import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {deleteDocumentAction} from './actions';
 import {DocumentActionDetails} from './document-action-details';
+import {DocumentTypeFilter} from './document-type-filter';
 import {UploadDocumentModal} from './upload-document-modal';
 
 type PropertyOption = {
@@ -100,25 +101,6 @@ function formatDate(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(value));
 }
 
-function filterHref(params: {propertyId: string; query: string; year?: number}, type: string) {
-  const next = new URLSearchParams();
-
-  if (params.query) {
-    next.set('q', params.query);
-  }
-
-  if (params.year) {
-    next.set('year', String(params.year));
-  }
-
-  if (params.propertyId) {
-    next.set('property_id', params.propertyId);
-  }
-
-  next.set('type', type);
-  return `/documents?${next.toString()}`;
-}
-
 function FileTypeIcon({type}: {type: string}) {
   const color = typeMeta(type).value;
   const className =
@@ -134,15 +116,6 @@ function FileTypeIcon({type}: {type: string}) {
     <svg aria-hidden="true" className={`h-5 w-5 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24">
       <path d="M6 3.75h8.25L18 7.5v12.75H6V3.75Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
       <path d="M14 4v4h4M8.5 12h7M8.5 15h5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
-      <path d="M3.75 6.75h6l1.5 2h9v8.5a2 2 0 0 1-2 2H5.75a2 2 0 0 1-2-2V6.75Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
-      <path d="M4 10h16.25l-1.4 6.45a2 2 0 0 1-1.95 1.58H4.75" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -171,7 +144,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
   const params = await searchParams;
   const query = params.q?.trim() ?? '';
   const selectedPropertyId = params.property_id ?? '';
-  const selectedType = params.type ?? '';
+  const selectedType = FOLDER_TYPES.some((folder) => folder.value === params.type) ? params.type ?? '' : '';
   const currentYear = new Date().getFullYear();
   const selectedYear = yearRange(params.year ?? String(currentYear));
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -185,10 +158,6 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
 
   if (selectedPropertyId) {
     documentQuery = documentQuery.eq('property_id', selectedPropertyId);
-  }
-
-  if (selectedType) {
-    documentQuery = documentQuery.eq('document_type', selectedType);
   }
 
   if (selectedYear) {
@@ -281,7 +250,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
         </label>
         <label className="min-w-0 flex-[1_1_170px]">
           <span className="sr-only">{t('type')}</span>
-          <select className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm" defaultValue={selectedType} name="type">
+          <select className="focus-ring min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm" data-document-type-select defaultValue={selectedType} name="type">
             <option value="">{common('all')}</option>
             <option value="lease">{t('types.lease')}</option>
             <option value="invoice">{t('types.invoice')}</option>
@@ -305,24 +274,15 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
         </button>
       </form>
 
-      <section className="mb-10 grid grid-cols-2 gap-5 md:grid-cols-4">
-        {FOLDER_TYPES.map((folder) => (
-          <Link
-            className={[
-              'focus-ring rounded-xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f8fbfa]',
-              selectedType === folder.value ? 'border-[var(--accent)]' : 'border-[var(--line-soft)]'
-            ].join(' ')}
-            href={filterHref({propertyId: selectedPropertyId, query, year: selectedYear?.year}, folder.value)}
-            key={folder.value}
-          >
-            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg ${folder.iconClassName}`}>
-              <FolderIcon />
-            </div>
-            <h2 className="text-base font-semibold text-[#171d1c]">{t(`types.${folder.labelKey}`)}</h2>
-            <p className="mt-1 text-xs font-medium text-[var(--muted)]">{t('fileCount', {count: folderCounts.get(folder.value) ?? 0})}</p>
-          </Link>
-        ))}
-      </section>
+      <DocumentTypeFilter
+        folders={FOLDER_TYPES.map((folder) => ({
+          countLabel: t('fileCount', {count: folderCounts.get(folder.value) ?? 0}),
+          iconClassName: folder.iconClassName,
+          label: t(`types.${folder.labelKey}`),
+          value: folder.value
+        }))}
+        initialType={selectedType}
+      />
 
       <section className="mb-8 overflow-visible rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-5 py-4">
@@ -351,7 +311,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
                   const meta = typeMeta(document.document_type);
 
                   return (
-                    <tr className="transition hover:bg-[#f8fbfa]" key={document.id}>
+                    <tr className="transition hover:bg-[#f8fbfa]" data-document-row data-document-type={document.document_type} hidden={Boolean(selectedType && selectedType !== document.document_type)} key={document.id}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <FileTypeIcon type={document.document_type} />
@@ -397,6 +357,11 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
                     </tr>
                   );
                 })}
+                <tr data-document-empty hidden={documentsWithUrls.some((document) => !selectedType || document.document_type === selectedType)}>
+                  <td className="px-5 py-10 text-center text-sm text-[var(--muted)]" colSpan={6}>
+                    {t('empty')}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
