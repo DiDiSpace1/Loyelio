@@ -70,37 +70,8 @@ export function CollectionSelectionControls({formId, initialSelected, labels, to
     };
   }, [formId, refreshSelected]);
 
-  function setAll(checked: boolean) {
-    for (const checkbox of checkboxes(formId)) {
-      checkbox.checked = checked;
-    }
-
-    refreshSelected();
-    notifySelectionChange(formId);
-  }
-
-  function selectOpen() {
-    for (const checkbox of checkboxes(formId)) {
-      checkbox.checked = checkbox.dataset.collectionStatus !== 'paid';
-    }
-
-    refreshSelected();
-    notifySelectionChange(formId);
-  }
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-2 text-sm font-semibold text-[#33413f]">{summary}</span>
-      <button className="focus-ring min-h-9 rounded-md border border-[var(--line)] bg-white px-3 text-xs font-semibold text-[#253331] hover:bg-[#f5faf8]" onClick={() => setAll(true)} type="button">
-        {labels.selectAll}
-      </button>
-      <button className="focus-ring min-h-9 rounded-md border border-[var(--line)] bg-white px-3 text-xs font-semibold text-[#253331] hover:bg-[#f5faf8]" onClick={selectOpen} type="button">
-        {labels.onlyOpen}
-      </button>
-      <button className="focus-ring min-h-9 rounded-md border border-[var(--line)] bg-white px-3 text-xs font-semibold text-[#253331] hover:bg-[#f5faf8]" onClick={() => setAll(false)} type="button">
-        {labels.clear}
-      </button>
-    </div>
+    <span className="text-sm font-semibold text-[#33413f]">{summary}</span>
   );
 }
 
