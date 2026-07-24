@@ -1,6 +1,7 @@
 'use client';
 
-import {useState} from 'react';
+import {useRouter} from 'next/navigation';
+import {useRef, useTransition} from 'react';
 
 export function CollectionMonthPicker({
   action,
@@ -13,11 +14,13 @@ export function CollectionMonthPicker({
   initialView: string;
   label: string;
 }) {
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const viewInput = useRef<HTMLInputElement>(null);
+  const [loading, startTransition] = useTransition();
 
   return (
-    <form action={action} aria-busy={loading} className="flex items-end" method="get" onSubmit={() => setLoading(true)}>
-      <input data-collection-view-input name="view" type="hidden" value={initialView} />
+    <div aria-busy={loading} className="flex items-end">
+      <input data-collection-view-input name="view" ref={viewInput} type="hidden" value={initialView} />
       <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
         {label}
         <span className="relative">
@@ -26,8 +29,13 @@ export function CollectionMonthPicker({
             defaultValue={initialMonth}
             name="month"
             onChange={(event) => {
-              setLoading(true);
-              event.currentTarget.form?.requestSubmit();
+              const query = new URLSearchParams({
+                month: event.currentTarget.value,
+                view: viewInput.current?.value || initialView
+              });
+              startTransition(() => {
+                router.replace(`${action}?${query.toString()}`, {scroll: false});
+              });
             }}
             type="month"
           />
@@ -36,6 +44,6 @@ export function CollectionMonthPicker({
           ) : null}
         </span>
       </label>
-    </form>
+    </div>
   );
 }
