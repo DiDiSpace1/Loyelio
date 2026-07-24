@@ -3,7 +3,6 @@ import {getLocale, getTranslations} from 'next-intl/server';
 
 import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {canUseRentReminders, getWorkspaceBilling} from '@/lib/billing/limits';
-import {isOutstandingRentStatus, leaseHasOverdueRent, leaseIsEffectiveOn} from '@/lib/rent/overdue';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createTenantAction} from './actions';
@@ -52,76 +51,12 @@ function isoMonth(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-function monthStart(month: string) {
-  return `${month}-01`;
-}
-
 function parseMonthParam(month?: string) {
   if (month && MONTH_PARAM_PATTERN.test(month)) {
     return month;
   }
 
   return isoMonth(new Date());
-}
-
-function addMonths(month: string, offset: number) {
-  const [year, monthIndex] = month.split('-').map(Number);
-  return isoMonth(new Date(Date.UTC(year, monthIndex - 1 + offset, 1)));
-}
-
-function viewHref(view: string, month: string, queryText: string) {
-  const params = new URLSearchParams({month, view});
-
-  if (queryText) {
-    params.set('q', queryText);
-  }
-
-  return `/tenants?${params.toString()}`;
-}
-
-function leaseCoversMonth(lease: TenantRow['leases'][number], month: string) {
-  const start = monthStart(month);
-  const nextMonth = monthStart(addMonths(month, 1));
-  return lease.start_date < nextMonth && (!lease.end_date || lease.end_date >= start);
-}
-
-function activeLease(tenant: TenantRow, month: string) {
-  return tenant.leases.find((lease) => lease.status === 'active' && leaseCoversMonth(lease, month)) ?? null;
-}
-
-function hasAssignedLease(tenant: TenantRow) {
-  return tenant.leases.some((lease) => lease.status === 'active' || lease.status === 'draft');
-}
-
-function hasOverdueRent(tenant: TenantRow, month: string, today: string) {
-  return tenant.leases.some((lease) => leaseHasOverdueRent(lease, month, today));
-}
-
-function earliestOverdueMonth(tenants: TenantRow[], month: string, today: string) {
-  const currentPeriod = monthStart(month);
-  const overdueMonths = tenants.flatMap((tenant) =>
-    tenant.leases.flatMap((lease) =>
-      leaseIsEffectiveOn(lease, today)
-        ? lease.rent_charges
-            .filter((rentCharge) => rentCharge.period_month <= currentPeriod && isOutstandingRentStatus(rentCharge.status))
-            .map((rentCharge) => rentCharge.period_month.slice(0, 7))
-        : []
-    )
-  );
-
-  return overdueMonths.sort()[0] ?? month;
-}
-
-function leaseExpiresSoon(tenant: TenantRow, month: string) {
-  const lease = activeLease(tenant, month);
-
-  if (!lease?.end_date) {
-    return false;
-  }
-
-  const start = monthStart(month);
-  const limit = monthStart(addMonths(month, 3));
-  return lease.end_date >= start && lease.end_date < limit;
 }
 
 export default async function TenantsPage({searchParams}: TenantsPageProps) {
@@ -147,14 +82,6 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   const hasReminderAccess = canUseRentReminders(billing);
   const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
   const allRows = tenants ?? [];
-  const activeTenantRows = allRows.filter((tenant) => tenant.is_active);
-  const today = new Date().toISOString().slice(0, 10);
-  const summaryMonth = isoMonth(new Date());
-  const summaryActiveRows = activeTenantRows.filter((tenant) => activeLease(tenant, summaryMonth));
-  const summaryUnassignedRows = activeTenantRows.filter((tenant) => !hasAssignedLease(tenant));
-  const summaryExpiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, summaryMonth));
-  const summaryOverdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, summaryMonth, today));
-  const summaryOverdueMonth = earliestOverdueMonth(activeTenantRows, summaryMonth, today);
   return (
     <>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -194,102 +121,9 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
       {showCreate ? (
         <CreateTenantView hasReminderAccess={hasReminderAccess} locale={locale} />
       ) : (
-        <>
-          <section className="mt-8 grid gap-3">
-            <div className="grid gap-3 md:grid-cols-3">
-              <SummaryCard
-                active={selectedView === 'unassigned'}
-                href={viewHref('unassigned', summaryMonth, queryText)}
-                icon="person_edit"
-                iconTone="muted"
-                label={t('summary.unassigned')}
-                note={t('summary.unassignedNote')}
-                tone="neutral"
-                value={summaryUnassignedRows.length.toString()}
-              />
-              <SummaryCard
-                active={selectedView === 'expiring'}
-                href={viewHref('expiring', summaryMonth, queryText)}
-                icon="notifications_active"
-                iconTone="warning"
-                label={t('summary.expiring')}
-                note={t('summary.expiringNote')}
-                tone="warning"
-                value={summaryExpiringRows.length.toString()}
-              />
-              <SummaryCard
-                active={selectedView === 'overdue'}
-                href={viewHref('overdue', summaryOverdueMonth, queryText)}
-                icon="warning"
-                iconTone="danger"
-                label={t('summary.overdue')}
-                note={t('summary.overdueNote')}
-                tone="danger"
-                value={summaryOverdueRows.length.toString()}
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <SummaryCard active={selectedView === 'all'} href={viewHref('all', summaryMonth, queryText)} icon="person" iconTone="primary" label={t('summary.allTenants')} note={t('summary.allTenantsNote')} value={allRows.length.toString()} />
-              <SummaryCard active={selectedView === 'active'} href={viewHref('active', summaryMonth, queryText)} icon="person_check" iconTone="primary" label={t('summary.activeLeases')} note={t('summary.activeLeasesNote')} value={summaryActiveRows.length.toString()} />
-            </div>
-          </section>
-
-          <TenantTableClient hasPortfolioAccess={hasPortfolioAccess} hasReminderAccess={hasReminderAccess} initialMonth={selectedMonth} initialQuery={queryText} initialView={selectedView} locale={locale} tenants={allRows} />
-        </>
+        <TenantTableClient hasPortfolioAccess={hasPortfolioAccess} hasReminderAccess={hasReminderAccess} initialMonth={selectedMonth} initialQuery={queryText} initialView={selectedView} locale={locale} tenants={allRows} />
       )}
     </>
-  );
-}
-
-function SummaryCard({
-  active = false,
-  href,
-  icon,
-  iconTone = 'primary',
-  label,
-  note,
-  tone = 'neutral',
-  value
-}: {
-  active?: boolean;
-  href: string;
-  icon: string;
-  iconTone?: 'danger' | 'muted' | 'primary' | 'warning';
-  label: string;
-  note: string;
-  tone?: 'danger' | 'neutral' | 'warning';
-  value: string;
-}) {
-  const toneClass =
-    tone === 'danger'
-      ? 'border-[#fecaca] text-[#ba1a1a]'
-      : tone === 'warning'
-        ? 'border-[#fed7aa] text-[#b45309]'
-        : 'border-[var(--line-soft)] text-[var(--muted)]';
-  const iconToneClass =
-    iconTone === 'danger'
-      ? 'bg-[#ffdad6] text-[#ba1a1a]'
-      : iconTone === 'warning'
-        ? 'bg-[#fff4db] text-[#9a5a00]'
-        : iconTone === 'muted'
-          ? 'bg-gray-100 text-gray-600'
-          : 'bg-[var(--accent-soft)] text-[var(--accent)]';
-
-  return (
-    <Link className={['focus-ring rounded-lg border bg-white p-5 shadow-sm transition hover:bg-[#f8fbfa]', toneClass, active ? 'ring-2 ring-[var(--accent)]' : ''].join(' ')} href={href}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase">{label}</p>
-          <p className="mt-3 text-xl font-semibold tabular-nums text-[#171d1c]">{value}</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">{note}</p>
-        </div>
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${iconToneClass}`}>
-          <span className="material-symbols-outlined" data-icon={icon}>
-            {icon}
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 

@@ -22,7 +22,7 @@ function checkboxes(formId: string) {
     return [];
   }
 
-  return Array.from(form.querySelectorAll<CollectionCheckbox>('input[data-collection-status][name="lease_ids"]'));
+  return Array.from(form.querySelectorAll<CollectionCheckbox>('input[data-collection-status][name="lease_ids"]')).filter((checkbox) => !checkbox.closest('tr')?.hidden);
 }
 
 function notifySelectionChange(formId: string) {
@@ -31,10 +31,13 @@ function notifySelectionChange(formId: string) {
 
 export function CollectionSelectionControls({formId, initialSelected, labels, total}: {formId: string; initialSelected: number; labels: SelectionLabels; total: number}) {
   const [selected, setSelected] = useState(initialSelected);
-  const summary = useMemo(() => labels.selected.replace('{selected}', String(selected)).replace('{total}', String(total)), [labels.selected, selected, total]);
+  const [visibleTotal, setVisibleTotal] = useState(total);
+  const summary = useMemo(() => labels.selected.replace('{selected}', String(selected)).replace('{total}', String(visibleTotal)), [labels.selected, selected, visibleTotal]);
 
   const refreshSelected = useCallback(() => {
-    setSelected(checkboxes(formId).filter((checkbox) => checkbox.checked).length);
+    const visibleCheckboxes = checkboxes(formId);
+    setSelected(visibleCheckboxes.filter((checkbox) => checkbox.checked).length);
+    setVisibleTotal(visibleCheckboxes.length);
   }, [formId]);
 
   useEffect(() => {
@@ -103,11 +106,14 @@ export function CollectionSelectionControls({formId, initialSelected, labels, to
 
 export function CollectionSelectAllCheckbox({formId, initialSelected, labels, total}: {formId: string; initialSelected: number; labels: Pick<SelectionLabels, 'clear' | 'selectAll'>; total: number}) {
   const [selected, setSelected] = useState(initialSelected);
+  const [visibleTotal, setVisibleTotal] = useState(total);
   const ref = useRef<HTMLInputElement>(null);
-  const allSelected = total > 0 && selected === total;
+  const allSelected = visibleTotal > 0 && selected === visibleTotal;
 
   const syncSelected = useCallback(() => {
-    setSelected(checkboxes(formId).filter((checkbox) => checkbox.checked).length);
+    const visibleCheckboxes = checkboxes(formId);
+    setSelected(visibleCheckboxes.filter((checkbox) => checkbox.checked).length);
+    setVisibleTotal(visibleCheckboxes.length);
   }, [formId]);
 
   useEffect(() => {
@@ -131,9 +137,9 @@ export function CollectionSelectAllCheckbox({formId, initialSelected, labels, to
 
   useEffect(() => {
     if (ref.current) {
-      ref.current.indeterminate = selected > 0 && selected < total;
+      ref.current.indeterminate = selected > 0 && selected < visibleTotal;
     }
-  }, [selected, total]);
+  }, [selected, visibleTotal]);
 
   function toggleAll() {
     for (const checkbox of checkboxes(formId)) {

@@ -9,6 +9,7 @@ import {getCurrentUserWorkspace} from '@/lib/workspace';
 import {CollectionSelectAllCheckbox, CollectionSelectionControls} from './collection-selection-controls';
 import {CollectionRowActions} from './collection-row-actions';
 import {CollectionSubmitConfirmation} from './collection-submit-confirmation';
+import {CollectionViewController} from './collection-view-controller';
 import {updateCollectionsAction} from './actions';
 import {deleteCollectionViewAction, saveCollectionViewAction} from './saved-view-actions';
 
@@ -115,6 +116,18 @@ function selectedView(value?: string): CollectionView {
 
 function collectionStatus(value: string | undefined): CollectionStatus {
   return value === 'paid' || value === 'partial' ? value : 'unpaid';
+}
+
+function rowMatchesView(view: CollectionView, status: CollectionStatus) {
+  if (view === 'all') {
+    return true;
+  }
+
+  if (view === 'open') {
+    return status !== 'paid';
+  }
+
+  return status === view;
 }
 
 function viewHref(locale: string, month: string, view: CollectionView) {
@@ -257,13 +270,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const unpaidCount = rows.length - paidCount - partialCount;
   const expectedTotal = rows.reduce((sum, row) => sum + row.totalDue, 0);
   const collectedTotal = rows.reduce((sum, row) => sum + row.paid, 0);
-  const visibleRows = rows.filter((row) => {
-    if (view === 'open') {
-      return row.status !== 'paid';
-    }
-
-    return view === 'all' || row.status === view;
-  });
+  const visibleRows = rows.filter((row) => rowMatchesView(view, row.status));
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
   const initialSelected = visibleRows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
   const success = params.collection_success === 'collections_updated';
@@ -296,7 +303,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <form action={localizedPath(locale, '/collections')} className="flex flex-wrap items-end gap-3" method="get">
-            <input name="view" type="hidden" value={view} />
+            <input data-collection-view-input name="view" type="hidden" value={view} />
             <label className="grid gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
               {t('month')}
               <input className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#171d1c]" defaultValue={month} name="month" type="month" />
@@ -305,11 +312,11 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
               {t('refresh')}
             </button>
           </form>
-          <a className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" href={exportHref(locale, month, view)}>
+          <a className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" data-collection-export href={exportHref(locale, month, view)}>
             <span className="material-symbols-outlined text-[20px]">download</span>
             {t('export')}
           </a>
-          <a className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" href={reportHref(locale, month, view)}>
+          <a className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold hover:bg-[#f5faf8]" data-collection-report href={reportHref(locale, month, view)}>
             <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
             {t('pdfReport')}
           </a>
@@ -327,7 +334,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                   <input name="locale" type="hidden" value={locale} />
                   <input name="id" type="hidden" value={saved.id} />
                   <input name="month" type="hidden" value={month} />
-                  <input name="view" type="hidden" value={view} />
+                  <input data-collection-view-input name="view" type="hidden" value={view} />
                   <button aria-label={t('savedViews.delete')} className="flex h-9 w-9 items-center justify-center border-l border-[var(--line)] text-[var(--muted)] hover:bg-[#eef7f4]" type="submit">
                     <span className="material-symbols-outlined text-[18px]">close</span>
                   </button>
@@ -339,7 +346,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
           <form action={saveCollectionViewAction} className="flex flex-wrap gap-2">
             <input name="locale" type="hidden" value={locale} />
             <input name="month" type="hidden" value={month} />
-            <input name="view" type="hidden" value={view} />
+            <input data-collection-view-input name="view" type="hidden" value={view} />
             <input className="focus-ring min-h-10 rounded-md border border-[var(--line)] px-3 text-sm" maxLength={60} name="name" placeholder={t('savedViews.name')} required />
             <button className="min-h-10 rounded-md border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f0f5f2]" type="submit">{t('savedViews.save')}</button>
           </form>
@@ -406,10 +413,13 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
         <MetricCard label={t('metrics.toFollow')} tone={unpaidCount + partialCount > 0 ? 'danger' : 'neutral'} value={(unpaidCount + partialCount).toString()} />
       </section>
 
-      <nav aria-label={t('views.label')} className="mt-6 flex flex-wrap gap-2">
-        {COLLECTION_VIEWS.map((viewKey) => {
-          const active = view === viewKey;
-          const count =
+      <CollectionViewController
+        ariaLabel={t('views.label')}
+        initialView={view}
+        locale={locale}
+        month={month}
+        views={COLLECTION_VIEWS.map((viewKey) => ({
+          count:
             viewKey === 'all'
               ? rows.length
               : viewKey === 'open'
@@ -418,28 +428,16 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                   ? paidCount
                   : viewKey === 'partial'
                     ? partialCount
-                    : unpaidCount;
-
-          return (
-            <Link
-              aria-current={active ? 'page' : undefined}
-              className={`focus-ring inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-sm font-semibold ${
-                active ? 'border-[var(--accent)] bg-[#e8f5f1] text-[var(--accent)]' : 'border-[var(--line)] bg-white text-[#34413e] hover:bg-[#f5faf8]'
-              }`}
-              href={viewHref(locale, month, viewKey)}
-              key={viewKey}
-            >
-              {t(`views.${viewKey}`)}
-              <span className={`tabular-nums ${active ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}>{count}</span>
-            </Link>
-          );
-        })}
-      </nav>
+                    : unpaidCount,
+          key: viewKey,
+          label: t(`views.${viewKey}`)
+        }))}
+      />
 
       <form action={updateCollectionsAction} className="mt-8 overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm" id={COLLECTION_FORM_ID}>
         <input name="locale" type="hidden" value={locale} />
         <input name="month" type="hidden" value={month} />
-        <input name="view" type="hidden" value={view} />
+        <input data-collection-view-input name="view" type="hidden" value={view} />
         <div className="grid gap-4 border-b border-[var(--line-soft)] p-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <h2 className="text-lg font-semibold text-[#171d1c]">{t('tableTitle')}</h2>
@@ -525,16 +523,16 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line-soft)]">
-              {visibleRows.length ? (
-                visibleRows.map((row) => {
+              {rows.map((row) => {
                   const tenant = relationOne(row.lease.tenants);
                   const property = relationOne(row.lease.properties);
                   const unit = relationOne(row.lease.units);
-                  const defaultChecked = row.status !== 'paid' && row.totalDue > 0;
+                  const visible = rowMatchesView(view, row.status);
+                  const defaultChecked = visible && row.status !== 'paid' && row.totalDue > 0;
                   const tenantName = tenant?.full_name ?? t('unknownTenant');
 
                   return (
-                    <tr className="align-middle hover:bg-[#fbfdfc]" key={row.lease.id}>
+                    <tr className="align-middle hover:bg-[#fbfdfc]" data-collection-row data-collection-status={row.status} hidden={!visible} key={row.lease.id}>
                       <td className="px-5 py-4">
                         <input aria-label={t('columns.select')} className="h-4 w-4 accent-[var(--accent)]" data-collection-status={row.status} defaultChecked={defaultChecked} name="lease_ids" type="checkbox" value={row.lease.id} />
                       </td>
@@ -576,14 +574,12 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                       </td>
                     </tr>
                   );
-                })
-              ) : (
-                <tr>
-                  <td className="px-5 py-10 text-center text-sm text-[var(--muted)]" colSpan={10}>
-                    {rows.length ? t('emptyFiltered') : t('empty')}
-                  </td>
-                </tr>
-              )}
+                })}
+              <tr data-collection-empty hidden={visibleRows.length > 0}>
+                <td className="px-5 py-10 text-center text-sm text-[var(--muted)]" colSpan={10}>
+                  {rows.length ? t('emptyFiltered') : t('empty')}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

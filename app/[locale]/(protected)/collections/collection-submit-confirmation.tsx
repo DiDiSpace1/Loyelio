@@ -32,7 +32,9 @@ function selectedCount(formId: string) {
     return 0;
   }
 
-  return Array.from(form.querySelectorAll<CollectionCheckbox>('input[data-collection-status][name="lease_ids"]')).filter((checkbox) => checkbox.checked).length;
+  return Array.from(form.querySelectorAll<CollectionCheckbox>('input[data-collection-status][name="lease_ids"]')).filter(
+    (checkbox) => checkbox.checked && !checkbox.closest('tr')?.hidden
+  ).length;
 }
 
 function formValue(formId: string, name: string) {
@@ -79,7 +81,11 @@ export function CollectionSubmitConfirmation({formId, initialSelected, labels}: 
     }
 
     form.addEventListener('change', refresh);
-    return () => form.removeEventListener('change', refresh);
+    window.addEventListener('collection-selection-change', refresh);
+    return () => {
+      form.removeEventListener('change', refresh);
+      window.removeEventListener('collection-selection-change', refresh);
+    };
   }, [formId, refresh]);
 
   function openConfirm() {

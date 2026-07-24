@@ -34,6 +34,9 @@ export type TenantTableRow = {
 };
 
 const MONTH_PARAM_PATTERN = /^\d{4}-\d{2}$/;
+const TENANT_VIEWS = ['active', 'all', 'expiring', 'overdue', 'unassigned'] as const;
+
+type TenantView = (typeof TENANT_VIEWS)[number];
 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -149,6 +152,10 @@ function sanitizeMonth(month: string) {
   return MONTH_PARAM_PATTERN.test(month) ? month : isoMonth(new Date());
 }
 
+function sanitizeView(view: string): TenantView {
+  return TENANT_VIEWS.includes(view as TenantView) ? (view as TenantView) : 'active';
+}
+
 export function TenantTableClient({
   hasPortfolioAccess,
   hasReminderAccess,
@@ -174,7 +181,19 @@ export function TenantTableClient({
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [pendingBatchOperation, setPendingBatchOperation] = useState<'activate' | 'deactivate' | null>(null);
-  const selectedView = initialView;
+  const [selectedView, setSelectedView] = useState<TenantView>(sanitizeView(initialView));
+
+  const summary = useMemo(() => {
+    const activeTenantRows = tenants.filter((tenant) => tenant.is_active);
+
+    return {
+      active: activeTenantRows.filter((tenant) => activeLease(tenant, selectedMonth)).length,
+      all: tenants.length,
+      expiring: activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, selectedMonth)).length,
+      overdue: activeTenantRows.filter((tenant) => hasOverdueRent(tenant, selectedMonth)).length,
+      unassigned: activeTenantRows.filter((tenant) => !hasAssignedLease(tenant)).length
+    };
+  }, [selectedMonth, tenants]);
 
   const rows = useMemo(() => {
     const activeTenantRows = tenants.filter((tenant) => tenant.is_active);
@@ -196,19 +215,25 @@ export function TenantTableClient({
     return viewRows.filter((tenant) => tenantMatches(tenant, appliedQuery));
   }, [appliedQuery, selectedMonth, selectedView, tenants]);
 
-  function syncUrl(nextMonth = selectedMonth, nextQuery = appliedQuery) {
-    const params = new URLSearchParams({month: nextMonth, view: selectedView});
+  function syncUrl(nextMonth = selectedMonth, nextQuery = appliedQuery, nextView = selectedView, historyMode: 'push' | 'replace' = 'replace') {
+    const params = new URLSearchParams({month: nextMonth, view: nextView});
 
     if (nextQuery) {
       params.set('q', nextQuery);
     }
 
-    window.history.replaceState(null, '', `/${locale}/tenants?${params.toString()}`);
+    window.history[historyMode === 'push' ? 'pushState' : 'replaceState'](null, '', `/${locale}/tenants?${params.toString()}`);
   }
 
   function changeMonth(nextMonth: string) {
     setSelectedMonth(nextMonth);
     syncUrl(nextMonth, appliedQuery);
+  }
+
+  function changeView(nextView: TenantView) {
+    setSelectedView(nextView);
+    setSelectedTenantIds([]);
+    syncUrl(selectedMonth, appliedQuery, nextView, 'push');
   }
 
   function applySearch() {
@@ -222,6 +247,22 @@ export function TenantTableClient({
     setAppliedQuery('');
     syncUrl(selectedMonth, '');
   }
+
+  useEffect(() => {
+    function handlePopState() {
+      const params = new URL(window.location.href).searchParams;
+      const nextMonth = sanitizeMonth(params.get('month') ?? '');
+      const nextQuery = (params.get('q') ?? '').trim();
+      setSelectedMonth(nextMonth);
+      setSelectedView(sanitizeView(params.get('view') ?? 'active'));
+      setQueryInput(nextQuery);
+      setAppliedQuery(nextQuery);
+      setSelectedTenantIds([]);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const visibleTenantIds = rows.map((tenant) => tenant.id);
   const selectedVisibleCount = visibleTenantIds.filter((id) => selectedTenantIds.includes(id)).length;
@@ -242,7 +283,20 @@ export function TenantTableClient({
   }
 
   return (
-    <section className="mt-6 overflow-visible rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
+    <>
+      <section className="mt-8 grid gap-3">
+        <div className="grid gap-3 md:grid-cols-3">
+          <TenantSummaryCard active={selectedView === 'unassigned'} icon="person_edit" iconTone="muted" label={t('summary.unassigned')} note={t('summary.unassignedNote')} onClick={() => changeView('unassigned')} value={summary.unassigned.toString()} />
+          <TenantSummaryCard active={selectedView === 'expiring'} icon="notifications_active" iconTone="warning" label={t('summary.expiring')} note={t('summary.expiringNote')} onClick={() => changeView('expiring')} tone="warning" value={summary.expiring.toString()} />
+          <TenantSummaryCard active={selectedView === 'overdue'} icon="warning" iconTone="danger" label={t('summary.overdue')} note={t('summary.overdueNote')} onClick={() => changeView('overdue')} tone="danger" value={summary.overdue.toString()} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <TenantSummaryCard active={selectedView === 'all'} icon="person" label={t('summary.allTenants')} note={t('summary.allTenantsNote')} onClick={() => changeView('all')} value={summary.all.toString()} />
+          <TenantSummaryCard active={selectedView === 'active'} icon="person_check" label={t('summary.activeLeases')} note={t('summary.activeLeasesNote')} onClick={() => changeView('active')} value={summary.active.toString()} />
+        </div>
+      </section>
+
+      <section className="mt-6 overflow-visible rounded-lg border border-[var(--line-soft)] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[var(--line-soft)] p-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <button aria-label={t('previousMonth')} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md text-[#33413f] hover:bg-[#f0f5f2]" onClick={() => changeMonth(addMonths(selectedMonth, -1))} type="button">
@@ -450,7 +504,60 @@ export function TenantTableClient({
           </div>
         </div>
       ) : null}
-    </section>
+      </section>
+    </>
+  );
+}
+
+function TenantSummaryCard({
+  active,
+  icon,
+  iconTone = 'primary',
+  label,
+  note,
+  onClick,
+  tone = 'neutral',
+  value
+}: {
+  active: boolean;
+  icon: string;
+  iconTone?: 'danger' | 'muted' | 'primary' | 'warning';
+  label: string;
+  note: string;
+  onClick: () => void;
+  tone?: 'danger' | 'neutral' | 'warning';
+  value: string;
+}) {
+  const toneClass =
+    tone === 'danger'
+      ? 'border-[#fecaca] text-[#ba1a1a]'
+      : tone === 'warning'
+        ? 'border-[#fed7aa] text-[#b45309]'
+        : 'border-[var(--line-soft)] text-[var(--muted)]';
+  const iconToneClass =
+    iconTone === 'danger'
+      ? 'bg-[#ffdad6] text-[#ba1a1a]'
+      : iconTone === 'warning'
+        ? 'bg-[#fff4db] text-[#9a5a00]'
+        : iconTone === 'muted'
+          ? 'bg-gray-100 text-gray-600'
+          : 'bg-[var(--accent-soft)] text-[var(--accent)]';
+
+  return (
+    <button className={['focus-ring rounded-lg border bg-white p-5 text-left shadow-sm transition hover:bg-[#f8fbfa]', toneClass, active ? 'ring-2 ring-[var(--accent)]' : ''].join(' ')} onClick={onClick} type="button">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase">{label}</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-[#171d1c]">{value}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{note}</p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${iconToneClass}`}>
+          <span className="material-symbols-outlined" data-icon={icon}>
+            {icon}
+          </span>
+        </div>
+      </div>
+    </button>
   );
 }
 
