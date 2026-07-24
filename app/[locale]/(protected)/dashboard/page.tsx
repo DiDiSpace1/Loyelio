@@ -3,6 +3,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 
 import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {getWorkspaceBilling} from '@/lib/billing/limits';
+import {isOutstandingRentStatus} from '@/lib/rent/overdue';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {RevenueExpenseChart} from './revenue-expense-chart';
@@ -131,10 +132,6 @@ function isLeaseCurrentlyEffective(lease: Pick<DashboardProperty['leases'][numbe
   return Boolean(lease && lease.status === 'active' && (!lease.start_date || lease.start_date <= today) && (!lease.end_date || lease.end_date >= today));
 }
 
-function isUnpaidStatus(status: string) {
-  return status === 'unpaid' || status === 'overdue' || status === 'late';
-}
-
 function remainingAmount(charge: Pick<RentCharge, 'rent_payments' | 'total_due'>) {
   const paidAmount = charge.rent_payments.filter(isRentPayment).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
 
@@ -253,7 +250,7 @@ export default async function DashboardPage() {
 
       return {
         label: chartMonth.label,
-        value: monthCharges.filter((charge) => isUnpaidStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0),
+        value: monthCharges.filter((charge) => isOutstandingRentStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0),
         hasData: monthCharges.length > 0
       };
     })
@@ -270,9 +267,9 @@ export default async function DashboardPage() {
   const cashFlowTotal = paidTotal - currentExpenseTotal;
   const previousCashFlowTotal = previousPaidTotal - previousExpenseTotal;
   const pendingTotal = currentEffectiveCharges
-    .filter((charge) => charge.status !== 'paid' && charge.status !== 'waived' && !isUnpaidStatus(charge.status))
+    .filter((charge) => charge.status !== 'paid' && charge.status !== 'waived' && !isOutstandingRentStatus(charge.status))
     .reduce((sum, charge) => sum + remainingAmount(charge), 0);
-  const unpaidTotal = currentEffectiveCharges.filter((charge) => isUnpaidStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0);
+  const unpaidTotal = currentEffectiveCharges.filter((charge) => isOutstandingRentStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0);
   const occupiedProperties = rows.filter((property) => property.leases.some((lease) => isLeaseCurrentlyEffective(lease, today))).length;
   const occupancyRate = rows.length ? Math.round((occupiedProperties / rows.length) * 100) : 0;
   const expiringLeases = rows
@@ -283,7 +280,7 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => String(a.end_date).localeCompare(String(b.end_date)));
   const missingReceipts = (currentExpenses ?? []).filter((expense) => expense.receipt_status === 'missing');
-  const unpaidCharges = currentEffectiveCharges.filter((charge) => isUnpaidStatus(charge.status) && remainingAmount(charge) > 0);
+  const unpaidCharges = currentEffectiveCharges.filter((charge) => isOutstandingRentStatus(charge.status) && remainingAmount(charge) > 0);
   const propertyPerformance = rows.slice(0, 5).map((property) => {
     const propertyCharges = currentEffectiveCharges.filter((charge) => charge.leases?.properties?.name === property.name);
     const revenue = propertyCharges.reduce((sum, charge) => {
@@ -298,7 +295,7 @@ export default async function DashboardPage() {
       id: property.id,
       name: property.name,
       revenue,
-      status: revenue - expenses < 0 || propertyCharges.some((charge) => isUnpaidStatus(charge.status)) ? t('advanced.status.watch') : t('advanced.status.stable')
+      status: revenue - expenses < 0 || propertyCharges.some((charge) => isOutstandingRentStatus(charge.status)) ? t('advanced.status.watch') : t('advanced.status.stable')
     };
   });
   const receiptCoverage = currentExpenses?.length ? Math.round(((currentExpenses.length - missingReceipts.length) / currentExpenses.length) * 100) : 100;

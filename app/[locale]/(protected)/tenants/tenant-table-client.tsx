@@ -4,6 +4,8 @@ import Link from 'next/link';
 import {useTranslations} from 'next-intl';
 import {useMemo, useState} from 'react';
 
+import {leaseHasOverdueRent} from '@/lib/rent/overdue';
+
 import {deleteTenantAction, updateLeaseReminderAction, updateTenantActiveAction, updateTenantBatchActiveAction} from './actions';
 import {DeleteTenantButton} from './delete-tenant-button';
 import {TenantActionDetails} from './tenant-action-details';
@@ -102,9 +104,8 @@ function paymentStatus(lease: TenantTableRow['leases'][number] | null, month: st
 }
 
 function hasOverdueRent(tenant: TenantTableRow, month: string) {
-  const currentPeriod = monthStart(month);
-
-  return tenant.leases.some((lease) => lease.rent_charges.some((rentCharge) => lease.start_date <= currentPeriod && rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status)));
+  const today = new Date().toISOString().slice(0, 10);
+  return tenant.leases.some((lease) => leaseHasOverdueRent(lease, month, today));
 }
 
 function leaseExpiresSoon(tenant: TenantTableRow, month: string) {

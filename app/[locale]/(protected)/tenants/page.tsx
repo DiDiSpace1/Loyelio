@@ -3,6 +3,7 @@ import {getLocale, getTranslations} from 'next-intl/server';
 
 import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
 import {canUseRentReminders, getWorkspaceBilling} from '@/lib/billing/limits';
+import {isOutstandingRentStatus, leaseHasOverdueRent, leaseIsEffectiveOn} from '@/lib/rent/overdue';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createTenantAction} from './actions';
@@ -92,21 +93,19 @@ function hasAssignedLease(tenant: TenantRow) {
   return tenant.leases.some((lease) => lease.status === 'active' || lease.status === 'draft');
 }
 
-function hasOverdueRent(tenant: TenantRow, month: string) {
-  const currentPeriod = monthStart(month);
-
-  return tenant.leases.some((lease) =>
-    lease.rent_charges.some((rentCharge) => lease.start_date <= currentPeriod && rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status))
-  );
+function hasOverdueRent(tenant: TenantRow, month: string, today: string) {
+  return tenant.leases.some((lease) => leaseHasOverdueRent(lease, month, today));
 }
 
-function earliestOverdueMonth(tenants: TenantRow[], month: string) {
+function earliestOverdueMonth(tenants: TenantRow[], month: string, today: string) {
   const currentPeriod = monthStart(month);
   const overdueMonths = tenants.flatMap((tenant) =>
     tenant.leases.flatMap((lease) =>
-      lease.rent_charges
-        .filter((rentCharge) => rentCharge.period_month <= currentPeriod && ['partial', 'unpaid'].includes(rentCharge.status))
-        .map((rentCharge) => rentCharge.period_month.slice(0, 7))
+      leaseIsEffectiveOn(lease, today)
+        ? lease.rent_charges
+            .filter((rentCharge) => rentCharge.period_month <= currentPeriod && isOutstandingRentStatus(rentCharge.status))
+            .map((rentCharge) => rentCharge.period_month.slice(0, 7))
+        : []
     )
   );
 
@@ -149,12 +148,13 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
   const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
   const allRows = tenants ?? [];
   const activeTenantRows = allRows.filter((tenant) => tenant.is_active);
+  const today = new Date().toISOString().slice(0, 10);
   const summaryMonth = isoMonth(new Date());
   const summaryActiveRows = activeTenantRows.filter((tenant) => activeLease(tenant, summaryMonth));
   const summaryUnassignedRows = activeTenantRows.filter((tenant) => !hasAssignedLease(tenant));
   const summaryExpiringRows = activeTenantRows.filter((tenant) => leaseExpiresSoon(tenant, summaryMonth));
-  const summaryOverdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, summaryMonth));
-  const summaryOverdueMonth = earliestOverdueMonth(activeTenantRows, summaryMonth);
+  const summaryOverdueRows = activeTenantRows.filter((tenant) => hasOverdueRent(tenant, summaryMonth, today));
+  const summaryOverdueMonth = earliestOverdueMonth(activeTenantRows, summaryMonth, today);
   return (
     <>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
