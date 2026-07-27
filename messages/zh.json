@@ -1107,6 +1107,7 @@
     "comparePlansDescription": "统一选择月付或年付，对比价格与每档包含的功能。",
     "annualSaving": "选择年付最高可节省 42.5%",
       "planSummary": "{properties} 个房产 · {tenants} 位租客 · {documents} 份文档 · {storage}",
+      "cardLimits": "{properties} 个房产、{tenants} 位租客和 {documents} 份文档",
       "monthly": "月付",
       "yearly": "年付",
       "monthlyPrice": "{price}/月",

@@ -442,6 +442,12 @@ function SubscriptionTab({
                         <span>{feature}</span>
                       </li>
                     ))}
+                    {plan.plan !== 'solo' ? (
+                      <li className="flex items-start gap-2 text-sm leading-5 text-[#33413f]">
+                        <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--accent)]">check_circle</span>
+                        <span>{t('cardLimits', {documents: plan.documents, properties: plan.properties, tenants: plan.tenants})}</span>
+                      </li>
+                    ) : null}
                   </ul>
                 </div>
                 <button

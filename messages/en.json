@@ -1107,6 +1107,7 @@
     "comparePlansDescription": "Choose one billing cycle to compare prices and included capabilities.",
     "annualSaving": "Yearly billing saves up to 42.5%",
       "planSummary": "{properties} properties · {tenants} tenants · {documents} documents · {storage}",
+      "cardLimits": "{properties} properties, {tenants} tenants and {documents} documents",
       "monthly": "Monthly",
       "yearly": "Yearly",
       "monthlyPrice": "{price}/month",

@@ -1107,6 +1107,7 @@
     "comparePlansDescription": "Choisissez un rythme de facturation pour comparer les prix et les fonctions incluses.",
     "annualSaving": "L'annuel permet d'économiser jusqu'à 42,5 %",
       "planSummary": "{properties} biens · {tenants} locataires · {documents} documents · {storage}",
+      "cardLimits": "{properties} biens, {tenants} locataires et {documents} documents",
       "monthly": "Mensuel",
       "yearly": "Annuel",
       "monthlyPrice": "{price}/mois",
