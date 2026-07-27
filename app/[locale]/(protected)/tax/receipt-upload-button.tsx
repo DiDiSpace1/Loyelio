@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import {useTranslations} from 'next-intl';
+import {useRouter} from 'next/navigation';
 
 import {PendingSubmitButton} from '@/components/app/pending-submit-button';
 
@@ -10,7 +11,17 @@ import {attachExpenseReceiptAction} from './actions';
 export function ReceiptUploadButton({expenseId, locale}: {expenseId: string; locale: string}) {
   const t = useTranslations('documents.receiptUpload');
   const common = useTranslations('common');
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  async function uploadReceipt(formData: FormData) {
+    const result = await attachExpenseReceiptAction(formData);
+
+    if (result?.success) {
+      setOpen(false);
+      router.refresh();
+    }
+  }
 
   return (
     <>
@@ -25,19 +36,14 @@ export function ReceiptUploadButton({expenseId, locale}: {expenseId: string; loc
 
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-labelledby={`receipt-upload-${expenseId}`}>
-          <form action={attachExpenseReceiptAction} className="w-full max-w-md rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-xl">
+          <form action={uploadReceipt} className="w-full max-w-md rounded-lg border border-[var(--line-soft)] bg-white p-5 shadow-xl">
             <input name="locale" type="hidden" value={locale} />
             <input name="expense_id" type="hidden" value={expenseId} />
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-[#171d1c]" id={`receipt-upload-${expenseId}`}>
-                  {t('title')}
-                </h3>
-                <p className="mt-1 text-sm text-[var(--muted)]">{t('hint')}</p>
-              </div>
-              <button className="focus-ring rounded-md p-1 text-xl leading-none text-[#33413f] hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button" aria-label={common('close')}>
-                x
-              </button>
+            <div>
+              <h3 className="text-lg font-semibold text-[#171d1c]" id={`receipt-upload-${expenseId}`}>
+                {t('title')}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--muted)]">{t('hint')}</p>
             </div>
             <label className="mt-5 grid gap-2 text-sm font-medium text-[#33413f]">
               {t('file')}

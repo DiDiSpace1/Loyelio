@@ -116,5 +116,5 @@ export async function attachExpenseReceiptAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(localizedPath(locale, '/tax'));
+  return {success: true};
 }
