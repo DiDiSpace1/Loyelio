@@ -171,17 +171,18 @@ function PricingCard({
           ))}
         </ul>
       </div>
-      <Link
-        className={
-          featured
-            ? 'focus-ring mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-md bg-[var(--accent)] px-4 pt-0 text-sm font-semibold !text-white transition-opacity hover:opacity-90'
-            : 'focus-ring mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--line)] bg-white px-4 pt-0 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--panel-muted)]'
-        }
-        href={href}
-        style={{marginTop: '24px'}}
-      >
-        {cta}
-      </Link>
+      <div className="mt-auto pt-6">
+        <Link
+          className={
+            featured
+              ? 'focus-ring inline-flex min-h-10 w-full items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold !text-white transition-opacity hover:opacity-90'
+              : 'focus-ring inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--line)] bg-white px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--panel-muted)]'
+          }
+          href={href}
+        >
+          {cta}
+        </Link>
+      </div>
     </div>
   );
 }
