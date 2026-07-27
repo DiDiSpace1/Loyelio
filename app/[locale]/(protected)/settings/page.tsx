@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import {Link} from '@/components/app/localized-link';
 import {useTranslations} from 'next-intl';
 import {getLocale, getTranslations} from 'next-intl/server';
 
