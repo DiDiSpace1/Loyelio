@@ -988,7 +988,11 @@
     "statusWaived": "Waived",
     "statusLate": "Late",
     "disclaimer": "Categories are indicative and do not replace tax advice.",
-    "statusUnpaid": "Unpaid"
+    "statusUnpaid": "Unpaid",
+    "paginationSummary": "Showing {start}-{end} of {count}",
+    "pageStatus": "Page {page} of {count}",
+    "previousPage": "Previous",
+    "nextPage": "Next"
   },
   "contact": {
     "title": "Contact us",

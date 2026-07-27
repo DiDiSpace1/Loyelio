@@ -988,7 +988,11 @@
     "statusWaived": "Annulé",
     "statusLate": "En retard",
     "disclaimer": "Les catégories sont indicatives et ne remplacent pas un conseil fiscal.",
-    "statusUnpaid": "Non payé"
+    "statusUnpaid": "Non payé",
+    "paginationSummary": "Affichage de {start} à {end} sur {count}",
+    "pageStatus": "Page {page} sur {count}",
+    "previousPage": "Précédent",
+    "nextPage": "Suivant"
   },
   "contact": {
     "title": "Contactez-nous",

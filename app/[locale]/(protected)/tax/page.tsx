@@ -62,15 +62,23 @@ type RentChargeRow = {
 type TaxPageProps = {
   searchParams: Promise<{
     error?: string;
+    page?: string;
     property_id?: string;
     tab?: string;
     year?: string;
   }>;
 };
 
+const TABLE_PAGE_SIZE = 10;
+
 function parseYear(value: string | undefined) {
   const year = value ? Number.parseInt(value, 10) : new Date().getFullYear();
   return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : new Date().getFullYear();
+}
+
+function parsePage(value: string | undefined) {
+  const page = value ? Number.parseInt(value, 10) : 1;
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
 function yearRange(year: number) {
@@ -122,17 +130,76 @@ function statusMeta(status: string, dueDate: string | null, today: string, label
   return {className: 'bg-[#eef2f0] text-[#53615f]', label: labels.unpaid};
 }
 
-function tabHref(input: {locale: string; propertyId: string; tab: 'expenses' | 'revenues'; year: number}) {
+function tabHref(input: {locale: string; page?: number; propertyId: string; tab: 'expenses' | 'revenues'; year: number}) {
   const params = new URLSearchParams({
     tab: input.tab,
     year: String(input.year)
   });
+
+  if (input.page && input.page > 1) {
+    params.set('page', String(input.page));
+  }
 
   if (input.propertyId) {
     params.set('property_id', input.propertyId);
   }
 
   return `${localizedPath(input.locale, '/tax')}?${params.toString()}`;
+}
+
+function TablePagination({
+  count,
+  currentPage,
+  formatPage,
+  formatSummary,
+  hrefForPage,
+  labels,
+  pageCount
+}: {
+  count: number;
+  currentPage: number;
+  formatPage: (page: number, count: number) => string;
+  formatSummary: (start: number, end: number, count: number) => string;
+  hrefForPage: (page: number) => string;
+  labels: {
+    next: string;
+    previous: string;
+  };
+  pageCount: number;
+}) {
+  if (count <= TABLE_PAGE_SIZE) {
+    return null;
+  }
+
+  const start = (currentPage - 1) * TABLE_PAGE_SIZE + 1;
+  const end = Math.min(currentPage * TABLE_PAGE_SIZE, count);
+  const buttonClass = 'focus-ring inline-flex min-h-9 items-center justify-center rounded-md border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#33413f] hover:bg-[#f0f5f2]';
+  const disabledClass = 'inline-flex min-h-9 cursor-not-allowed items-center justify-center rounded-md border border-[var(--line-soft)] bg-[#f8fbfa] px-3 text-sm font-semibold text-[#9aa5a2]';
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-[var(--line-soft)] px-6 py-4 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+      <p>{formatSummary(start, end, count)}</p>
+      <div className="flex items-center gap-2">
+        {currentPage > 1 ? (
+          <Link className={buttonClass} href={hrefForPage(currentPage - 1)}>
+            {labels.previous}
+          </Link>
+        ) : (
+          <span className={disabledClass}>{labels.previous}</span>
+        )}
+        <span className="min-w-20 text-center text-xs font-semibold text-[#53615e]">
+          {formatPage(currentPage, pageCount)}
+        </span>
+        {currentPage < pageCount ? (
+          <Link className={buttonClass} href={hrefForPage(currentPage + 1)}>
+            {labels.next}
+          </Link>
+        ) : (
+          <span className={disabledClass}>{labels.next}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function Icon({children, className = ''}: {children: string; className?: string}) {
@@ -198,6 +265,7 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
   const t = await getTranslations('tax');
   const params = await searchParams;
   const year = parseYear(params.year);
+  const requestedPage = parsePage(params.page);
   const propertyId = params.property_id ?? '';
   const selectedTab = params.tab === 'expenses' ? 'expenses' : 'revenues';
   const range = yearRange(year);
@@ -258,6 +326,12 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
   const recordedExpenses = expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const missingReceipts = signedExpenseRows.filter((row) => row.receipt_status === 'missing' || !row.documents?.file_path);
   const cashBalance = receivedRevenue - recordedExpenses;
+  const operationCount = selectedTab === 'expenses' ? signedExpenseRows.length : rentRows.length;
+  const operationPageCount = Math.max(1, Math.ceil(operationCount / TABLE_PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, operationPageCount);
+  const pageStart = (currentPage - 1) * TABLE_PAGE_SIZE;
+  const paginatedExpenseRows = signedExpenseRows.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
+  const paginatedRentRows = rentRows.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
   const exportQuery = new URLSearchParams({year: String(year)});
   const billing = await getWorkspaceBilling(supabase, workspaceId);
   const paid = hasPaidAccess(billing);
@@ -367,8 +441,9 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
           </div>
 
           {selectedTab === 'expenses' ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-[980px] w-full text-left text-sm">
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
                   <tr>
                     <th className="px-6 py-3">{t('date')}</th>
@@ -381,8 +456,8 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-soft)]">
-                  {signedExpenseRows.length ? (
-                    signedExpenseRows.map((expense) => {
+                  {paginatedExpenseRows.length ? (
+                    paginatedExpenseRows.map((expense) => {
                       const missing = expense.receipt_status === 'missing' || !expense.documents?.file_path;
                       return (
                         <tr className="hover:bg-[#f8fbfa]" key={expense.id}>
@@ -408,11 +483,25 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                     </tr>
                   )}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+              <TablePagination
+                count={operationCount}
+                currentPage={currentPage}
+                formatPage={(page, count) => t('pageStatus', {count, page})}
+                formatSummary={(start, end, count) => t('paginationSummary', {count, end, start})}
+                hrefForPage={(page) => tabHref({locale, page, propertyId, tab: selectedTab, year})}
+                labels={{
+                  next: t('nextPage'),
+                  previous: t('previousPage')
+                }}
+                pageCount={operationPageCount}
+              />
+            </>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[980px] w-full text-left text-sm">
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-[#f0f5f2] text-xs font-semibold uppercase text-[#3d4947]">
                   <tr>
                     <th className="px-6 py-3">{t('date')}</th>
@@ -426,8 +515,8 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-soft)]">
-                  {rentRows.length ? (
-                    rentRows.map((charge) => {
+                  {paginatedRentRows.length ? (
+                    paginatedRentRows.map((charge) => {
                       const meta = statusMeta(charge.status, charge.due_date, today, {late: t('statusLate'), paid: t('statusPaid'), pending: t('statusPending'), unpaid: t('statusUnpaid'), waived: t('statusWaived')});
                       const rentPayment = charge.rent_payments?.find((payment) => !payment.notes?.startsWith('[[loyelio:revenue_type=deposit]]') && !payment.notes?.startsWith('[[loyelio:revenue_type=other]]'));
                       const transactionHref =
@@ -478,8 +567,21 @@ export default async function TaxPage({searchParams}: TaxPageProps) {
                     </tr>
                   )}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+              <TablePagination
+                count={operationCount}
+                currentPage={currentPage}
+                formatPage={(page, count) => t('pageStatus', {count, page})}
+                formatSummary={(start, end, count) => t('paginationSummary', {count, end, start})}
+                hrefForPage={(page) => tabHref({locale, page, propertyId, tab: selectedTab, year})}
+                labels={{
+                  next: t('nextPage'),
+                  previous: t('previousPage')
+                }}
+                pageCount={operationPageCount}
+              />
+            </>
           )}
         </section>
 
