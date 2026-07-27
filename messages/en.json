@@ -100,34 +100,69 @@
       "free": {
         "name": "Free",
         "price": "EUR 0",
-        "units": "1 property",
-        "description": "For trials or users managing one room.",
-        "note": "Start with the essentials."
+      "units": "1 property",
+      "description": "For trials or users managing one room.",
+      "note": "Start with the essentials.",
+      "featureIntro": "The basics to get started:",
+      "features": [
+        "Property, tenant and lease tracking",
+        "Rent payment status",
+        "10 documents and 50 MB storage",
+        "1 property and up to 3 tenants"
+      ]
       },
       "solo": {
         "name": "Solo",
         "price": "EUR 39/year",
         "units": "1-5 properties",
-        "description": "For small landlords, LMNP owners and shared-flat landlords."
+      "description": "For managing a small rental activity one task at a time.",
+      "featureIntro": "Everything needed for manual management:",
+      "features": [
+        "Manual receipt generation",
+        "CSV tax export",
+        "Property photos",
+        "5 properties, 20 tenants and 150 documents"
+      ]
       },
       "plus": {
         "name": "Plus",
         "price": "EUR 69/year",
         "units": "6-10 properties",
-        "description": "For owners with multiple rooms or several small properties."
+      "description": "For automating repetitive tasks and monitoring rentals more closely.",
+      "featureIntro": "Everything in Solo, plus:",
+      "features": [
+        "Professional dashboard",
+        "Batch receipt generation",
+        "Automatic rent reminders",
+        "Tax ZIP export with PDF summary"
+      ]
       },
       "portfolio": {
         "name": "Portfolio",
         "price": "EUR 99/year",
         "units": "11-20 properties",
-        "description": "For semi-professional landlords and small investors."
+      "description": "For controlling many tenants through centralized workflows.",
+      "featureIntro": "Everything in Plus, plus:",
+      "features": [
+        "Monthly collection center",
+        "Automatic receipt after payment",
+        "Reminder and task centers",
+        "Batch delivery and ZIP download"
+      ]
       },
       "custom": {
         "name": "Custom",
         "price": "Contact us",
-        "units": "20+ units",
-        "description": "For large portfolios or special requirements.",
-        "note": "A tailored offer for larger portfolios."
+      "units": "20+ units",
+      "description": "For large portfolios or special requirements.",
+      "note": "A tailored offer for larger portfolios.",
+      "featureIntro": "A setup adapted to your operation:",
+      "features": [
+        "All Portfolio features",
+        "Limits adapted to your portfolio",
+        "Support tailored to your needs",
+        "Personal review with the Loyelio team"
+      ]
       }
     },
     "finalTitle": "Ready to simplify your management?",
@@ -1064,7 +1099,9 @@
       "tenantsLimit": "Up to {count} tenants",
       "documentsLimit": "{count} documents",
       "storageLimit": "{value} document storage",
-      "comparePlans": "Compare plans",
+    "comparePlans": "Compare plans",
+    "comparePlansDescription": "Choose one billing cycle to compare prices and included capabilities.",
+    "annualSaving": "Yearly billing saves up to 42.5%",
       "planSummary": "{properties} properties · {tenants} tenants · {documents} documents · {storage}",
       "monthly": "Monthly",
       "yearly": "Yearly",

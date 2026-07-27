@@ -100,34 +100,69 @@
       "free": {
         "name": "Free",
         "price": "0 EUR",
-        "units": "1 bien",
-        "description": "Pour tester Loyelio ou suivre une seule chambre.",
-        "note": "Démarrez avec l'essentiel."
+      "units": "1 bien",
+      "description": "Pour tester Loyelio ou suivre une seule chambre.",
+      "note": "Démarrez avec l'essentiel.",
+      "featureIntro": "Les bases pour démarrer :",
+      "features": [
+        "Suivi des biens, locataires et baux",
+        "Statut des paiements de loyer",
+        "10 documents et 50 Mo de stockage",
+        "1 bien et jusqu'à 3 locataires"
+      ]
       },
       "solo": {
         "name": "Solo",
         "price": "39 EUR/an",
         "units": "1-5 biens",
-        "description": "Pour les petits bailleurs, LMNP et propriétaires en colocation."
+      "description": "Pour gérer une petite activité locative, opération par opération.",
+      "featureIntro": "Tout le nécessaire en gestion manuelle :",
+      "features": [
+        "Génération manuelle des quittances",
+        "Export fiscal CSV",
+        "Photos des biens",
+        "5 biens, 20 locataires et 150 documents"
+      ]
       },
       "plus": {
         "name": "Plus",
         "price": "69 EUR/an",
         "units": "6-10 biens",
-        "description": "Pour les bailleurs avec plusieurs chambres ou plusieurs biens."
+      "description": "Pour automatiser les tâches répétitives et mieux piloter vos locations.",
+      "featureIntro": "Tout Solo, avec en plus :",
+      "features": [
+        "Tableau de bord professionnel",
+        "Génération groupée des quittances",
+        "Rappels de loyer automatiques",
+        "Export fiscal ZIP avec synthèse PDF"
+      ]
       },
       "portfolio": {
         "name": "Portfolio",
         "price": "99 EUR/an",
         "units": "11-20 biens",
-        "description": "Pour les bailleurs semi-professionnels et petits investisseurs."
+      "description": "Pour contrôler de nombreux locataires depuis des outils centralisés.",
+      "featureIntro": "Tout Plus, avec en plus :",
+      "features": [
+        "Centre mensuel des encaissements",
+        "Quittance automatique après paiement",
+        "Centres de rappels et de tâches",
+        "Envoi groupé et téléchargement ZIP"
+      ]
       },
       "custom": {
         "name": "Custom",
         "price": "Contact",
-        "units": "20+ lots",
-        "description": "Pour les grands portefeuilles ou les besoins spécifiques.",
-        "note": "Une offre adaptée aux grands portefeuilles."
+      "units": "20+ lots",
+      "description": "Pour les grands portefeuilles ou les besoins spécifiques.",
+      "note": "Une offre adaptée aux grands portefeuilles.",
+      "featureIntro": "Une configuration adaptée à votre activité :",
+      "features": [
+        "Toutes les fonctions Portfolio",
+        "Limites adaptées au portefeuille",
+        "Accompagnement selon vos besoins",
+        "Étude personnalisée avec l'équipe Loyelio"
+      ]
       }
     },
     "finalTitle": "Prêt à simplifier votre gestion ?",
@@ -1064,7 +1099,9 @@
       "tenantsLimit": "Jusqu'à {count} locataires",
       "documentsLimit": "{count} documents",
       "storageLimit": "{value} de stockage documents",
-      "comparePlans": "Comparer les forfaits",
+    "comparePlans": "Comparer les forfaits",
+    "comparePlansDescription": "Choisissez un rythme de facturation pour comparer les prix et les fonctions incluses.",
+    "annualSaving": "L'annuel permet d'économiser jusqu'à 42,5 %",
       "planSummary": "{properties} biens · {tenants} locataires · {documents} documents · {storage}",
       "monthly": "Mensuel",
       "yearly": "Annuel",

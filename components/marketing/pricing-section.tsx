@@ -87,6 +87,8 @@ export function PricingSection() {
               popularLabel={t('popular')}
               plan={plan}
               units={t(`pricing.${plan}.units`)}
+              features={t.raw(`pricing.${plan}.features`) as string[]}
+              featureIntro={t(`pricing.${plan}.featureIntro`)}
             />
           ))}
         </div>
@@ -104,6 +106,8 @@ function PricingCard({
   cta,
   description,
   featured,
+  featureIntro,
+  features,
   href,
   locale,
   name,
@@ -115,6 +119,8 @@ function PricingCard({
   cta: string;
   description: string;
   featured: boolean;
+  featureIntro: string;
+  features: string[];
   href: string;
   locale: string;
   name: string;
@@ -136,7 +142,7 @@ function PricingCard({
           : t('billing.yearlyPrice', {price: euro(paidPlan?.yearly ?? 0, locale)});
 
   return (
-    <div className={featured ? 'ui-card relative rounded-xl border-2 border-[var(--accent)] bg-white p-5 text-left' : 'ui-card rounded-xl bg-white p-5 text-left'}>
+    <div className={featured ? 'ui-card relative flex min-h-full flex-col rounded-xl border-2 border-[var(--accent)] bg-white p-5 text-left' : 'ui-card flex min-h-full flex-col rounded-xl bg-white p-5 text-left'}>
       {featured ? (
         <span className="absolute right-4 top-4 rounded bg-[var(--accent)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] !text-white">
           {popularLabel}
@@ -153,14 +159,26 @@ function PricingCard({
       ) : (
         <div className="mt-4 min-h-[74px] rounded-lg bg-[#f8fbfa] p-3 text-xs leading-5 text-[var(--muted)]">{t(`pricing.${plan}.note`)}</div>
       )}
-      <p className="mt-4 min-h-16 text-sm leading-6 text-[var(--muted)]">{description}</p>
+      <p className="mt-4 text-sm leading-6 text-[var(--muted)]">{description}</p>
+      <div className="mt-5 border-t border-[var(--line-soft)] pt-5">
+        <p className="text-sm font-semibold text-[#17201e]">{featureIntro}</p>
+        <ul className="mt-4 grid gap-3">
+          {features.map((feature) => (
+            <li className="flex items-start gap-2 text-sm leading-5 text-[#33413f]" key={feature}>
+              <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--accent)]">check_circle</span>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
       <Link
         className={
           featured
-            ? 'focus-ring mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold !text-white transition-opacity hover:opacity-90'
-            : 'focus-ring mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--line)] bg-white px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--panel-muted)]'
+            ? 'focus-ring mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-md bg-[var(--accent)] px-4 pt-0 text-sm font-semibold !text-white transition-opacity hover:opacity-90'
+            : 'focus-ring mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--line)] bg-white px-4 pt-0 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--panel-muted)]'
         }
         href={href}
+        style={{marginTop: '24px'}}
       >
         {cta}
       </Link>

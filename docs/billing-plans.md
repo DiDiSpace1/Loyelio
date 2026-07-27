@@ -25,7 +25,7 @@ The intended product ladder is:
 
 ## Current Implemented Snapshot
 
-Last verified against the application: 2026-07-23.
+Last verified against the application: 2026-07-27.
 
 These values are what the app currently enforces in code.
 
@@ -341,6 +341,7 @@ Status meanings:
 | Collection audit history | Complete | Migration, event recording and monthly history display are implemented |
 | Broader Portfolio tenant batch management | Complete | Visible-row selection, confirmed batch activation/deactivation and reminder-center handoff are implemented; destructive batch deletion is intentionally excluded |
 | In-app priority support workflow | Complete | Plus and Portfolio can create durable in-app tickets with email routing, visible history and tier-specific response targets |
+| Pricing and settings plan comparison | Complete | Public and authenticated plan cards show tier-specific capabilities with one shared monthly/yearly selector |
 
 The planned value-differentiation backlog in this document is now implemented. Saved collection views, monthly PDF reports, task completion history and automatic receipt history are available to Portfolio.
 

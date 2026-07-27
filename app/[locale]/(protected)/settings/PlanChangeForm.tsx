@@ -2,6 +2,8 @@
 
 import {useRef, useState, useTransition} from 'react';
 
+import {useBillingCycle} from './BillingCycleControl';
+
 type PlanChangeFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
@@ -52,11 +54,11 @@ export function PlanChangeForm({
   targetPlanLabel,
   yearlyPrice
 }: PlanChangeFormProps) {
+  const {cycle: selectedInterval} = useBillingCycle();
   const confirmedRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedInterval, setSelectedInterval] = useState('yearly');
   const [isPending, startTransition] = useTransition();
   const isBusy = isPending || isSubmitting;
   const switchDate = formatDate(currentPeriodEnd, locale);
@@ -68,13 +70,6 @@ export function PlanChangeForm({
       <form
         action={action}
         className={className}
-        onChange={(event) => {
-          const target = event.target;
-
-          if (target instanceof HTMLInputElement && target.name === 'billing_interval') {
-            setSelectedInterval(target.value);
-          }
-        }}
         onSubmit={(event) => {
           if (!requiresConfirmation || confirmedRef.current) {
             return;
@@ -85,6 +80,7 @@ export function PlanChangeForm({
         }}
         ref={formRef}
       >
+        <input name="billing_interval" type="hidden" value={selectedInterval} />
         {children}
       </form>
 

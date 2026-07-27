@@ -9,6 +9,7 @@ import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction, updateAccountSettingsAction, updatePasswordAction} from './actions';
+import {BillingCyclePrice, BillingCycleProvider, BillingCycleToggle} from './BillingCycleControl';
 import {PlanChangeForm} from './PlanChangeForm';
 
 type SettingsPageProps = {
@@ -351,6 +352,9 @@ function SubscriptionTab({
   tenantUsage: number;
 }) {
   const t = useTranslations('settings.subscription');
+  const pricingT = useTranslations('landing.pricing');
+  const currentPlanKey = normalizeBillingPlan(currentPlan);
+  const currentPlanFeatures = pricingT.raw(`${currentPlanKey}.features`) as string[];
   const currentPlanLabel = planLabel(currentPlan);
   const currentPeriodEndLabel = currentPeriodEnd ? new Intl.DateTimeFormat(locale, {dateStyle: 'long'}).format(new Date(currentPeriodEnd)) : t('unknownDate');
   const scheduledTimestamp = Number(scheduledAt);
@@ -386,19 +390,28 @@ function SubscriptionTab({
                 <FeatureItem>{t('tenantsLimit', {count: limits.tenants})}</FeatureItem>
                 <FeatureItem>{t('documentsLimit', {count: limits.documents})}</FeatureItem>
                 <FeatureItem>{t('storageLimit', {value: formatBytes(limits.storageBytes)})}</FeatureItem>
+                {currentPlanFeatures.map((feature) => (
+                  <FeatureItem key={feature}>{feature}</FeatureItem>
+                ))}
               </ul>
             </div>
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
-          <div className="flex items-center justify-between px-6 py-5">
-            <h2 className="text-lg font-semibold">{t('comparePlans')}</h2>
+        <BillingCycleProvider>
+          <section className="overflow-hidden rounded-xl border border-[var(--line-soft)] bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[var(--line-soft)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{t('comparePlans')}</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">{t('comparePlansDescription')}</p>
+            </div>
+            <BillingCycleToggle annualSaving={t('annualSaving')} monthly={t('monthly')} yearly={t('yearly')} />
           </div>
-          <div className="grid gap-4 p-6 md:grid-cols-3">
+          <div className="grid gap-4 p-6 lg:grid-cols-3">
             {planCards.map((plan) => {
               const isCurrent = plan.plan === currentPlan;
               const targetPlanLabel = plan.label;
+              const features = pricingT.raw(`${plan.plan}.features`) as string[];
               const cardContent = (
                 <>
                   {!isCurrent ? (
@@ -408,20 +421,25 @@ function SubscriptionTab({
                       <input name="return_path" type="hidden" value={`${localizedPath(locale, '/settings')}?tab=abonnement`} />
                     </>
                   ) : null}
-                <h3 className="font-semibold">{plan.label}</h3>
-                <div className="mt-4 grid gap-2">
-                  <label className={['flex items-center justify-between rounded-lg border border-[var(--line)] px-3 py-2 text-sm', isCurrent ? 'cursor-default' : 'cursor-pointer'].join(' ')}>
-                    <span className="font-semibold">{t('monthly')}</span>
-                    <span className="font-semibold text-[var(--accent)]">{t('monthlyPrice', {price: formatMoney(plan.monthlyPrice, locale)})}</span>
-                    {!isCurrent ? <input className="ml-2" name="billing_interval" type="radio" value="monthly" /> : null}
-                  </label>
-                  <label className={['flex items-center justify-between rounded-lg border border-[var(--accent)] bg-[#eef7f4] px-3 py-2 text-sm', isCurrent ? 'cursor-default' : 'cursor-pointer'].join(' ')}>
-                    <span className="font-semibold">{t('yearly')}</span>
-                    <span className="font-semibold text-[var(--accent)]">{t('yearlyPrice', {price: formatMoney(plan.yearlyPrice, locale)})}</span>
-                    {!isCurrent ? <input className="ml-2" defaultChecked name="billing_interval" type="radio" value="yearly" /> : null}
-                  </label>
+                <h3 className="text-lg font-semibold">{plan.label}</h3>
+                <p className="mt-3 text-2xl font-semibold tabular-nums text-[var(--accent)]">
+                  <BillingCyclePrice
+                    monthly={t('monthlyPrice', {price: formatMoney(plan.monthlyPrice, locale)})}
+                    yearly={t('yearlyPrice', {price: formatMoney(plan.yearlyPrice, locale)})}
+                  />
+                </p>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{pricingT(`${plan.plan}.description`)}</p>
+                <div className="mt-5 border-t border-[var(--line-soft)] pt-5">
+                  <p className="text-sm font-semibold">{pricingT(`${plan.plan}.featureIntro`)}</p>
+                  <ul className="mt-4 grid gap-3">
+                    {features.map((feature) => (
+                      <li className="flex items-start gap-2 text-sm leading-5 text-[#33413f]" key={feature}>
+                        <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--accent)]">check_circle</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t('planSummary', {documents: plan.documents, properties: plan.properties, storage: plan.storage, tenants: plan.tenants})}</p>
                 <button
                   className={[
                     'mt-5 min-h-10 w-full rounded-lg px-4 text-sm font-semibold',
@@ -466,7 +484,8 @@ function SubscriptionTab({
               );
             })}
           </div>
-        </section>
+          </section>
+        </BillingCycleProvider>
       </div>
 
       <aside className="grid gap-6 content-start">
