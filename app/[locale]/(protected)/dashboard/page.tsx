@@ -528,14 +528,14 @@ function AdvancedDashboard({activeLeaseCount, cashFlowTotal, cashFlowTrend, char
           <AdvancedMetric icon="event_upcoming" label={t('advanced.kpis.leasesWatch')} note={t('advanced.inSixtyDays')} tone="neutral" value={String(expiringLeases.length)} />
         </section>
 
-        <section className="mt-6 grid gap-6 min-[1100px]:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-          <div className="grid content-start gap-6">
+        <section className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 min-[1360px]:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
             <MonthlyTrendCard points={chartPoints} t={t} />
             <PerformanceTable rows={propertyPerformance} t={t} />
             <UnpaidEvolutionCard points={unpaidTrendPoints} t={t} trendChange={unpaidTrendChange} />
           </div>
 
-          <aside className="grid content-start gap-6">
+          <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
             <InsightCard
               items={[
                 {
