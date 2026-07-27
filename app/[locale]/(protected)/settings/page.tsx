@@ -34,6 +34,8 @@ const planCards = [
   {documents: 1000, label: 'Portfolio', monthlyPrice: 12.9, plan: 'portfolio', properties: 20, storage: '4 GB', tenants: 80, yearlyPrice: 89}
 ] as const;
 
+const planOrder = ['free', 'solo', 'plus', 'portfolio'] as const;
+
 const errorMessageKeys = new Set([
   'billing_customer_missing',
   'checkout_failed',
@@ -410,8 +412,10 @@ function SubscriptionTab({
           <div className="grid gap-4 p-6 lg:grid-cols-3">
             {planCards.map((plan) => {
               const isCurrent = plan.plan === currentPlan;
+              const isUpgrade = planOrder.indexOf(plan.plan) > planOrder.indexOf(currentPlanKey);
               const targetPlanLabel = plan.label;
               const features = pricingT.raw(`${plan.plan}.features`) as string[];
+              const actionLabel = currentPlanKey === 'free' ? t('subscribePlan') : isUpgrade ? t('upgradePlan') : t('changePlan');
               const cardContent = (
                 <>
                   {!isCurrent ? (
@@ -429,7 +433,7 @@ function SubscriptionTab({
                   />
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{pricingT(`${plan.plan}.description`)}</p>
-                <div className="mt-5 border-t border-[var(--line-soft)] pt-5">
+                <div className="mb-5 mt-5 border-t border-[var(--line-soft)] pt-5">
                   <p className="text-sm font-semibold">{pricingT(`${plan.plan}.featureIntro`)}</p>
                   <ul className="mt-4 grid gap-3">
                     {features.map((feature) => (
@@ -442,25 +446,25 @@ function SubscriptionTab({
                 </div>
                 <button
                   className={[
-                    'mt-5 min-h-10 w-full rounded-lg px-4 text-sm font-semibold',
+                    'mt-auto min-h-10 w-full rounded-lg px-4 text-sm font-semibold',
                     isCurrent ? 'cursor-not-allowed bg-[#f0f5f2] text-[var(--muted)]' : 'focus-ring bg-[var(--accent)] text-white'
                   ].join(' ')}
                   disabled={isCurrent}
                   type={isCurrent ? 'button' : 'submit'}
                 >
-                  {isCurrent ? t('currentPlanButton') : t('changePlan')}
+                  {isCurrent ? t('currentPlanButton') : actionLabel}
                 </button>
                 </>
               );
 
               return isCurrent ? (
-                <div className="rounded-lg border border-[var(--line)] p-4" key={plan.plan}>
+                <div className="flex h-full flex-col rounded-lg border border-[var(--line)] p-4" key={plan.plan}>
                   {cardContent}
                 </div>
               ) : (
                 <PlanChangeForm
                   action={createCheckoutSessionAction}
-                  className="rounded-lg border border-[var(--line)] p-4"
+                  className="flex h-full flex-col rounded-lg border border-[var(--line)] p-4"
                   currentPeriodEnd={currentPeriodEnd}
                   description={t('confirmChangeDescription', {currentPlan: currentPlanLabel, date: currentPeriodEndLabel, plan: targetPlanLabel})}
                   key={plan.plan}

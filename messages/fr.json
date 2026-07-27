@@ -1112,6 +1112,8 @@
       "monthlyPrice": "{price}/mois",
       "yearlyPrice": "{price}/an",
       "changePlan": "Changer de forfait",
+      "subscribePlan": "Souscrire au forfait",
+      "upgradePlan": "Passer au forfait supérieur",
       "confirmChangeTitle": "Confirmer le changement de forfait",
       "confirmChangeDescription": "Votre abonnement {currentPlan} reste actif jusqu'au {date}, puis passera automatiquement au forfait {plan}.",
       "cancelChange": "Annuler",

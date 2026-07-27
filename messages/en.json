@@ -1112,6 +1112,8 @@
       "monthlyPrice": "{price}/month",
       "yearlyPrice": "{price}/year",
       "changePlan": "Change plan",
+      "subscribePlan": "Subscribe",
+      "upgradePlan": "Upgrade plan",
       "confirmChangeTitle": "Confirm plan change",
       "confirmChangeDescription": "Your current {currentPlan} subscription stays active until {date}, then it will automatically switch to the {plan} plan.",
       "cancelChange": "Cancel",
