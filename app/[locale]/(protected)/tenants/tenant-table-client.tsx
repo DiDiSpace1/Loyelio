@@ -450,7 +450,7 @@ export function TenantTableClient({
                             href={
                               hasPortfolioAccess && lease
                                 ? `/collections?month=${selectedMonth}&view=all&lease_id=${lease.id}#collection-lease-${lease.id}`
-                                : `/transactions?new=transaction&tenant_id=${tenant.id}`
+                                : `/transactions?new=transaction&tenant_id=${tenant.id}&lease_id=${lease?.id ?? ''}&period_month=${selectedMonth}`
                             }
                           >
                             {t('actions.transaction')}

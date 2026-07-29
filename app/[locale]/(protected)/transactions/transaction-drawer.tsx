@@ -79,7 +79,9 @@ function Icon({children, className = ''}: {children: string; className?: string}
 }
 
 export function TransactionDrawer({
+  initialLeaseId,
   initialOpen = false,
+  initialPeriodMonth,
   initialRentChargeId,
   initialTenantId,
   leases,
@@ -87,7 +89,9 @@ export function TransactionDrawer({
   properties,
   taxCategories
 }: {
+  initialLeaseId?: string;
   initialOpen?: boolean;
+  initialPeriodMonth?: string;
   initialRentChargeId?: string;
   initialTenantId?: string;
   leases: LeaseOption[];
@@ -99,13 +103,16 @@ export function TransactionDrawer({
   const common = useTranslations('common');
   const initialLeaseByCharge = initialRentChargeId ? leases.find((lease) => lease.rent_charges.some((charge) => charge.id === initialRentChargeId)) : undefined;
   const initialCharge = initialLeaseByCharge?.rent_charges.find((charge) => charge.id === initialRentChargeId);
-  const initialLeaseId = initialLeaseByCharge?.id ?? (initialTenantId ? leases.find((lease) => lease.tenants?.id === initialTenantId)?.id : undefined);
+  const resolvedInitialLeaseId =
+    leases.find((lease) => lease.id === initialLeaseId)?.id ??
+    initialLeaseByCharge?.id ??
+    (initialTenantId ? leases.find((lease) => lease.tenants?.id === initialTenantId)?.id : undefined);
   const [open, setOpen] = useState(initialOpen);
   const [mode, setMode] = useState<'expense' | 'revenue'>('revenue');
   const [revenueType, setRevenueType] = useState<'deposit' | 'other' | 'rent'>('rent');
-  const initialPeriodMonth = initialCharge?.period_month ?? currentMonth();
-  const [periodMonth, setPeriodMonth] = useState(initialPeriodMonth);
-  const [selectedLeaseId, setSelectedLeaseId] = useState(initialLeaseId ?? leases[0]?.id ?? '');
+  const resolvedInitialPeriodMonth = /^\d{4}-\d{2}$/.test(initialPeriodMonth ?? '') ? initialPeriodMonth! : initialCharge?.period_month?.slice(0, 7) ?? currentMonth();
+  const [periodMonth, setPeriodMonth] = useState(resolvedInitialPeriodMonth);
+  const [selectedLeaseId, setSelectedLeaseId] = useState(resolvedInitialLeaseId ?? leases[0]?.id ?? '');
   const selectedLease = useMemo(() => leases.find((lease) => lease.id === selectedLeaseId), [leases, selectedLeaseId]);
   const amountDue = remainingForPeriod(selectedLease, periodMonth);
   const amountPlaceholder = revenueType === 'deposit' ? Number(selectedLease?.deposit_amount ?? 0).toFixed(2).replace('.', ',') : revenueType === 'rent' ? '560,00' : '0,00';

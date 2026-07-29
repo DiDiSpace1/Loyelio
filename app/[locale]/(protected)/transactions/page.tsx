@@ -64,7 +64,9 @@ type ExpenseRow = {
 type TransactionsPageProps = {
   searchParams: Promise<{
     error?: string;
+    lease_id?: string;
     new?: string;
+    period_month?: string;
     rent_charge_id?: string;
     tenant_id?: string;
     view?: string;
@@ -245,7 +247,17 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
           <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
         </div>
-        <TransactionDrawer initialOpen={params.new === 'transaction'} initialRentChargeId={params.rent_charge_id} initialTenantId={params.tenant_id} leases={leases ?? []} locale={locale} properties={properties ?? []} taxCategories={taxCategories ?? []} />
+        <TransactionDrawer
+          initialLeaseId={params.lease_id}
+          initialOpen={params.new === 'transaction'}
+          initialPeriodMonth={params.period_month}
+          initialRentChargeId={params.rent_charge_id}
+          initialTenantId={params.tenant_id}
+          leases={leases ?? []}
+          locale={locale}
+          properties={properties ?? []}
+          taxCategories={taxCategories ?? []}
+        />
       </div>
 
       {params.error ? (
