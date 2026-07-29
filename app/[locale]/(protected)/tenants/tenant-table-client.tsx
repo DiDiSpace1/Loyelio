@@ -4,7 +4,7 @@ import {Link} from '@/components/app/localized-link';
 import {useTranslations} from 'next-intl';
 import {useEffect, useMemo, useRef, useState} from 'react';
 
-import {leaseHasOverdueRent} from '@/lib/rent/overdue';
+import {isOutstandingRentStatus, leaseHasOverdueRent} from '@/lib/rent/overdue';
 
 import {deleteTenantAction, updateLeaseReminderAction, updateTenantActiveAction, updateTenantBatchActiveAction} from './actions';
 import {DeleteTenantButton} from './delete-tenant-button';
@@ -111,6 +111,25 @@ function hasOverdueRent(tenant: TenantTableRow, month: string) {
   return tenant.leases.some((lease) => leaseHasOverdueRent(lease, month, today));
 }
 
+function latestOverdueMonth(tenants: TenantTableRow[], selectedMonth: string) {
+  const selectedPeriod = monthStart(selectedMonth);
+  const overduePeriods = tenants
+    .filter((tenant) => tenant.is_active)
+    .flatMap((tenant) =>
+      tenant.leases.flatMap((lease) =>
+        lease.rent_charges
+          .filter((charge) => {
+            const chargeMonth = charge.period_month.slice(0, 7);
+            return charge.period_month <= selectedPeriod && isOutstandingRentStatus(charge.status) && lease.status === 'active' && leaseCoversMonth(lease, chargeMonth);
+          })
+          .map((charge) => charge.period_month)
+      )
+    )
+    .sort((a, b) => b.localeCompare(a));
+
+  return overduePeriods[0]?.slice(0, 7) ?? selectedMonth;
+}
+
 function leaseExpiresSoon(tenant: TenantTableRow, month: string) {
   const lease = activeLease(tenant, month);
 
@@ -182,6 +201,7 @@ export function TenantTableClient({
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [pendingBatchOperation, setPendingBatchOperation] = useState<'activate' | 'deactivate' | null>(null);
   const [selectedView, setSelectedView] = useState<TenantView>(sanitizeView(initialView));
+  const overdueMonth = useMemo(() => latestOverdueMonth(tenants, selectedMonth), [selectedMonth, tenants]);
 
   const summary = useMemo(() => {
     const activeTenantRows = tenants.filter((tenant) => tenant.is_active);
@@ -231,9 +251,11 @@ export function TenantTableClient({
   }
 
   function changeView(nextView: TenantView) {
+    const nextMonth = nextView === 'overdue' ? overdueMonth : selectedMonth;
+    setSelectedMonth(nextMonth);
     setSelectedView(nextView);
     setSelectedTenantIds([]);
-    syncUrl(selectedMonth, appliedQuery, nextView, 'push');
+    syncUrl(nextMonth, appliedQuery, nextView, 'push');
   }
 
   function applySearch() {
