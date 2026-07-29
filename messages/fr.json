@@ -1086,7 +1086,8 @@
       "stripe_price_missing": "Les Price IDs Stripe ne sont pas configurés."
     },
     "saved": "Paramètres enregistrés.",
-    "passwordSaved": "Mot de passe mis à jour."
+      "passwordSaved": "Mot de passe mis à jour.",
+      "debugPlanSaved": "Le forfait de test et ses droits ont été mis à jour."
   },
     "subscription": {
       "currentPlan": "Forfait actuel",
@@ -1131,7 +1132,13 @@
       "propertiesUsage": "Biens enregistrés",
       "tenantsUsage": "Locataires",
       "documentsUsage": "Documents",
-      "storageUsage": "Stockage documents"
+      "storageUsage": "Stockage documents",
+      "debugTrigger": "Changer de forfait (test)",
+      "debugTitle": "Forfait de test",
+      "debugDescription": "Ce réglage modifie immédiatement les droits du compte de test sans créer de paiement Stripe.",
+      "debugCurrent": "Actuel",
+      "debugCancel": "Annuler",
+      "debugSubmit": "Appliquer"
     },
     "security": {
       "changePassword": "Modifier le mot de passe",

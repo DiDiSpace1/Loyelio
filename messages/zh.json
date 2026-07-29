@@ -1086,7 +1086,8 @@
       "stripe_price_missing": "尚未配置 Stripe Price ID。"
     },
     "saved": "设置已保存。",
-    "passwordSaved": "密码已更新。"
+      "passwordSaved": "密码已更新。",
+      "debugPlanSaved": "调试套餐及对应权限已更新。"
   },
     "subscription": {
       "currentPlan": "当前套餐",
@@ -1131,7 +1132,13 @@
       "propertiesUsage": "已注册房产",
       "tenantsUsage": "租客",
       "documentsUsage": "文档",
-      "storageUsage": "文档存储空间"
+      "storageUsage": "文档存储空间",
+      "debugTrigger": "切换套餐（调试）",
+      "debugTitle": "切换调试套餐",
+      "debugDescription": "此设置会立即更改测试账号的套餐权限，不会创建 Stripe 付款。",
+      "debugCurrent": "当前",
+      "debugCancel": "取消",
+      "debugSubmit": "确认切换"
     },
     "security": {
       "changePassword": "修改密码",

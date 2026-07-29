@@ -8,8 +8,9 @@ import {pendingReplacementFromStripeCustomer, syncWorkspaceBillingFromStripe, sy
 import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
-import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction, updateAccountSettingsAction, updatePasswordAction} from './actions';
+import {createBillingPortalSessionAction, createCheckoutSessionAction, deleteAccountAction, switchDebugPlanAction, updateAccountSettingsAction, updatePasswordAction} from './actions';
 import {BillingCyclePrice, BillingCycleProvider, BillingCycleToggle} from './BillingCycleControl';
+import {DebugPlanSwitcher} from './DebugPlanSwitcher';
 import {PlanChangeForm} from './PlanChangeForm';
 
 type SettingsPageProps = {
@@ -35,6 +36,7 @@ const planCards = [
 ] as const;
 
 const planOrder = ['free', 'solo', 'plus', 'portfolio'] as const;
+const BILLING_DEBUG_EMAIL = 'zihaoz813@gmail.com';
 
 const errorMessageKeys = new Set([
   'billing_customer_missing',
@@ -101,10 +103,11 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
   const params = await searchParams;
   const activeTab = parseTab(params.tab);
   const {profile, supabase, user, workspaceId} = await getCurrentUserWorkspace(locale);
+  const isBillingDebugUser = user.email?.toLowerCase() === BILLING_DEBUG_EMAIL;
   let billing = await getWorkspaceBilling(supabase, workspaceId);
   let pendingReplacement: Awaited<ReturnType<typeof pendingReplacementFromStripeCustomer>> = null;
 
-  if (activeTab === 'abonnement' && (billing?.stripe_customer_id || billing?.stripe_subscription_id)) {
+  if (!isBillingDebugUser && activeTab === 'abonnement' && (billing?.stripe_customer_id || billing?.stripe_subscription_id)) {
     try {
       if (billing.stripe_customer_id) {
         await syncWorkspaceBillingFromStripeCustomer(workspaceId, billing.stripe_customer_id);
@@ -138,9 +141,26 @@ export default async function SettingsPage({searchParams}: SettingsPageProps) {
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-normal text-[#171d1c]">{t('title')}</h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t('subtitle')}</p>
+        </div>
+        {isBillingDebugUser && activeTab === 'abonnement' ? (
+          <DebugPlanSwitcher
+            action={switchDebugPlanAction}
+            currentPlan={normalizeBillingPlan(currentPlan)}
+            labels={{
+              cancel: t('subscription.debugCancel'),
+              current: t('subscription.debugCurrent'),
+              description: t('subscription.debugDescription'),
+              submit: t('subscription.debugSubmit'),
+              title: t('subscription.debugTitle'),
+              trigger: t('subscription.debugTrigger')
+            }}
+            locale={locale}
+          />
+        ) : null}
       </div>
 
       <SettingsTabs activeTab={activeTab} labels={{abonnement: t('tabs.abonnement'), donnees: t('tabs.donnees'), profil: t('tabs.profil'), securite: t('tabs.securite')}} />
@@ -244,6 +264,7 @@ function StatusMessages({
       {error ? <Message tone="danger">{debug ? `${errorMessage} ${t('debugId', {id: debug})}` : errorMessage}</Message> : null}
       {saved === 'settings' ? <Message tone="success">{t('saved')}</Message> : null}
       {saved === 'password' ? <Message tone="success">{t('passwordSaved')}</Message> : null}
+      {saved === 'debug_plan' ? <Message tone="success">{t('debugPlanSaved')}</Message> : null}
     </>
   );
 }

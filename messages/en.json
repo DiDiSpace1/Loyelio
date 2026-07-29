@@ -1086,7 +1086,8 @@
       "stripe_price_missing": "Stripe Price IDs are not configured."
     },
     "saved": "Settings saved.",
-    "passwordSaved": "Password updated."
+      "passwordSaved": "Password updated.",
+      "debugPlanSaved": "The test plan and its permissions were updated."
   },
     "subscription": {
       "currentPlan": "Current plan",
@@ -1131,7 +1132,13 @@
       "propertiesUsage": "Registered properties",
       "tenantsUsage": "Tenants",
       "documentsUsage": "Documents",
-      "storageUsage": "Document storage"
+      "storageUsage": "Document storage",
+      "debugTrigger": "Switch plan (test)",
+      "debugTitle": "Test plan",
+      "debugDescription": "This setting immediately changes the test account permissions without creating a Stripe payment.",
+      "debugCurrent": "Current",
+      "debugCancel": "Cancel",
+      "debugSubmit": "Apply"
     },
     "security": {
       "changePassword": "Change password",

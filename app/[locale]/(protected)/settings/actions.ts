@@ -11,6 +11,8 @@ import {localizedPath} from '@/lib/navigation';
 import {createSupabaseAdminClient} from '@/lib/supabase/admin';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
+const BILLING_DEBUG_EMAIL = 'zihaoz813@gmail.com';
+
 function value(formData: FormData, key: string) {
   const raw = formData.get(key);
   return typeof raw === 'string' ? raw.trim() : '';
@@ -472,6 +474,38 @@ export async function createBillingPortalSessionAction(formData: FormData) {
   });
 
   redirect(session.url);
+}
+
+export async function switchDebugPlanAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const requestedPlan = value(formData, 'plan');
+  const plan = ['free', 'solo', 'plus', 'portfolio'].includes(requestedPlan) ? requestedPlan : 'free';
+  const {user, workspaceId} = await getCurrentUserWorkspace(locale);
+
+  if (user.email?.toLowerCase() !== BILLING_DEBUG_EMAIL) {
+    redirect(`${localizedPath(locale, '/settings')}?tab=abonnement`);
+  }
+
+  const admin = createSupabaseAdminClient();
+  const {error} = await admin
+    .from('workspace_billing')
+    .update({
+      lifetime_access: plan !== 'free',
+      plan,
+      status: plan === 'free' ? 'free' : 'active'
+    })
+    .eq('workspace_id', workspaceId);
+
+  if (error) {
+    console.error('Debug billing plan switch failed', {
+      message: error.message,
+      plan,
+      workspaceId
+    });
+    redirect(`${localizedPath(locale, '/settings')}?tab=abonnement&error=settings_failed`);
+  }
+
+  redirect(`${localizedPath(locale, '/settings')}?tab=abonnement&saved=debug_plan`);
 }
 
 export async function deleteAccountAction(formData: FormData) {

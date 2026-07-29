@@ -5,6 +5,8 @@ import {syncWorkspaceBillingFromStripe, syncWorkspaceBillingFromStripeCustomer} 
 import {localizedPath} from '@/lib/navigation';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 
+const BILLING_DEBUG_EMAIL = 'zihaoz813@gmail.com';
+
 type CallbackParams = {
   params: Promise<{
     locale: string;
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest, {params}: CallbackParams) {
     if (user) {
       const {data: profile} = await supabase.from('profiles').select('default_workspace_id').eq('id', user.id).maybeSingle<{default_workspace_id: string | null}>();
 
-      if (profile?.default_workspace_id) {
+      if (profile?.default_workspace_id && user.email?.toLowerCase() !== BILLING_DEBUG_EMAIL) {
         const billing = await getWorkspaceBilling(supabase, profile.default_workspace_id);
 
         if (billing?.stripe_customer_id || billing?.stripe_subscription_id) {
