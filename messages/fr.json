@@ -1233,6 +1233,12 @@
     "newLease": "Nouveau bail",
     "searchPlaceholder": "Rechercher...",
     "clearSearch": "Effacer la recherche",
+    "filter": {
+      "label": "Filtrer les baux",
+      "all": "Tous",
+      "active": "Actifs",
+      "inactive": "Inactifs"
+    },
     "property": "Bien",
     "propertyPlaceholder": "Veuillez choisir votre bien",
     "withoutProperty": "Bail sans bien",
@@ -1282,6 +1288,8 @@
     "status": {
       "active": "Actif",
       "ended": "Terminé",
+      "expired": "Expiré",
+      "expiringSoon": "Bientôt expiré",
       "draft": "Clauses à définir"
     },
     "detail": {

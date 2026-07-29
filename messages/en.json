@@ -1233,6 +1233,12 @@
     "newLease": "New lease",
     "searchPlaceholder": "Search...",
     "clearSearch": "Clear search",
+    "filter": {
+      "label": "Filter leases",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "property": "Property",
     "propertyPlaceholder": "Choose a property",
     "withoutProperty": "Lease without property",
@@ -1282,6 +1288,8 @@
     "status": {
       "active": "Active",
       "ended": "Ended",
+      "expired": "Expired",
+      "expiringSoon": "Expiring soon",
       "draft": "Clauses to define"
     },
     "detail": {

@@ -7,9 +7,10 @@ import {BailListClient, type BailListRow} from './bail-list-client';
 
 type BailListViewProps = {
   query?: string;
+  status?: string;
 };
 
-export async function BailListView({query = ''}: BailListViewProps) {
+export async function BailListView({query = '', status = 'all'}: BailListViewProps) {
   const locale = await getLocale();
   const t = await getTranslations('bail');
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
@@ -32,7 +33,7 @@ export async function BailListView({query = ''}: BailListViewProps) {
         </Link>
       </div>
 
-      <BailListClient initialQuery={query.trim()} leases={data ?? []} locale={locale} />
+      <BailListClient initialFilter={status} initialQuery={query.trim()} leases={data ?? []} locale={locale} today={new Date().toISOString().slice(0, 10)} />
     </>
   );
 }

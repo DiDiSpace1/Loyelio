@@ -5,6 +5,7 @@ type BailPageProps = {
   searchParams: Promise<{
     property_id?: string;
     q?: string;
+    status?: string;
     tenant_id?: string;
   }>;
 };
@@ -16,5 +17,5 @@ export default async function BailPage({searchParams}: BailPageProps) {
     return <BailManagerView selectedPropertyId={params.property_id} selectedTenantId={params.tenant_id} />;
   }
 
-  return <BailListView query={params.q} />;
+  return <BailListView query={params.q} status={params.status} />;
 }

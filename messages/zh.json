@@ -1233,6 +1233,12 @@
     "newLease": "新建租约",
     "searchPlaceholder": "搜索...",
     "clearSearch": "清除搜索",
+    "filter": {
+      "label": "筛选租约",
+      "all": "全部",
+      "active": "有效",
+      "inactive": "无效"
+    },
     "property": "房产",
     "propertyPlaceholder": "选择房产",
     "withoutProperty": "无房产租约",
@@ -1282,6 +1288,8 @@
     "status": {
       "active": "有效",
       "ended": "已结束",
+      "expired": "过期",
+      "expiringSoon": "即将到期",
       "draft": "待定条款"
     },
     "detail": {
