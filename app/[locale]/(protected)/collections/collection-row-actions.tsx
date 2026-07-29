@@ -37,14 +37,9 @@ export function CollectionRowActions({currentStatus, labels, leaseId}: {currentS
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
           <div className="w-full max-w-md rounded-xl bg-white p-6 text-left shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-[#171d1c]">{labels.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{labels.copy}</p>
-              </div>
-              <button aria-label={labels.cancel} className="focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] hover:bg-[#f5faf8] disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={() => setOpen(false)} type="button">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
+            <div>
+              <h3 className="text-xl font-semibold text-[#171d1c]">{labels.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{labels.copy}</p>
             </div>
 
             <div className="mt-5 grid grid-cols-3 gap-2">

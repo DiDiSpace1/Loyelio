@@ -5,6 +5,7 @@ import type {ReactNode} from 'react';
 import {useTranslations} from 'next-intl';
 
 import {ConfirmSubmitButton} from '@/components/app/confirm-submit-button';
+import {PendingSubmitButton} from '@/components/app/pending-submit-button';
 import {DateDisplayInput, isoDateToDisplay} from '@/components/forms/date-display-input';
 
 import {deleteTransactionAction, updateTransactionAction} from './actions';
@@ -150,7 +151,7 @@ export function TransactionActionsMenu({
       ) : null}
 
       {editOpen ? (
-        <Modal title={t('editTitle')} onClose={() => setEditOpen(false)}>
+        <Modal hideHeaderClose title={t('editTitle')} onClose={() => setEditOpen(false)}>
           <form action={updateTransactionAction} className="grid gap-4">
             <input name="locale" type="hidden" value={locale} />
             <input name="type" type="hidden" value={row.type} />
@@ -221,9 +222,9 @@ export function TransactionActionsMenu({
               <button className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-5 text-sm font-semibold" onClick={() => setEditOpen(false)} type="button">
                 {common('cancel')}
               </button>
-              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
+              <PendingSubmitButton className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70" style={{color: '#ffffff'}}>
                 {common('save')}
-              </button>
+              </PendingSubmitButton>
             </div>
           </form>
         </Modal>
@@ -241,15 +242,17 @@ function Info({label, value}: {label: string; value: string}) {
   );
 }
 
-function Modal({children, onClose, title}: {children: ReactNode; onClose: () => void; title: string}) {
+function Modal({children, hideHeaderClose = false, onClose, title}: {children: ReactNode; hideHeaderClose?: boolean; onClose: () => void; title: string}) {
   return (
     <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true">
       <div className="w-full max-w-lg rounded-lg bg-white text-left shadow-xl">
         <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-5 py-4">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <button className="focus-ring rounded-md p-2" onClick={onClose} type="button">
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          {!hideHeaderClose ? (
+            <button className="focus-ring rounded-md p-2" onClick={onClose} type="button">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          ) : null}
         </div>
         <div className="p-5">{children}</div>
       </div>

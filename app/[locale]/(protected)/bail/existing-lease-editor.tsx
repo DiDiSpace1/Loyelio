@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {useTranslations} from 'next-intl';
 
+import {PendingSubmitButton} from '@/components/app/pending-submit-button';
 import {DateDisplayInput, isoDateToDisplay} from '@/components/forms/date-display-input';
 
 import {deleteLeaseAction, updateLeaseAction} from '../properties/actions';
@@ -75,14 +76,11 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
             <input name="locale" type="hidden" value={locale} />
             <input name="property_id" type="hidden" value={propertyId} />
             <input name="lease_id" type="hidden" value={editingLease.id} />
-            <div className="flex items-center justify-between gap-4 border-b border-[var(--line-soft)] px-5 py-4">
+            <div className="border-b border-[var(--line-soft)] px-5 py-4">
               <div className="min-w-0">
                 <h3 className="truncate text-lg font-semibold">{t('editLease')}</h3>
                 <p className="mt-1 truncate text-sm text-[var(--muted)]">{editingLease.tenants?.full_name ?? t('tenant')}</p>
               </div>
-              <button className="focus-ring rounded-full p-2 text-[#33413f]" onClick={() => setEditingLease(null)} type="button" aria-label={t('close')}>
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
             </div>
 
             <div className="grid gap-4 p-5 md:grid-cols-2">
@@ -103,9 +101,9 @@ export function ExistingLeaseEditor({leases, locale, propertyId}: {leases: Edita
               <button className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-5 text-sm font-semibold" onClick={() => setEditingLease(null)} type="button">
                 {common('cancel')}
               </button>
-              <button className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">
+              <PendingSubmitButton className="focus-ring min-h-11 rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70" style={{color: '#ffffff'}}>
                 {common('save')}
-              </button>
+              </PendingSubmitButton>
             </div>
           </form>
         </div>

@@ -107,14 +107,9 @@ export function UploadDocumentModal({locale, properties, tenants}: {locale: stri
 
             <form action={uploadDocumentAction} className="overflow-y-auto p-6">
               <input name="locale" type="hidden" value={locale} />
-              <div className="flex items-start justify-between gap-4">
-                <h2 className="text-2xl font-semibold text-[#171d1c]" id="upload-document-title">
-                  {modal('title')}
-                </h2>
-                <button className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full text-[#171d1c] transition hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button" aria-label={common('close')}>
-                  <span className="material-symbols-outlined text-[22px]">close</span>
-                </button>
-              </div>
+              <h2 className="text-2xl font-semibold text-[#171d1c]" id="upload-document-title">
+                {modal('title')}
+              </h2>
 
               <label className="mt-6 flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--line)] bg-[#f8fbfa] px-4 text-center hover:bg-[#f0f5f2]">
                 <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--accent)] text-white" style={{color: '#ffffff'}}>

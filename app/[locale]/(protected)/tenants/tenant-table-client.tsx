@@ -1,6 +1,7 @@
 'use client';
 
 import {Link} from '@/components/app/localized-link';
+import {PendingSubmitButton} from '@/components/app/pending-submit-button';
 import {useTranslations} from 'next-intl';
 import {useEffect, useMemo, useRef, useState} from 'react';
 
@@ -507,21 +508,16 @@ export function TenantTableClient({
       {pendingBatchOperation ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4 py-6" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-xl bg-white p-6 text-[#17201e] shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold">{t(`batch.confirm.${pendingBatchOperation}.title`)}</h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t(`batch.confirm.${pendingBatchOperation}.copy`, {count: selectedTenantIds.length})}</p>
-              </div>
-              <button aria-label={common('close')} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#17201e] text-xl leading-none hover:bg-[#f0f5f2]" onClick={() => setPendingBatchOperation(null)} type="button">
-                x
-              </button>
+            <div>
+              <h2 className="text-xl font-semibold">{t(`batch.confirm.${pendingBatchOperation}.title`)}</h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t(`batch.confirm.${pendingBatchOperation}.copy`, {count: selectedTenantIds.length})}</p>
             </div>
             <form action={updateTenantBatchActiveAction} className="mt-6 flex justify-end gap-3">
               <input name="locale" type="hidden" value={locale} />
               <input name="operation" type="hidden" value={pendingBatchOperation} />
               {selectedTenantIds.map((id) => <input key={id} name="tenant_ids" type="hidden" value={id} />)}
               <button className="min-h-10 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold" onClick={() => setPendingBatchOperation(null)} type="button">{common('cancel')}</button>
-              <button className="min-h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">{common('confirm')}</button>
+              <PendingSubmitButton className="min-h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70" style={{color: '#ffffff'}}>{common('confirm')}</PendingSubmitButton>
             </form>
           </div>
         </div>

@@ -87,18 +87,7 @@ export function PlanChangeForm({
       {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 text-[#17201e] shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <h2 className="text-xl font-semibold">{labels.title}</h2>
-              <button
-                aria-label={labels.cancel}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#17201e] text-xl leading-none hover:bg-[#f0f5f2] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isBusy}
-                onClick={() => setIsOpen(false)}
-                type="button"
-              >
-                x
-              </button>
-            </div>
+            <h2 className="text-xl font-semibold">{labels.title}</h2>
             <p className="mt-5 text-base leading-7 text-[#5f6b68]">{description}</p>
 
             <div className="mt-6 rounded-xl border border-[var(--line-soft)] bg-[#fafcfa] p-5">

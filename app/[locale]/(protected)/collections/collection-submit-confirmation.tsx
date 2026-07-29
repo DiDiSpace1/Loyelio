@@ -2,6 +2,8 @@
 
 import {useCallback, useEffect, useState} from 'react';
 
+import {LoadingSpinner} from '@/components/app/pending-submit-button';
+
 type ConfirmLabels = {
   apply: string;
   cancel: string;
@@ -65,6 +67,7 @@ export function CollectionSubmitConfirmation({formId, initialSelected, labels}: 
   const [statusValue, setStatusValue] = useState('');
   const [statusLabel, setStatusLabel] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refresh = useCallback(() => {
     setSelected(selectedCount(formId));
@@ -90,11 +93,19 @@ export function CollectionSubmitConfirmation({formId, initialSelected, labels}: 
 
   function openConfirm() {
     refresh();
+    setIsSubmitting(false);
     setOpen(true);
   }
 
   function submit() {
-    formElement(formId)?.requestSubmit();
+    const form = formElement(formId);
+
+    if (!form) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    form.requestSubmit();
   }
 
   return (
@@ -106,14 +117,9 @@ export function CollectionSubmitConfirmation({formId, initialSelected, labels}: 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-[#171d1c]">{labels.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{selected > 0 ? labels.copy : labels.noSelection}</p>
-              </div>
-              <button aria-label={labels.cancel} className="focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] text-xl leading-none hover:bg-[#f5faf8]" onClick={() => setOpen(false)} type="button">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
+            <div>
+              <h3 className="text-xl font-semibold text-[#171d1c]">{labels.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{selected > 0 ? labels.copy : labels.noSelection}</p>
             </div>
 
             <div className="mt-5 grid gap-3 rounded-lg border border-[var(--line-soft)] bg-[#f8fbfa] p-4 text-sm">
@@ -134,10 +140,11 @@ export function CollectionSubmitConfirmation({formId, initialSelected, labels}: 
             {statusValue === 'paid' ? <p className="mt-4 rounded-lg border border-[#b8e5cf] bg-[#edf8f1] p-3 text-sm leading-6 text-[#087a55]">{labels.receiptWarning}</p> : null}
 
             <div className="mt-6 flex justify-end gap-3">
-              <button className="focus-ring min-h-10 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f5faf8]" onClick={() => setOpen(false)} type="button">
+              <button className="focus-ring min-h-10 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f5faf8] disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} onClick={() => setOpen(false)} type="button">
                 {labels.cancel}
               </button>
-              <button className="focus-ring min-h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white" disabled={selected === 0} onClick={submit} style={{color: '#ffffff'}} type="button">
+              <button aria-busy={isSubmitting} className="focus-ring inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70" disabled={selected === 0 || isSubmitting} onClick={submit} style={{color: '#ffffff'}} type="button">
+                {isSubmitting ? <LoadingSpinner /> : null}
                 {labels.confirm}
               </button>
             </div>
