@@ -10,6 +10,7 @@ import {ExistingLeaseEditor} from './existing-lease-editor';
 import {PropertySelector} from './property-selector';
 
 type BailManagerViewProps = {
+  renewalLeaseId?: string;
   selectedPropertyId?: string;
   selectedTenantId?: string;
   source?: 'bail' | 'property';
@@ -33,6 +34,7 @@ type PropertyForTenantManagement = {
     start_date: string;
     status: string;
     tenants: {
+      id: string;
       full_name: string;
     } | null;
   }[];
@@ -43,7 +45,13 @@ type TenantOption = {
   full_name: string;
 };
 
-export async function BailManagerView({selectedPropertyId, selectedTenantId = '', source = 'bail'}: BailManagerViewProps) {
+function nextDay(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+export async function BailManagerView({renewalLeaseId, selectedPropertyId, selectedTenantId = '', source = 'bail'}: BailManagerViewProps) {
   const locale = await getLocale();
   const t = await getTranslations('bail');
   const common = await getTranslations('common');
@@ -56,7 +64,7 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
   if (propertyId) {
     const {data: property, error} = await supabase
       .from('properties')
-      .select('id, name, occupancy_status, leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(full_name))')
+      .select('id, name, occupancy_status, leases(id, status, start_date, end_date, monthly_rent, charges_amount, deposit_amount, tenants(id, full_name))')
       .eq('workspace_id', workspaceId)
       .eq('id', propertyId)
       .single<PropertyForTenantManagement>();
@@ -70,6 +78,17 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
 
   const {data: tenants} = await supabase.from('tenants').select('id, full_name').eq('workspace_id', workspaceId).order('full_name', {ascending: true}).returns<TenantOption[]>();
   const activeLeases = selectedProperty?.leases.filter((lease) => lease.status === 'active') ?? [];
+  const renewalLease = renewalLeaseId ? selectedProperty?.leases.find((lease) => lease.id === renewalLeaseId) : undefined;
+  const renewalDefaults = renewalLease
+    ? {
+        chargesAmount: Number(renewalLease.charges_amount ?? 0),
+        depositAmount: Number(renewalLease.deposit_amount ?? 0),
+        endDate: '',
+        monthlyRent: Number(renewalLease.monthly_rent ?? 0),
+        startDate: renewalLease.end_date ? nextDay(renewalLease.end_date) : '',
+        tenantId: renewalLease.tenants?.id ?? ''
+      }
+    : undefined;
   const backHref = source === 'property' ? '/properties' : '/dashboard';
   const backLabel = source === 'property' ? t('backToProperties') : t('backToDashboard');
 
@@ -101,8 +120,11 @@ export async function BailManagerView({selectedPropertyId, selectedTenantId = ''
               <input name="locale" type="hidden" value={locale} />
               <input name="property_id" type="hidden" value={selectedProperty.id} />
               <input name="return_to" type="hidden" value={source === 'bail' ? 'bail' : 'tenant_management'} />
-              <h2 className="mb-0 text-base font-semibold">{t('addTenants')}</h2>
-              <OccupancyManager initialStatus={activeLeases.length ? 'rented' : selectedProperty.occupancy_status} initialTenantId={selectedTenantId} tenants={tenants ?? []} />
+              <div>
+                <h2 className="mb-0 text-base font-semibold">{renewalLease ? t('renewal.title') : t('addTenants')}</h2>
+                {renewalLease ? <p className="mt-1 text-sm text-[var(--muted)]">{t('renewal.description', {tenant: renewalLease.tenants?.full_name ?? t('tenant')})}</p> : null}
+              </div>
+              <OccupancyManager initialAssignment={renewalDefaults} initialStatus={activeLeases.length ? 'rented' : selectedProperty.occupancy_status} initialTenantId={renewalDefaults?.tenantId ?? selectedTenantId} tenants={tenants ?? []} />
               <div className="flex justify-end gap-3">
                 <Link className="focus-ring inline-flex min-h-11 items-center rounded-md border border-[var(--line)] px-5 text-sm font-semibold cursor-pointer" href={source === 'property' ? `/properties/${selectedProperty.id}` : '/bail'}>
                   {common('cancel')}

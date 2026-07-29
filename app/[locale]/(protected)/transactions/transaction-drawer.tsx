@@ -21,7 +21,9 @@ export type LeaseOption = {
   charges_amount: number | null;
   deposit_amount: number | null;
   id: string;
+  end_date: string | null;
   monthly_rent: number | null;
+  start_date: string;
   rent_charges: {
     id: string;
     period_month: string;
@@ -59,8 +61,17 @@ function paidForPeriod(lease: LeaseOption | undefined, month: string) {
 }
 
 function remainingForPeriod(lease: LeaseOption | undefined, month: string) {
-  const expected = Number(lease?.monthly_rent ?? 0) + Number(lease?.charges_amount ?? 0);
+  const charge = lease?.rent_charges.find((row) => row.period_month === periodStart(month));
+  const expected = charge?.total_due == null ? Number(lease?.monthly_rent ?? 0) + Number(lease?.charges_amount ?? 0) : Number(charge.total_due);
   return Math.max(0, expected - paidForPeriod(lease, month));
+}
+
+function formatLeaseOption(lease: LeaseOption, locale: string, propertyFallback: string, tenantFallback: string) {
+  const property = lease.properties?.name ?? propertyFallback;
+  const tenant = lease.tenants?.full_name ?? tenantFallback;
+  const dates = `${new Intl.DateTimeFormat(locale).format(new Date(`${lease.start_date}T00:00:00Z`))} - ${lease.end_date ? new Intl.DateTimeFormat(locale).format(new Date(`${lease.end_date}T00:00:00Z`)) : '∞'}`;
+  const amount = new Intl.NumberFormat(locale, {currency: 'EUR', maximumFractionDigits: 0, style: 'currency'}).format(Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0));
+  return `${property} - ${tenant} · ${dates} · ${amount}`;
 }
 
 function Icon({children, className = ''}: {children: string; className?: string}) {
@@ -160,7 +171,7 @@ export function TransactionDrawer({
                       <option value="">{t('chooseLease')}</option>
                       {leases.map((lease) => (
                         <option key={lease.id} value={lease.id}>
-                          {(lease.properties?.name ?? t('property')) + ' - ' + (lease.tenants?.full_name ?? t('tenant'))}
+                          {formatLeaseOption(lease, locale, t('property'), t('tenant'))}
                         </option>
                       ))}
                     </select>

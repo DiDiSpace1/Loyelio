@@ -23,10 +23,19 @@ type ActiveLease = {
 };
 
 export function OccupancyManager({
+  initialAssignment,
   initialStatus,
   initialTenantId = '',
   tenants
 }: {
+  initialAssignment?: {
+    chargesAmount: number;
+    depositAmount: number;
+    endDate: string;
+    monthlyRent: number;
+    startDate: string;
+    tenantId: string;
+  };
   initialStatus: string;
   initialTenantId?: string;
   tenants: TenantOption[];
@@ -123,7 +132,7 @@ export function OccupancyManager({
                 <select
                   className={`focus-ring min-h-11 min-w-0 rounded-md border px-3 text-sm font-normal ${invalidFields.has(`${index}:tenant`) ? 'border-[#ba1a1a] bg-[#fff7f6]' : 'border-[var(--line)]'}`}
                   data-validation-key={`${index}:tenant`}
-                  defaultValue={index === 0 ? initialTenantId : ''}
+                  defaultValue={index === 0 ? initialAssignment?.tenantId ?? initialTenantId : ''}
                   name="assignment_tenant_id"
                   onChange={() => setInvalidFields((fields) => withoutField(fields, `${index}:tenant`))}
                 >
@@ -139,6 +148,7 @@ export function OccupancyManager({
                 {t('entryDate')}
                 <DateDisplayInput
                   className={`focus-ring h-11 min-h-11 w-full rounded-md border bg-white px-3 text-sm font-normal ${invalidFields.has(`${index}:start`) ? 'border-[#ba1a1a]' : 'border-[var(--line)]'}`}
+                  defaultValue={index === 0 ? initialAssignment?.startDate : undefined}
                   name="assignment_start_date"
                   onIsoChange={() => setInvalidFields((fields) => withoutField(fields, `${index}:start`))}
                   validationKey={`${index}:start`}
@@ -146,11 +156,11 @@ export function OccupancyManager({
               </label>
               <label className="grid min-w-0 gap-2 text-xs font-semibold text-[#33413f]">
                 {t('exitDate')}
-                <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm font-normal" name="assignment_end_date" />
+                <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm font-normal" defaultValue={index === 0 ? initialAssignment?.endDate : undefined} name="assignment_end_date" />
               </label>
-              <MoneyField invalid={invalidFields.has(`${index}:rent`)} label={t('monthlyRent')} name="assignment_monthly_rent" onChange={() => setInvalidFields((fields) => withoutField(fields, `${index}:rent`))} required validationKey={`${index}:rent`} />
-              <MoneyField label={t('charge')} name="assignment_charges_amount" />
-              <MoneyField label={t('deposit')} name="assignment_deposit_amount" />
+              <MoneyField defaultValue={index === 0 ? initialAssignment?.monthlyRent : undefined} invalid={invalidFields.has(`${index}:rent`)} label={t('monthlyRent')} name="assignment_monthly_rent" onChange={() => setInvalidFields((fields) => withoutField(fields, `${index}:rent`))} required validationKey={`${index}:rent`} />
+              <MoneyField defaultValue={index === 0 ? initialAssignment?.chargesAmount : undefined} label={t('charge')} name="assignment_charges_amount" />
+              <MoneyField defaultValue={index === 0 ? initialAssignment?.depositAmount : undefined} label={t('deposit')} name="assignment_deposit_amount" />
               <button
                 className="focus-ring self-end rounded-md border border-[var(--line)] px-3 py-3 text-sm font-semibold disabled:opacity-40"
                 disabled={assignmentRows.length === 1}
@@ -187,12 +197,12 @@ function withoutField(fields: Set<string>, field: string) {
   return nextFields;
 }
 
-function MoneyField({invalid = false, label, name, onChange, required = false, validationKey}: {invalid?: boolean; label: string; name: string; onChange?: () => void; required?: boolean; validationKey?: string}) {
+function MoneyField({defaultValue = 0, invalid = false, label, name, onChange, required = false, validationKey}: {defaultValue?: number; invalid?: boolean; label: string; name: string; onChange?: () => void; required?: boolean; validationKey?: string}) {
   return (
     <label className="grid min-w-0 gap-2 text-xs font-semibold text-[#33413f]">
       {label}
       <span className={`relative min-h-11 min-w-0 rounded-md border bg-white ${invalid ? 'border-[#ba1a1a] bg-[#fff7f6]' : 'border-[var(--line)]'}`}>
-        <input className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-12 text-sm font-normal outline-none" data-validation-key={validationKey} defaultValue="0" min="0" name={name} onChange={onChange} required={required} step="0.01" type="number" />
+        <input className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-12 text-sm font-normal outline-none" data-validation-key={validationKey} defaultValue={defaultValue} min="0" name={name} onChange={onChange} required={required} step="0.01" type="number" />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold">EUR</span>
       </span>
     </label>

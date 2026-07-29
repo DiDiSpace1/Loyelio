@@ -50,6 +50,61 @@ function withStatus(url: string, key: 'error' | 'success', value: string) {
   return `${url}${url.includes('?') ? '&' : '?'}${key}=${value}`;
 }
 
+type LeasePeriod = {
+  end_date: string | null;
+  id: string;
+  start_date: string;
+  tenant_id: string;
+  unit_id: string | null;
+};
+
+function periodsOverlap(startDate: string, endDate: string | null, existing: Pick<LeasePeriod, 'end_date' | 'start_date'>) {
+  const requestedEnd = endDate || '9999-12-31';
+  const existingEnd = existing.end_date || '9999-12-31';
+  return startDate <= existingEnd && existing.start_date <= requestedEnd;
+}
+
+async function hasLeaseConflict({
+  endDate,
+  excludeLeaseId,
+  propertyId,
+  startDate,
+  supabase,
+  tenantId,
+  unitId,
+  workspaceId
+}: {
+  endDate: string | null;
+  excludeLeaseId?: string;
+  propertyId: string;
+  startDate: string;
+  supabase: SupabaseClient;
+  tenantId: string;
+  unitId?: string | null;
+  workspaceId: string;
+}) {
+  const {data, error} = await supabase
+    .from('leases')
+    .select('id, tenant_id, unit_id, start_date, end_date')
+    .eq('property_id', propertyId)
+    .eq('workspace_id', workspaceId)
+    .returns<LeasePeriod[]>();
+
+  if (error) {
+    return {conflict: false, lookupFailed: true};
+  }
+
+  const conflict = (data ?? []).some((lease) => {
+    if (lease.id === excludeLeaseId || !periodsOverlap(startDate, endDate, lease)) {
+      return false;
+    }
+
+    return lease.tenant_id === tenantId || Boolean(unitId && lease.unit_id === unitId);
+  });
+
+  return {conflict, lookupFailed: false};
+}
+
 async function uploadPropertyPhotos({
   coverOffset = 0,
   files,
@@ -395,7 +450,42 @@ export async function updateLeaseAction(formData: FormData) {
     redirect(errorUrl('lease_update_missing'));
   }
 
+  if (endDate && endDate < startDate) {
+    redirect(errorUrl('lease_dates_invalid'));
+  }
+
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {data: existingLease} = await supabase
+    .from('leases')
+    .select('tenant_id, unit_id')
+    .eq('id', leaseId)
+    .eq('property_id', propertyId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle<{tenant_id: string; unit_id: string | null}>();
+
+  if (!existingLease) {
+    redirect(errorUrl('lease_missing'));
+  }
+
+  const conflictCheck = await hasLeaseConflict({
+    endDate: endDate || null,
+    excludeLeaseId: leaseId,
+    propertyId,
+    startDate,
+    supabase,
+    tenantId: existingLease.tenant_id,
+    unitId: existingLease.unit_id,
+    workspaceId
+  });
+
+  if (conflictCheck.lookupFailed) {
+    redirect(errorUrl('lease_conflict_lookup_failed'));
+  }
+
+  if (conflictCheck.conflict) {
+    redirect(errorUrl('lease_overlap'));
+  }
+
   const {error} = await supabase
     .from('leases')
     .update({
@@ -534,23 +624,41 @@ export async function assignPropertyTenantsAction(formData: FormData) {
   }
 
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
-  const {data: existingLeases} = await supabase
-    .from('leases')
-    .select('tenant_id')
-    .eq('property_id', propertyId)
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'active');
-  const existingTenantIds = new Set((existingLeases ?? []).map((lease: {tenant_id: string}) => lease.tenant_id));
 
   for (let index = 0; index < tenantIds.length; index += 1) {
     const tenantId = tenantIds[index];
     const startDate = startDates[index];
+    const endDate = endDates[index] || null;
     const monthlyRent = monthlyRents[index] ?? 0;
     const chargesAmount = chargesAmounts[index] ?? 0;
     const depositAmount = depositAmounts[index] ?? 0;
 
-    if (!tenantId || !startDate || monthlyRent <= 0 || existingTenantIds.has(tenantId)) {
+    if (!tenantId || !startDate || monthlyRent <= 0) {
       continue;
+    }
+
+    const returnPath = (returnTo === 'bail' ? `/bail?property_id=${propertyId}` : `/properties/${propertyId}/tenants`) as `/${string}`;
+    const errorUrl = (code: string) => withStatus(localizedPath(locale, returnPath), 'error', code);
+
+    if (endDate && endDate < startDate) {
+      redirect(errorUrl('lease_dates_invalid'));
+    }
+
+    const conflictCheck = await hasLeaseConflict({
+      endDate,
+      propertyId,
+      startDate,
+      supabase,
+      tenantId,
+      workspaceId
+    });
+
+    if (conflictCheck.lookupFailed) {
+      redirect(errorUrl('lease_conflict_lookup_failed'));
+    }
+
+    if (conflictCheck.conflict) {
+      redirect(errorUrl('lease_overlap'));
     }
 
     const {data: lease, error: leaseError} = await supabase
@@ -558,7 +666,7 @@ export async function assignPropertyTenantsAction(formData: FormData) {
       .insert({
         charges_amount: chargesAmount,
         deposit_amount: depositAmount,
-        end_date: endDates[index] || null,
+        end_date: endDate,
         monthly_rent: monthlyRent,
         property_id: propertyId,
         start_date: startDate,
@@ -576,7 +684,7 @@ export async function assignPropertyTenantsAction(formData: FormData) {
 
     const rentCharges = buildRentChargesForLease({
       chargesAmount,
-      endDate: endDates[index] || null,
+      endDate,
       leaseId: lease.id,
       monthlyRent,
       startDate,
@@ -666,7 +774,29 @@ export async function createLeaseAction(formData: FormData) {
     redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=missing_lease`);
   }
 
+  if (endDate && endDate < startDate) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=lease_dates_invalid`);
+  }
+
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const conflictCheck = await hasLeaseConflict({
+    endDate: endDate || null,
+    propertyId,
+    startDate,
+    supabase,
+    tenantId,
+    unitId: unitId || null,
+    workspaceId
+  });
+
+  if (conflictCheck.lookupFailed) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=lease_conflict_lookup_failed`);
+  }
+
+  if (conflictCheck.conflict) {
+    redirect(`${localizedPath(locale, `/properties/${propertyId}`)}?error=lease_overlap`);
+  }
+
   const chargesAmount = moneyValue(formData, 'charges_amount');
   const monthlyRent = moneyValue(formData, 'monthly_rent');
   const {data: lease, error} = await supabase

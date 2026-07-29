@@ -159,9 +159,15 @@ export default async function BailDetailPage({params}: BailDetailPageProps) {
         <div className="flex flex-col items-start gap-3 text-left md:items-end md:text-right">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#33413f]">{detail('monthlyRentWithCharges')}</p>
           <p className="mt-1 text-3xl font-semibold text-[var(--accent)] tabular-nums">{formatMoney(totalMonthly, locale)}</p>
-          <Link className="cursor-pointer focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#00574f]" href={`${localizedPath(locale, '/bail')}?property_id=${bail.property_id}`} style={{color: '#ffffff'}}>
-            {t('edit')}
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link className="cursor-pointer focus-ring inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--line)] bg-white px-5 text-sm font-semibold text-[#171d1c] hover:bg-[#f5faf8]" href={`${localizedPath(locale, '/bail')}?property_id=${bail.property_id}&renew_from=${bail.id}`}>
+              <span className="material-symbols-outlined mr-2 text-[18px]">event_repeat</span>
+              {detail('renewLease')}
+            </Link>
+            <Link className="cursor-pointer focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#00574f]" href={`${localizedPath(locale, '/bail')}?property_id=${bail.property_id}`} style={{color: '#ffffff'}}>
+              {t('edit')}
+            </Link>
+          </div>
         </div>
       </div>
 

@@ -131,9 +131,8 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
       .from('leases')
-      .select('id, monthly_rent, charges_amount, deposit_amount, properties(id, name), tenants(id, full_name), rent_charges(id, period_month, total_due, rent_payments(amount, notes))')
+      .select('id, start_date, end_date, monthly_rent, charges_amount, deposit_amount, properties(id, name), tenants(id, full_name), rent_charges(id, period_month, total_due, rent_payments(amount, notes))')
       .eq('workspace_id', workspaceId)
-      .eq('status', 'active')
       .order('created_at', {ascending: false})
       .returns<LeaseOption[]>(),
     supabase

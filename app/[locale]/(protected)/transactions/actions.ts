@@ -76,13 +76,20 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: lease} = await supabase
     .from('leases')
-    .select('id, monthly_rent, charges_amount')
+    .select('id, start_date, end_date, monthly_rent, charges_amount')
     .eq('id', leaseId)
     .eq('workspace_id', workspaceId)
-    .maybeSingle<{id: string; monthly_rent: number | null; charges_amount: number | null}>();
+    .maybeSingle<{charges_amount: number | null; end_date: string | null; id: string; monthly_rent: number | null; start_date: string}>();
 
   if (!lease) {
     redirect(`${localizedPath(locale, '/transactions')}?error=lease_missing`);
+  }
+
+  const leaseStartMonth = monthStart(lease.start_date);
+  const leaseEndMonth = lease.end_date ? monthStart(lease.end_date) : null;
+
+  if (periodMonth < leaseStartMonth || (leaseEndMonth && periodMonth > leaseEndMonth)) {
+    redirect(`${localizedPath(locale, '/transactions')}?error=revenue_period_outside_lease`);
   }
 
   const rentAmount = Number(lease.monthly_rent ?? 0);
@@ -90,32 +97,35 @@ export async function createRevenueTransactionAction(formData: FormData) {
   const totalDue = rentAmount + chargesAmount;
   const {data: existingCharge} = await supabase
     .from('rent_charges')
-    .select('id, rent_payments(amount, notes)')
+    .select('id, rent_amount, charges_amount, total_due, rent_payments(amount, notes)')
     .eq('workspace_id', workspaceId)
     .eq('lease_id', leaseId)
     .eq('period_month', periodMonth)
-    .maybeSingle<{id: string; rent_payments: {amount: number | null; notes: string | null}[]}>();
+    .maybeSingle<{charges_amount: number | null; id: string; rent_amount: number | null; total_due: number | null; rent_payments: {amount: number | null; notes: string | null}[]}>();
+  const effectiveRentAmount = existingCharge?.rent_amount == null ? rentAmount : Number(existingCharge.rent_amount);
+  const effectiveChargesAmount = existingCharge?.charges_amount == null ? chargesAmount : Number(existingCharge.charges_amount);
+  const effectiveTotalDue = existingCharge?.total_due == null ? totalDue : Number(existingCharge.total_due);
   const alreadyPaid = existingCharge?.rent_payments.filter(isRentPayment).reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
   const nextPaid = alreadyPaid + (type === 'rent' ? amount : 0);
-  const remainingDue = Math.max(0, totalDue - alreadyPaid);
+  const remainingDue = Math.max(0, effectiveTotalDue - alreadyPaid);
 
   if (type === 'rent' && amount > remainingDue) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_overpaid`);
   }
 
-  const status = nextPaid <= 0 ? 'unpaid' : nextPaid < totalDue ? 'partial' : 'paid';
+  const status = nextPaid <= 0 ? 'unpaid' : nextPaid < effectiveTotalDue ? 'partial' : 'paid';
   const {data: charge, error: chargeError} = await supabase
     .from('rent_charges')
     .upsert(
       {
-        charges_amount: chargesAmount,
+        charges_amount: effectiveChargesAmount,
         due_date: receivedAt,
         lease_id: leaseId,
         notes: notes || null,
         period_month: periodMonth,
-        rent_amount: rentAmount,
+        rent_amount: effectiveRentAmount,
         status,
-        total_due: totalDue,
+        total_due: effectiveTotalDue,
         workspace_id: workspaceId
       },
       {onConflict: 'lease_id,period_month'}
