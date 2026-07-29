@@ -197,12 +197,12 @@ function withoutField(fields: Set<string>, field: string) {
   return nextFields;
 }
 
-function MoneyField({defaultValue = 0, invalid = false, label, name, onChange, required = false, validationKey}: {defaultValue?: number; invalid?: boolean; label: string; name: string; onChange?: () => void; required?: boolean; validationKey?: string}) {
+function MoneyField({defaultValue, invalid = false, label, name, onChange, required = false, validationKey}: {defaultValue?: number; invalid?: boolean; label: string; name: string; onChange?: () => void; required?: boolean; validationKey?: string}) {
   return (
     <label className="grid min-w-0 gap-2 text-xs font-semibold text-[#33413f]">
       {label}
       <span className={`relative min-h-11 min-w-0 rounded-md border bg-white ${invalid ? 'border-[#ba1a1a] bg-[#fff7f6]' : 'border-[var(--line)]'}`}>
-        <input className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-12 text-sm font-normal outline-none" data-validation-key={validationKey} defaultValue={defaultValue} min="0" name={name} onChange={onChange} required={required} step="0.01" type="number" />
+        <input className="h-11 w-full min-w-0 border-0 bg-transparent px-3 pr-12 text-sm font-normal outline-none" data-validation-key={validationKey} defaultValue={defaultValue} min="0" name={name} onChange={onChange} placeholder="0" required={required} step="0.01" type="number" />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold">EUR</span>
       </span>
     </label>
