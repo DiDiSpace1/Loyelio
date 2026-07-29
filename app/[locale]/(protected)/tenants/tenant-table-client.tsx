@@ -445,7 +445,14 @@ export function TenantTableClient({
                           {common('edit')}
                         </Link>
                         {hasLease ? (
-                          <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/transactions?new=transaction&tenant_id=${tenant.id}`}>
+                          <Link
+                            className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]"
+                            href={
+                              hasPortfolioAccess && lease
+                                ? `/collections?month=${selectedMonth}&view=all&lease_id=${lease.id}#collection-lease-${lease.id}`
+                                : `/transactions?new=transaction&tenant_id=${tenant.id}`
+                            }
+                          >
                             {t('actions.transaction')}
                           </Link>
                         ) : (

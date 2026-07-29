@@ -62,6 +62,7 @@ type CollectionsPageProps = {
   searchParams: Promise<{
     collection_error?: string;
     collection_success?: string;
+    lease_id?: string;
     month?: string;
     receipts?: string;
     result_skipped?: string;
@@ -272,6 +273,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
   const expectedTotal = rows.reduce((sum, row) => sum + row.totalDue, 0);
   const collectedTotal = rows.reduce((sum, row) => sum + row.paid, 0);
   const visibleRows = rows.filter((row) => rowMatchesView(view, row.status));
+  const focusedLeaseId = rows.some((row) => row.lease.id === params.lease_id) ? params.lease_id : null;
   const defaultPaidAt = new Date().toISOString().slice(0, 10);
   const initialSelected = visibleRows.filter((row) => row.status !== 'paid' && row.totalDue > 0).length;
   const success = params.collection_success === 'collections_updated';
@@ -524,7 +526,14 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                   const tenantName = tenant?.full_name ?? t('unknownTenant');
 
                   return (
-                    <tr className="align-middle hover:bg-[#fbfdfc]" data-collection-row data-collection-status={row.status} hidden={!visible} key={row.lease.id}>
+                    <tr
+                      className={`scroll-mt-24 align-middle hover:bg-[#fbfdfc] ${focusedLeaseId === row.lease.id ? 'bg-[#edf8f4] ring-2 ring-inset ring-[var(--accent)]' : ''}`}
+                      data-collection-row
+                      data-collection-status={row.status}
+                      hidden={!visible}
+                      id={`collection-lease-${row.lease.id}`}
+                      key={row.lease.id}
+                    >
                       <td className="px-5 py-4">
                         <input aria-label={t('columns.select')} className="h-4 w-4 accent-[var(--accent)]" data-collection-status={row.status} defaultChecked={defaultChecked} name="lease_ids" type="checkbox" value={row.lease.id} />
                       </td>
