@@ -48,6 +48,7 @@ type RentCharge = {
     status: string;
     tenants: {
       full_name: string;
+      id: string;
     } | null;
   } | null;
 };
@@ -184,14 +185,21 @@ export default async function DashboardPage() {
     .returns<DashboardProperty[]>();
   const {data: rentCharges} = await supabase
     .from('rent_charges')
-    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(full_name), properties(name))')
+    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(id, full_name), properties(name))')
     .eq('workspace_id', workspaceId)
     .eq('period_month', month)
     .order('created_at', {ascending: false})
     .returns<RentCharge[]>();
+  const {data: overdueRentCharges} = await supabase
+    .from('rent_charges')
+    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(id, full_name), properties(name))')
+    .eq('workspace_id', workspaceId)
+    .lte('period_month', month)
+    .order('period_month', {ascending: false})
+    .returns<RentCharge[]>();
   const {data: trendRentCharges} = await supabase
     .from('rent_charges')
-    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(full_name), properties(name))')
+    .select('id, status, total_due, period_month, rent_payments(amount, notes), leases(status, start_date, end_date, tenants(id, full_name), properties(name))')
     .eq('workspace_id', workspaceId)
     .gte('period_month', chartStart)
     .lt('period_month', chartEnd)
@@ -287,7 +295,6 @@ export default async function DashboardPage() {
   const pendingTotal = currentEffectiveCharges
     .filter((charge) => charge.status !== 'paid' && charge.status !== 'waived' && !isOutstandingRentStatus(charge.status))
     .reduce((sum, charge) => sum + remainingAmount(charge), 0);
-  const unpaidTotal = currentEffectiveCharges.filter((charge) => isOutstandingRentStatus(charge.status)).reduce((sum, charge) => sum + remainingAmount(charge), 0);
   const occupiedProperties = rows.filter((property) => property.leases.some((lease) => isLeaseCurrentlyEffective(lease, today))).length;
   const occupancyRate = rows.length ? Math.round((occupiedProperties / rows.length) * 100) : 0;
   const expiringLeases = rows
@@ -298,7 +305,12 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => String(a.end_date).localeCompare(String(b.end_date)));
   const missingReceipts = (currentExpenses ?? []).filter((expense) => expense.receipt_status === 'missing');
-  const unpaidCharges = currentEffectiveCharges.filter((charge) => isOutstandingRentStatus(charge.status) && remainingAmount(charge) > 0);
+  const unpaidCharges = (overdueRentCharges ?? []).filter(
+    (charge) => isLeaseCurrentlyEffective(charge.leases, today) && isOutstandingRentStatus(charge.status) && remainingAmount(charge) > 0
+  );
+  const unpaidTotal = unpaidCharges.reduce((sum, charge) => sum + remainingAmount(charge), 0);
+  const overdueTenantCount = new Set(unpaidCharges.map((charge) => charge.leases?.tenants?.id).filter(Boolean)).size;
+  const overdueMonth = unpaidCharges[0]?.period_month.slice(0, 7) ?? month.slice(0, 7);
   const propertyPerformance = rows.slice(0, 5).map((property) => {
     const propertyCharges = currentEffectiveCharges.filter((charge) => charge.leases?.properties?.name === property.name);
     const revenue = propertyCharges.reduce((sum, charge) => {
@@ -344,12 +356,13 @@ export default async function DashboardPage() {
         chartPoints={advancedChartPoints}
         collectionHref={
           currentPlan === 'portfolio'
-            ? `/collections?month=${month.slice(0, 7)}&view=open`
-            : `/tenants?month=${month.slice(0, 7)}&view=overdue`
+            ? `/collections?month=${overdueMonth}&view=open`
+            : `/tenants?month=${overdueMonth}&view=overdue`
         }
         expiringLeases={expiringLeases}
         missingReceiptsCount={missingReceipts.length}
         occupancyRate={occupancyRate}
+        overdueTenantCount={overdueTenantCount}
         paidTotal={paidTotal}
         pendingTotal={pendingTotal}
         plan={currentPlan}
@@ -470,6 +483,7 @@ type AdvancedDashboardProps = {
   }[];
   missingReceiptsCount: number;
   occupancyRate: number;
+  overdueTenantCount: number;
   paidTotal: number;
   pendingTotal: number;
   plan: 'plus' | 'portfolio';
@@ -494,7 +508,7 @@ type AdvancedDashboardProps = {
   revenueTrend: number;
 };
 
-function AdvancedDashboard({activeLeaseCount, cashFlowTotal, cashFlowTrend, chartPoints, collectionHref, expiringLeases, missingReceiptsCount, occupancyRate, paidTotal, plan, propertyPerformance, receiptCoverage, t, unpaidCharges, unpaidTotal, unpaidTrendChange, unpaidTrendPoints, revenueTrend}: AdvancedDashboardProps) {
+function AdvancedDashboard({activeLeaseCount, cashFlowTotal, cashFlowTrend, chartPoints, collectionHref, expiringLeases, missingReceiptsCount, occupancyRate, overdueTenantCount, paidTotal, plan, propertyPerformance, receiptCoverage, t, unpaidCharges, unpaidTotal, unpaidTrendChange, unpaidTrendPoints, revenueTrend}: AdvancedDashboardProps) {
   const firstUnpaid = unpaidCharges[0];
   const firstExpiring = expiringLeases[0];
   const planLabel = plan === 'portfolio' ? 'Portfolio' : 'Plus';
@@ -523,7 +537,7 @@ function AdvancedDashboard({activeLeaseCount, cashFlowTotal, cashFlowTrend, char
         <section className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <AdvancedMetric icon="account_balance_wallet" label={t('advanced.kpis.revenue')} note={t('advanced.vsLastMonth', {value: formatTrend(revenueTrend)})} tone="primary" value={formatMoney(paidTotal)} />
           <AdvancedMetric icon="trending_up" label={t('advanced.kpis.cashFlow')} note={t('advanced.vsLastMonth', {value: formatTrend(cashFlowTrend)})} tone="primary" value={formatMoney(cashFlowTotal)} />
-          <AdvancedMetric href={collectionHref} icon="warning" label={t('advanced.kpis.unpaid')} note={t('advanced.unpaidCount', {count: unpaidCharges.length})} tone="error" value={formatMoney(unpaidTotal)} />
+          <AdvancedMetric href={collectionHref} icon="warning" label={t('advanced.kpis.unpaid')} note={t('advanced.unpaidCount', {count: overdueTenantCount})} tone="error" value={formatMoney(unpaidTotal)} />
           <AdvancedMetric icon="pie_chart" label={t('advanced.kpis.occupancy')} note={t('advanced.activeRentals', {count: activeLeaseCount})} tone="primary" value={`${occupancyRate}%`} />
           <AdvancedMetric icon="event_upcoming" label={t('advanced.kpis.leasesWatch')} note={t('advanced.inSixtyDays')} tone="neutral" value={String(expiringLeases.length)} />
         </section>
@@ -545,7 +559,7 @@ function AdvancedDashboard({activeLeaseCount, cashFlowTotal, cashFlowTrend, char
                 },
                 {
                   icon: 'schedule',
-                  title: t('advanced.insights.paymentFollowup', {count: unpaidCharges.length}),
+                  title: t('advanced.insights.paymentFollowup', {count: overdueTenantCount}),
                   text: firstUnpaid ? t('advanced.insights.paymentText', {amount: formatMoney(remainingAmount(firstUnpaid)), tenant: firstUnpaid.leases?.tenants?.full_name ?? t('advanced.tenantFallback')}) : t('advanced.insights.noPaymentText')
                 },
                 {
@@ -596,6 +610,15 @@ function AdvancedMetric({href, icon, label, note, tone, value}: {href?: string; 
 function MonthlyTrendCard({points, t}: {points: AdvancedDashboardProps['chartPoints']; t: AdvancedDashboardProps['t']}) {
   const maxValue = chartMaximum(Math.max(0, ...points.flatMap((point) => [point.revenue, point.expense, Math.abs(point.cashFlow)])));
   const axisTicks = Array.from({length: 5}, (_, index) => maxValue - (maxValue / 4) * index);
+  const plotHeight = 190;
+  const cashFlowLinePoints = points
+    .map((point, index) => {
+      const x = ((index + 0.5) / points.length) * 1000;
+      const y = plotHeight - (Math.max(0, point.cashFlow) / maxValue) * plotHeight;
+
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   return (
     <section className="rounded-xl border border-[#dce5e1] bg-white p-6 shadow-[0_2px_6px_rgba(20,45,38,0.07)]">
@@ -609,25 +632,38 @@ function MonthlyTrendCard({points, t}: {points: AdvancedDashboardProps['chartPoi
       </div>
       {points.length ? (
         <div className="mt-6 grid grid-cols-[52px_minmax(0,1fr)] gap-3">
-          <div className="flex h-[230px] flex-col justify-between pb-8 text-right text-[11px] font-medium tabular-nums text-[#66736f]">
+          <div className="flex h-[190px] flex-col justify-between text-right text-[11px] font-medium tabular-nums text-[#66736f]">
             {axisTicks.map((tick) => <span key={tick}>{formatCompactMoney(tick)}</span>)}
           </div>
           <div className="relative h-[230px] min-w-0">
-            <div className="pointer-events-none absolute inset-x-0 bottom-8 top-0 flex flex-col justify-between">
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[190px] flex-col justify-between">
               {axisTicks.map((tick, index) => <span className={`block border-t ${index === axisTicks.length - 1 ? 'border-[#b9c7c2]' : 'border-dashed border-[#dce5e1]'}`} key={tick} />)}
             </div>
-            <div className="relative flex h-full items-end gap-4 pb-8">
+            <svg aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[190px] w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 190">
+              <polyline fill="none" points={cashFlowLinePoints} stroke="#006f61" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="relative grid h-full" style={{gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`}}>
               {points.map((point) => {
-                const revenueHeight = point.revenue > 0 ? Math.max(6, (point.revenue / maxValue) * 190) : 0;
-                const expenseHeight = point.expense > 0 ? Math.max(6, (point.expense / maxValue) * 190) : 0;
-                const cashFlowBottom = 8 + Math.max(0, (point.cashFlow / maxValue) * 190);
+                const revenueHeight = point.revenue > 0 ? Math.max(6, (point.revenue / maxValue) * plotHeight) : 0;
+                const expenseHeight = point.expense > 0 ? Math.max(6, (point.expense / maxValue) * plotHeight) : 0;
+                const cashFlowBottom = 40 + Math.max(0, (point.cashFlow / maxValue) * plotHeight);
+                const tooltip = `${point.label} · ${t('chart.revenue')}: ${formatMoney(point.revenue)} · ${t('chart.expenses')}: ${formatMoney(point.expense)} · ${t('advanced.trend.cashFlow')}: ${formatMoney(point.cashFlow)}`;
 
                 return (
-                  <div className="relative flex min-w-0 flex-1 items-end justify-center gap-2" key={point.label}>
-                    <div className="w-5 rounded-t-sm bg-[#65cdb7] shadow-[0_1px_2px_rgba(0,111,97,0.16)]" style={{height: `${revenueHeight}px`}} title={`${t('chart.revenue')} ${formatMoney(point.revenue)}`} />
-                    <div className="w-5 rounded-t-sm bg-[#ef5b60] shadow-[0_1px_2px_rgba(186,26,26,0.12)]" style={{height: `${expenseHeight}px`}} title={`${t('chart.expenses')} ${formatMoney(point.expense)}`} />
-                    <span className="absolute h-3 w-3 rounded-full border-2 border-white bg-[#006f61] shadow-sm" style={{bottom: `${cashFlowBottom}px`}} title={`${t('advanced.trend.cashFlow')} ${formatMoney(point.cashFlow)}`} />
-                    <span className="absolute -bottom-6 text-xs font-medium text-[#53615e]">{point.label}</span>
+                  <div className="relative min-w-0" key={point.label}>
+                    <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-end gap-2">
+                      <div className="w-5 rounded-t-sm bg-[#65cdb7] shadow-[0_1px_2px_rgba(0,111,97,0.16)]" style={{height: `${revenueHeight}px`}} title={`${t('chart.revenue')} ${formatMoney(point.revenue)}`} />
+                      <div className="w-5 rounded-t-sm bg-[#ef5b60] shadow-[0_1px_2px_rgba(186,26,26,0.12)]" style={{height: `${expenseHeight}px`}} title={`${t('chart.expenses')} ${formatMoney(point.expense)}`} />
+                    </div>
+                    <button aria-label={tooltip} className="group focus-ring absolute left-1/2 z-10 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white bg-[#006f61] shadow-sm" style={{bottom: `${cashFlowBottom}px`}} type="button">
+                      <span className="pointer-events-none absolute bottom-6 left-1/2 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-[#17201e] px-3 py-2 text-left text-xs font-medium leading-5 text-white shadow-lg group-hover:block group-focus:block" style={{color: '#ffffff'}}>
+                        <span className="block font-semibold">{point.label}</span>
+                        <span className="block">{t('chart.revenue')}: {formatMoney(point.revenue)}</span>
+                        <span className="block">{t('chart.expenses')}: {formatMoney(point.expense)}</span>
+                        <span className="block">{t('advanced.trend.cashFlow')}: {formatMoney(point.cashFlow)}</span>
+                      </span>
+                    </button>
+                    <span className="absolute inset-x-0 bottom-0 text-center text-xs font-medium text-[#53615e]">{point.label}</span>
                   </div>
                 );
               })}
