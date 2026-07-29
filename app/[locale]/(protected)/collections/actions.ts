@@ -9,6 +9,8 @@ import {getWorkspaceBilling} from '@/lib/billing/limits';
 import {normalizedCollectionStatus, recordRentCollectionEvent} from '@/lib/collections/audit';
 import {localizedPath} from '@/lib/navigation';
 import {createQuittanceDocument} from '@/lib/quittance/service';
+import {sendRentReminderEmail} from '@/lib/reminders/email';
+import {createSupabaseAdminClient} from '@/lib/supabase/admin';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 type RentPaymentRow = {
@@ -31,6 +33,19 @@ type LeaseRow = {
   property_id: string | null;
   rent_charges: RentChargeRow[];
   tenant_id: string | null;
+};
+
+type ReminderLeaseRow = {
+  charges_amount: number | null;
+  id: string;
+  monthly_rent: number | null;
+  properties: {name: string} | {name: string}[] | null;
+  rent_charges: {period_month: string; status: string; total_due: number | null}[];
+  rent_reminder_day: number | null;
+  start_date: string;
+  tenant_id: string | null;
+  tenants: {email: string | null; full_name: string} | {email: string | null; full_name: string}[] | null;
+  units: {name: string | null} | {name: string | null}[] | null;
 };
 
 type SkipReason = 'existingPaid' | 'invalidAmount' | 'saveFailed' | 'zeroAmount';
@@ -81,6 +96,129 @@ function paidTotal(charge: RentChargeRow | null | undefined) {
 
 function paymentMethod(value: string) {
   return ['bank_transfer', 'cash', 'cheque', 'card', 'other'].includes(value) ? value : 'bank_transfer';
+}
+
+function relationOne<T>(item: T | T[] | null) {
+  return Array.isArray(item) ? (item[0] ?? null) : item;
+}
+
+function dueDateForMonth(month: string, preferredDay: number) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  const day = Math.min(Math.max(preferredDay, 1), lastDay);
+  return `${month}-${String(day).padStart(2, '0')}`;
+}
+
+export async function sendCollectionReminderAction(formData: FormData) {
+  const locale = value(formData, 'locale') || 'fr';
+  const month = value(formData, 'month');
+  const periodMonth = /^\d{4}-\d{2}$/.test(month) ? `${month}-01` : '';
+  const leaseId = value(formData, 'reminder_lease_id');
+  const returnHref = collectionHref(locale, month, value(formData, 'view'));
+
+  if (!leaseId || !periodMonth) {
+    redirect(withParams(returnHref, {error: 'rent_reminder_failed'}));
+  }
+
+  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
+
+  if (!hasPortfolioAccess) {
+    redirect(withParams(returnHref, {error: 'portfolio_required'}));
+  }
+
+  const {data: lease, error: leaseError} = await supabase
+    .from('leases')
+    .select(
+      'id, tenant_id, start_date, monthly_rent, charges_amount, rent_reminder_day, tenants(full_name, email), properties(name), units(name), rent_charges(period_month, status, total_due)'
+    )
+    .eq('workspace_id', workspaceId)
+    .eq('id', leaseId)
+    .eq('status', 'active')
+    .single<ReminderLeaseRow>();
+
+  if (leaseError || !lease) {
+    redirect(withParams(returnHref, {error: 'rent_reminder_failed'}));
+  }
+
+  const tenant = relationOne(lease.tenants);
+
+  if (!tenant?.email || !lease.tenant_id) {
+    redirect(withParams(returnHref, {error: 'tenant_email_required'}));
+  }
+
+  const charge = lease.rent_charges.find((item) => item.period_month === periodMonth);
+
+  if (charge?.status === 'paid') {
+    redirect(withParams(returnHref, {error: 'rent_reminder_already_paid'}));
+  }
+
+  const property = relationOne(lease.properties);
+  const unit = relationOne(lease.units);
+  const {data: workspace} = await supabase.from('workspaces').select('name').eq('id', workspaceId).single<{name: string}>();
+  const startDay = Number.parseInt(lease.start_date.slice(8, 10), 10);
+  const preferredDay = lease.rent_reminder_day ?? (Number.isFinite(startDay) ? startDay : 1);
+  const dueDate = dueDateForMonth(month, preferredDay);
+  const totalDue = Number(charge?.total_due ?? Number(lease.monthly_rent ?? 0) + Number(lease.charges_amount ?? 0));
+  const propertyLabel = [property?.name, unit?.name].filter(Boolean).join(' - ') || workspace?.name || 'votre logement';
+  const admin = createSupabaseAdminClient();
+  const sentAt = new Date().toISOString();
+
+  try {
+    const providerMessageId = await sendRentReminderEmail({
+      amount: totalDue,
+      dueDate,
+      ownerName: profile.full_name || workspace?.name || 'Votre bailleur',
+      propertyLabel,
+      reminderMonth: periodMonth,
+      tenantEmail: tenant.email,
+      tenantName: tenant.full_name
+    });
+
+    await admin.from('rent_reminder_logs').upsert(
+      {
+        due_date: dueDate,
+        email_to: tenant.email,
+        error_message: null,
+        lease_id: lease.id,
+        provider_message_id: providerMessageId,
+        reminder_month: periodMonth,
+        reminder_type: 'manual_collection',
+        scheduled_for: sentAt.slice(0, 10),
+        sent_at: sentAt,
+        status: 'sent',
+        tenant_id: lease.tenant_id,
+        workspace_id: workspaceId
+      },
+      {onConflict: 'lease_id,reminder_month,reminder_type'}
+    );
+    await admin.from('leases').update({last_rent_reminder_sent_at: sentAt}).eq('id', lease.id).eq('workspace_id', workspaceId);
+  } catch (error) {
+    await admin.from('rent_reminder_logs').upsert(
+      {
+        due_date: dueDate,
+        email_to: tenant.email,
+        error_message: error instanceof Error ? error.message : 'Unknown email error.',
+        lease_id: lease.id,
+        provider_message_id: null,
+        reminder_month: periodMonth,
+        reminder_type: 'manual_collection',
+        scheduled_for: sentAt.slice(0, 10),
+        sent_at: null,
+        status: 'failed',
+        tenant_id: lease.tenant_id,
+        workspace_id: workspaceId
+      },
+      {onConflict: 'lease_id,reminder_month,reminder_type'}
+    );
+    redirect(withParams(returnHref, {error: 'rent_reminder_failed'}));
+  }
+
+  revalidatePath(localizedPath(locale, '/collections'));
+  revalidatePath(localizedPath(locale, '/reminders'));
+  revalidatePath(localizedPath(locale, '/tenants'));
+  redirect(withParams(returnHref, {success: 'rent_reminder_sent'}));
 }
 
 export async function updateCollectionsAction(formData: FormData) {

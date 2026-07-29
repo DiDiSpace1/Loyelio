@@ -759,7 +759,11 @@
       "partialNote": "选择部分付款时，将使用当前行填写的部分付款金额。",
       "cancel": "取消",
       "confirm": "确认",
-      "receiptWarning": "标记为已付款后，系统可能自动生成该租金的收据。"
+      "receiptWarning": "标记为已付款后，系统可能自动生成该租金的收据。",
+      "sendReminder": "发送邮件提醒",
+      "reminderHint": "发送邮件只会提醒租客付款，不会更改当前租金状态。",
+      "missingEmail": "该租客尚未填写邮箱。请先添加邮箱，再发送付款提醒。",
+      "addEmail": "去添加邮箱"
     },
     "unknownTenant": "租客",
     "unknownProperty": "房产",
@@ -1430,6 +1434,7 @@
       "transaction_created": "交易记录添加成功。",
       "transaction_deleted": "交易记录删除成功。",
       "transaction_updated": "交易记录修改成功。",
+      "rent_reminder_sent": "租金提醒邮件已发送。",
       "completed": "任务已完成。"
     },
     "error": {
@@ -1477,6 +1482,9 @@
       "missing_termination": "请填写结束日期。",
       "missing_unit": "未找到对应出租单元。",
       "partial_amount_missing": "请填写部分付款金额。",
+      "rent_reminder_already_paid": "该月份租金已付款，无需发送提醒。",
+      "rent_reminder_failed": "提醒邮件发送失败，请稍后重试。",
+      "tenant_email_required": "该租客尚未填写邮箱，请先添加邮箱。",
       "payment_delete_failed": "付款记录删除失败，请稍后重试。",
       "payment_failed": "付款记录保存失败，请稍后重试。",
       "payment_missing": "请填写付款信息。",

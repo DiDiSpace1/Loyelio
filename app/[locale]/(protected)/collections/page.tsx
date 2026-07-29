@@ -30,7 +30,7 @@ type LeaseRow = {
   }[];
   start_date: string;
   tenant_id: string | null;
-  tenants: Relation<{full_name: string}>;
+  tenants: Relation<{email: string | null; full_name: string}>;
   units: Relation<{name: string | null}>;
 };
 
@@ -223,7 +223,7 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
 
   const {data: leases, error} = await supabase
     .from('leases')
-    .select('id, tenant_id, start_date, end_date, monthly_rent, charges_amount, tenants(full_name), properties(name), units(name), rent_charges(period_month, status, total_due, rent_payments(amount, notes))')
+    .select('id, tenant_id, start_date, end_date, monthly_rent, charges_amount, tenants(full_name, email), properties(name), units(name), rent_charges(period_month, status, total_due, rent_payments(amount, notes))')
     .eq('workspace_id', workspaceId)
     .eq('status', 'active')
     .order('start_date', {ascending: true})
@@ -547,13 +547,17 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                         <CollectionRowActions
                           currentStatus={row.status}
                           labels={{
+                            addEmail: t('rowAction.addEmail'),
                             cancel: t('rowAction.cancel'),
                             confirm: t('rowAction.confirm'),
                             copy: t('rowAction.copy', {tenant: tenantName}),
+                            missingEmail: t('rowAction.missingEmail'),
                             open: t('rowAction.open'),
                             partialAmount: t('columns.partialAmount'),
                             partialNote: t('rowAction.partialNote'),
+                            reminderHint: t('rowAction.reminderHint'),
                             receiptWarning: t('rowAction.receiptWarning'),
+                            sendReminder: t('rowAction.sendReminder'),
                             statuses: {
                               paid: t('status.paid'),
                               partial: t('status.partial'),
@@ -562,6 +566,8 @@ export default async function CollectionsPage({searchParams}: CollectionsPagePro
                             title: t('rowAction.title')
                           }}
                           leaseId={row.lease.id}
+                          tenantEditHref={row.lease.tenant_id ? localizedPath(locale, `/tenants/${row.lease.tenant_id}/edit`) : localizedPath(locale, '/tenants')}
+                          tenantHasEmail={Boolean(relationOne(row.lease.tenants)?.email)}
                         />
                       </td>
                     </tr>

@@ -759,7 +759,11 @@
       "partialNote": "Le montant partiel saisi sur cette ligne sera utilisé.",
       "cancel": "Annuler",
       "confirm": "Confirmer",
-      "receiptWarning": "Marquer ce loyer comme payé peut générer automatiquement sa quittance."
+      "receiptWarning": "Marquer ce loyer comme payé peut générer automatiquement sa quittance.",
+      "sendReminder": "Envoyer un rappel",
+      "reminderHint": "L’envoi rappelle le paiement au locataire sans modifier le statut du loyer.",
+      "missingEmail": "Ce locataire n’a pas encore d’adresse e-mail. Ajoutez-la avant d’envoyer un rappel.",
+      "addEmail": "Ajouter l’e-mail"
     },
     "unknownTenant": "Locataire",
     "unknownProperty": "Bien",
@@ -1430,6 +1434,7 @@
       "transaction_created": "Transaction ajoutée.",
       "transaction_deleted": "Transaction supprimée.",
       "transaction_updated": "Transaction mise à jour.",
+      "rent_reminder_sent": "Le rappel de loyer a été envoyé.",
       "completed": "Tâche terminée."
     },
     "error": {
@@ -1477,6 +1482,9 @@
       "missing_termination": "Renseignez la date de fin.",
       "missing_unit": "Lot introuvable.",
       "partial_amount_missing": "Renseignez le montant du paiement partiel.",
+      "rent_reminder_already_paid": "Ce loyer est déjà payé. Aucun rappel n’est nécessaire.",
+      "rent_reminder_failed": "Impossible d’envoyer le rappel. Réessayez dans un instant.",
+      "tenant_email_required": "Ce locataire n’a pas d’adresse e-mail. Ajoutez-la avant d’envoyer un rappel.",
       "payment_delete_failed": "Impossible de supprimer le paiement.",
       "payment_failed": "Impossible d’enregistrer le paiement.",
       "payment_missing": "Renseignez les informations de paiement.",

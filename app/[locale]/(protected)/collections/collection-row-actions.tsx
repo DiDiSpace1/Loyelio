@@ -3,24 +3,43 @@
 import {useFormStatus} from 'react-dom';
 import {useState} from 'react';
 
+import {sendCollectionReminderAction} from './actions';
+
 type CollectionStatus = 'paid' | 'partial' | 'unpaid';
 
 type RowActionLabels = {
+  addEmail: string;
   cancel: string;
   confirm: string;
   copy: string;
+  missingEmail: string;
   open: string;
   partialAmount: string;
   partialNote: string;
+  reminderHint: string;
   receiptWarning: string;
+  sendReminder: string;
   statuses: Record<CollectionStatus, string>;
   title: string;
 };
 
-export function CollectionRowActions({currentStatus, labels, leaseId}: {currentStatus: CollectionStatus; labels: RowActionLabels; leaseId: string}) {
+export function CollectionRowActions({
+  currentStatus,
+  labels,
+  leaseId,
+  tenantEditHref,
+  tenantHasEmail
+}: {
+  currentStatus: CollectionStatus;
+  labels: RowActionLabels;
+  leaseId: string;
+  tenantEditHref: string;
+  tenantHasEmail: boolean;
+}) {
   const {pending} = useFormStatus();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<CollectionStatus>(currentStatus === 'paid' ? 'unpaid' : 'paid');
+  const [submitting, setSubmitting] = useState<'confirm' | 'reminder' | null>(null);
 
   return (
     <>
@@ -69,14 +88,48 @@ export function CollectionRowActions({currentStatus, labels, leaseId}: {currentS
               </div>
             ) : null}
             {status === 'paid' ? <p className="mt-4 rounded-lg border border-[#b8e5cf] bg-[#edf8f1] p-3 text-sm leading-6 text-[#087a55]">{labels.receiptWarning}</p> : null}
+            {status === 'unpaid' ? (
+              <p className={`mt-4 rounded-lg border p-3 text-sm leading-6 ${tenantHasEmail ? 'border-[#b8d9cf] bg-[#f1f8f5] text-[#245449]' : 'border-[#f0d6b6] bg-[#fff8ec] text-[#7a4a11]'}`}>
+                {tenantHasEmail ? labels.reminderHint : labels.missingEmail}
+              </p>
+            ) : null}
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button className="focus-ring min-h-10 rounded-lg border border-[var(--line)] px-4 text-sm font-semibold hover:bg-[#f5faf8] disabled:cursor-not-allowed disabled:opacity-50" disabled={pending} onClick={() => setOpen(false)} type="button">
                 {labels.cancel}
               </button>
-              <button className="focus-ring inline-flex min-h-10 min-w-20 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-80" disabled={pending} name="single_action" style={{color: '#ffffff'}} type="submit" value={`${leaseId}:${status}`}>
+              {status === 'unpaid' && tenantHasEmail ? (
+                <button
+                  className="focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--accent)] bg-white px-4 text-sm font-semibold text-[var(--accent)] disabled:cursor-wait disabled:opacity-70"
+                  disabled={pending}
+                  formAction={sendCollectionReminderAction}
+                  name="reminder_lease_id"
+                  onClick={() => setSubmitting('reminder')}
+                  type="submit"
+                  value={leaseId}
+                >
+                  <span className="material-symbols-outlined text-[19px]">outgoing_mail</span>
+                  {labels.sendReminder}
+                  {pending && submitting === 'reminder' ? <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent)]/35 border-t-[var(--accent)]" /> : null}
+                </button>
+              ) : null}
+              {status === 'unpaid' && !tenantHasEmail ? (
+                <a className="focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--accent)] bg-white px-4 text-sm font-semibold text-[var(--accent)] hover:bg-[#f5faf8]" href={tenantEditHref}>
+                  <span className="material-symbols-outlined text-[19px]">alternate_email</span>
+                  {labels.addEmail}
+                </a>
+              ) : null}
+              <button
+                className="focus-ring inline-flex min-h-10 min-w-20 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-80"
+                disabled={pending}
+                name="single_action"
+                onClick={() => setSubmitting('confirm')}
+                style={{color: '#ffffff'}}
+                type="submit"
+                value={`${leaseId}:${status}`}
+              >
                 {labels.confirm}
-                {pending ? <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/45 border-t-white" /> : null}
+                {pending && submitting === 'confirm' ? <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/45 border-t-white" /> : null}
               </button>
             </div>
           </div>

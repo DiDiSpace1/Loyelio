@@ -759,7 +759,11 @@
       "partialNote": "The partial amount entered in this row will be used.",
       "cancel": "Cancel",
       "confirm": "Confirm",
-      "receiptWarning": "Marking this rent as paid may automatically generate its receipt."
+      "receiptWarning": "Marking this rent as paid may automatically generate its receipt.",
+      "sendReminder": "Send email reminder",
+      "reminderHint": "Sending a reminder emails the tenant without changing the rent status.",
+      "missingEmail": "This tenant does not have an email address yet. Add one before sending a reminder.",
+      "addEmail": "Add email address"
     },
     "unknownTenant": "Tenant",
     "unknownProperty": "Property",
@@ -1430,6 +1434,7 @@
       "transaction_created": "Transaction added.",
       "transaction_deleted": "Transaction deleted.",
       "transaction_updated": "Transaction updated.",
+      "rent_reminder_sent": "The rent reminder email was sent.",
       "completed": "Task completed."
     },
     "error": {
@@ -1477,6 +1482,9 @@
       "missing_termination": "Enter the end date.",
       "missing_unit": "Unit not found.",
       "partial_amount_missing": "Enter the partial payment amount.",
+      "rent_reminder_already_paid": "This rent is already paid. No reminder is needed.",
+      "rent_reminder_failed": "The reminder could not be sent. Please try again shortly.",
+      "tenant_email_required": "This tenant has no email address. Add one before sending a reminder.",
       "payment_delete_failed": "Unable to delete the payment.",
       "payment_failed": "Unable to save the payment.",
       "payment_missing": "Enter the payment information.",
