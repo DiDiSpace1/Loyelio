@@ -5,6 +5,8 @@ import {useTranslations} from 'next-intl';
 
 import {TransactionActionsMenu, type TransactionActionOption, type TransactionActionRow} from './transaction-actions-menu';
 
+const PAGE_SIZE = 10;
+
 export type TransactionFilter = 'deposit' | 'expense' | 'income';
 
 export type TransactionStat = {
@@ -104,6 +106,7 @@ export function TransactionsOverview({
 }) {
   const t = useTranslations('transactions');
   const [activeFilter, setActiveFilter] = useState<TransactionFilter | null>(null);
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const selectedStat = stats.find((stat) => stat.filter === activeFilter);
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -119,12 +122,21 @@ export function TransactionsOverview({
       return matchesFilter && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
   }, [activeFilter, locale, normalizedQuery, rows]);
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const paginatedRows = filteredRows.slice(pageStart, pageStart + PAGE_SIZE);
+
+  function changeFilter(nextFilter: TransactionFilter | null) {
+    setActiveFilter(nextFilter);
+    setPage(1);
+  }
 
   return (
     <>
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {stats.map((stat) => (
-          <StatCard active={activeFilter === stat.filter} key={stat.filter} stat={stat} onClick={() => setActiveFilter(stat.filter)} />
+          <StatCard active={activeFilter === stat.filter} key={stat.filter} stat={stat} onClick={() => changeFilter(stat.filter)} />
         ))}
       </section>
 
@@ -133,7 +145,7 @@ export function TransactionsOverview({
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-[#171d1c]">{selectedStat?.label ?? t('recentHistory')}</h2>
             {selectedStat ? (
-              <button className="text-lg font-semibold text-[#171d1c] underline underline-offset-4" onClick={() => setActiveFilter(null)} type="button">
+              <button className="text-lg font-semibold text-[#171d1c] underline underline-offset-4" onClick={() => changeFilter(null)} type="button">
                 ({t('reset')})
               </button>
             ) : null}
@@ -144,12 +156,23 @@ export function TransactionsOverview({
             <Icon className="text-[20px] text-[#3d4947]">search</Icon>
             <input
               className="min-w-0 flex-1 border-0 bg-transparent outline-none placeholder:text-[#6b7775]"
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder={t('searchPlaceholder')}
               value={query}
             />
             {query ? (
-              <button aria-label={t('clearSearch')} className="grid h-7 w-7 place-items-center rounded-full text-[#3d4947] hover:bg-white/70" onClick={() => setQuery('')} type="button">
+              <button
+                aria-label={t('clearSearch')}
+                className="grid h-7 w-7 place-items-center rounded-full text-[#3d4947] hover:bg-white/70"
+                onClick={() => {
+                  setQuery('');
+                  setPage(1);
+                }}
+                type="button"
+              >
                 <Icon className="text-[20px]">close</Icon>
               </button>
             ) : null}
@@ -168,8 +191,8 @@ export function TransactionsOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line-soft)]">
-              {filteredRows.length ? (
-                filteredRows.map((row) => {
+              {paginatedRows.length ? (
+                paginatedRows.map((row) => {
                   const actionRow: TransactionActionRow = {
                     amount: row.amount,
                     category: row.category,
@@ -216,6 +239,38 @@ export function TransactionsOverview({
             </tbody>
           </table>
         </div>
+        {filteredRows.length ? (
+          <div className="flex flex-col gap-3 border-t border-[var(--line-soft)] px-6 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[var(--muted)]">
+              {t('pagination.range', {
+                count: filteredRows.length,
+                end: Math.min(pageStart + PAGE_SIZE, filteredRows.length),
+                start: pageStart + 1
+              })}
+            </p>
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <button
+                aria-label={t('pagination.previous')}
+                className="focus-ring grid h-9 w-9 place-items-center rounded-lg border border-[var(--line)] bg-white text-[#33413f] disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={currentPage === 1}
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                type="button"
+              >
+                <Icon className="text-[20px]">chevron_left</Icon>
+              </button>
+              <span className="min-w-20 text-center font-medium tabular-nums text-[#33413f]">{t('pagination.page', {current: currentPage, total: pageCount})}</span>
+              <button
+                aria-label={t('pagination.next')}
+                className="focus-ring grid h-9 w-9 place-items-center rounded-lg border border-[var(--line)] bg-white text-[#33413f] disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+                type="button"
+              >
+                <Icon className="text-[20px]">chevron_right</Icon>
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </>
   );

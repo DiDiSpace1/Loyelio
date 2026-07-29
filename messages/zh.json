@@ -1396,7 +1396,13 @@
     "propertyTenant": "房产 / 租客",
     "amount": "金额",
     "actions": "操作",
-    "noTransactions": "暂无交易记录。"
+    "noTransactions": "暂无交易记录。",
+    "pagination": {
+      "range": "显示第 {start}-{end} 条，共 {count} 条",
+      "page": "第 {current}/{total} 页",
+      "previous": "上一页",
+      "next": "下一页"
+    }
   },
   "routeMessages": {
     "success": {

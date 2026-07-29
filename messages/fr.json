@@ -1396,7 +1396,13 @@
     "propertyTenant": "Bien / Locataire",
     "amount": "Montant",
     "actions": "Actions",
-    "noTransactions": "Aucune transaction pour le moment."
+    "noTransactions": "Aucune transaction pour le moment.",
+    "pagination": {
+      "range": "Affichage de {start} à {end} sur {count}",
+      "page": "Page {current} sur {total}",
+      "previous": "Page précédente",
+      "next": "Page suivante"
+    }
   },
   "routeMessages": {
     "success": {

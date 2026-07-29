@@ -1396,7 +1396,13 @@
     "propertyTenant": "Property / Tenant",
     "amount": "Amount",
     "actions": "Actions",
-    "noTransactions": "No transaction yet."
+    "noTransactions": "No transaction yet.",
+    "pagination": {
+      "range": "Showing {start}-{end} of {count}",
+      "page": "Page {current} of {total}",
+      "previous": "Previous page",
+      "next": "Next page"
+    }
   },
   "routeMessages": {
     "success": {

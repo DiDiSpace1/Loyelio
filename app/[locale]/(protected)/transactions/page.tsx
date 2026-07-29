@@ -205,7 +205,6 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
 	      vendor: row.vendor
     }))
   ].sort((a, b) => b.date.localeCompare(a.date));
-  const combinedRows = params.view ? sortedRows.filter((row, index) => index < 10 || row.id === params.view) : sortedRows.slice(0, 10);
   const stats: TransactionStat[] = [
     {
       filter: 'income',
@@ -253,7 +252,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
         initialViewId={params.view}
         locale={locale}
         properties={(properties ?? []).map((property) => ({id: property.id, label: property.name}))}
-        rows={combinedRows}
+        rows={sortedRows}
         stats={stats}
         taxCategories={(taxCategories ?? []).map((category) => ({id: category.id, label: category.label}))}
       />
