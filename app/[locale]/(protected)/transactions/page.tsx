@@ -1,5 +1,6 @@
 import {getLocale, getTranslations} from 'next-intl/server';
 
+import {canUseAutoQuittance, getWorkspaceBilling} from '@/lib/billing/limits';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {TransactionDrawer, type LeaseOption} from './transaction-drawer';
@@ -26,6 +27,8 @@ type PaymentRow = {
     status: string;
     total_due: number | null;
     leases: {
+      property_id: string;
+      tenant_id: string | null;
       properties: {
         name: string;
       } | null;
@@ -34,6 +37,12 @@ type PaymentRow = {
       } | null;
     } | null;
   } | null;
+};
+
+type ReceiptRow = {
+  period_month: string | null;
+  property_id: string | null;
+  tenant_id: string | null;
 };
 
 type ExpenseRow = {
@@ -126,7 +135,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
   const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const range = monthRange(locale);
   const previousRange = previousMonthRange();
-  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: currentPayments}, {data: previousPayments}, {data: currentExpenses}] = await Promise.all([
+  const [{data: properties}, {data: taxCategories}, {data: leases}, {data: payments}, {data: expenses}, {data: receipts}, billing] = await Promise.all([
     supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
     supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
     supabase
@@ -137,43 +146,37 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       .returns<LeaseOption[]>(),
     supabase
       .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
+      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(property_id, tenant_id, properties(name), tenants(full_name)))')
       .eq('workspace_id', workspaceId)
-      .gte('paid_at', range.start)
-      .lt('paid_at', range.end)
       .order('paid_at', {ascending: false})
-      .returns<PaymentRow[]>(),
-    supabase
-      .from('rent_payments')
-      .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
-      .eq('workspace_id', workspaceId)
-      .gte('paid_at', previousRange.start)
-      .lt('paid_at', previousRange.end)
       .returns<PaymentRow[]>(),
     supabase
       .from('expenses')
       .select('id, amount, description, expense_date, property_id, tax_category_id, vendor, properties(name), tax_categories(label)')
       .eq('workspace_id', workspaceId)
-      .gte('expense_date', range.start)
-      .lt('expense_date', range.end)
       .order('expense_date', {ascending: false})
-      .returns<ExpenseRow[]>()
+      .returns<ExpenseRow[]>(),
+    supabase
+      .from('documents')
+      .select('period_month, property_id, tenant_id')
+      .eq('workspace_id', workspaceId)
+      .eq('document_type', 'rent_receipt')
+      .returns<ReceiptRow[]>(),
+    getWorkspaceBilling(supabase, workspaceId)
   ]);
-  const {data: viewedPayment} = params.view
-    ? await supabase
-        .from('rent_payments')
-        .select('id, amount, paid_at, payment_method, notes, rent_charges(period_month, status, total_due, leases(properties(name), tenants(full_name)))')
-        .eq('workspace_id', workspaceId)
-        .eq('id', params.view)
-        .maybeSingle<PaymentRow>()
-    : {data: null};
-  const currentPaymentRows = currentPayments ?? [];
-  const paymentRows = viewedPayment && !currentPaymentRows.some((row) => row.id === viewedPayment.id) ? [viewedPayment, ...currentPaymentRows] : currentPaymentRows;
-  const expenseRows = currentExpenses ?? [];
+  const paymentRows = payments ?? [];
+  const expenseRows = expenses ?? [];
+  const currentPaymentRows = paymentRows.filter((row) => row.paid_at >= range.start && row.paid_at < range.end);
+  const previousPaymentRows = paymentRows.filter((row) => row.paid_at >= previousRange.start && row.paid_at < previousRange.end);
+  const currentExpenseRows = expenseRows.filter((row) => row.expense_date >= range.start && row.expense_date < range.end);
+  const receiptKeys = new Set(
+    (receipts ?? []).map((receipt) => `${receipt.property_id ?? ''}:${receipt.tenant_id ?? ''}:${receipt.period_month?.slice(0, 7) ?? ''}`)
+  );
+  const autoSyncReceipt = canUseAutoQuittance(billing);
   const monthlyRevenue = currentPaymentRows.filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const monthlyDeposit = currentPaymentRows.filter((row) => noteRevenueType(row.notes) === 'deposit').reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const previousRevenue = (previousPayments ?? []).filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const monthlyExpenses = expenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const previousRevenue = previousPaymentRows.filter(isIncomePayment).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const monthlyExpenses = currentExpenseRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const revenueTrend = previousRevenue > 0 ? ((monthlyRevenue - previousRevenue) / previousRevenue) * 100 : null;
   const sortedRows: TransactionOverviewRow[] = [
     ...paymentRows.map((row) => ({
@@ -185,6 +188,10 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
 	      meta: [row.rent_charges?.leases?.properties?.name, row.rent_charges?.leases?.tenants?.full_name].filter(Boolean).join(' - ') || '-',
       notes: cleanRevenueNotes(row.notes),
 	      paymentMethod: row.payment_method,
+      receiptAutoSync: autoSyncReceipt,
+      receiptExists: receiptKeys.has(
+        `${row.rent_charges?.leases?.property_id ?? ''}:${row.rent_charges?.leases?.tenant_id ?? ''}:${row.rent_charges?.period_month?.slice(0, 7) ?? ''}`
+      ),
       revenueType: noteRevenueType(row.notes),
 	      status: row.rent_charges?.status ?? 'paid',
       type: 'revenue' as const
@@ -225,7 +232,7 @@ export default async function TransactionsPage({searchParams}: TransactionsPageP
       filter: 'expense',
       icon: 'receipt_long',
       label: t('monthlyExpenses'),
-      note: t('transactionCount', {count: expenseRows.length}),
+      note: t('transactionCount', {count: currentExpenseRows.length}),
       tone: 'expense',
       value: formatMoney(monthlyExpenses, locale)
     }

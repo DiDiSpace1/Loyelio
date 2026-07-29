@@ -29,6 +29,8 @@ export type TransactionOverviewRow = {
   notes?: string | null;
   paymentMethod?: string | null;
   propertyId?: string | null;
+  receiptAutoSync?: boolean;
+  receiptExists?: boolean;
   revenueType?: string | null;
   status: string;
   taxCategoryId?: string | null;
@@ -203,6 +205,8 @@ export function TransactionsOverview({
                     notes: row.notes,
                     paymentMethod: row.paymentMethod,
                     propertyId: row.propertyId,
+                    receiptAutoSync: row.receiptAutoSync,
+                    receiptExists: row.receiptExists,
                     revenueType: row.revenueType,
                     taxCategoryId: row.taxCategoryId,
                     type: row.type,

@@ -4,8 +4,9 @@ import {randomUUID} from 'node:crypto';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 
-import {canStoreDocument} from '@/lib/billing/limits';
+import {canStoreDocument, canUseAutoQuittance, getWorkspaceBilling} from '@/lib/billing/limits';
 import {localizedPath} from '@/lib/navigation';
+import {syncQuittanceForRentCharge} from '@/lib/quittance/sync';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 function value(formData: FormData, key: string) {
@@ -73,7 +74,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/transactions')}?error=revenue_missing`);
   }
 
-  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
   const {data: lease} = await supabase
     .from('leases')
     .select('id, start_date, end_date, monthly_rent, charges_amount')
@@ -148,6 +149,17 @@ export async function createRevenueTransactionAction(formData: FormData) {
 
   if (paymentError) {
     redirect(`${localizedPath(locale, '/transactions')}?error=payment_failed`);
+  }
+
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+
+  if (type === 'rent' && status === 'paid' && canUseAutoQuittance(billing)) {
+    try {
+      await syncQuittanceForRentCharge(supabase, workspaceId, charge.id, profile.full_name || profile.email || 'Proprietaire');
+    } catch (error) {
+      console.error('Automatic quittance synchronization failed after transaction creation', {error, rentChargeId: charge.id, workspaceId});
+      redirect(`${localizedPath(locale, '/transactions')}?error=receipt_sync_failed`);
+    }
   }
 
   revalidatePath(localizedPath(locale, '/transactions'));
@@ -262,7 +274,9 @@ export async function updateTransactionAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/transactions')}?error=transaction_missing`);
   }
 
-  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const shouldSyncReceipt = canUseAutoQuittance(billing) || value(formData, 'sync_receipt') === 'true';
 
   if (type === 'revenue') {
     const paidAt = value(formData, 'date') || new Date().toISOString().slice(0, 10);
@@ -301,6 +315,17 @@ export async function updateTransactionAction(formData: FormData) {
     }
 
     await updateRentChargeStatus(supabase, workspaceId, payment.rent_charge_id);
+
+    const nextRevenueType = revenueType(value(formData, 'revenue_type') || noteRevenueType(payment.notes));
+
+    if (shouldSyncReceipt && (isRentPayment(payment) || nextRevenueType === 'rent')) {
+      try {
+        await syncQuittanceForRentCharge(supabase, workspaceId, payment.rent_charge_id, profile.full_name || profile.email || 'Proprietaire');
+      } catch (error) {
+        console.error('Quittance synchronization failed after transaction update', {error, paymentId: id, rentChargeId: payment.rent_charge_id, workspaceId});
+        redirect(`${localizedPath(locale, '/transactions')}?error=receipt_sync_failed`);
+      }
+    }
   } else if (type === 'expense') {
     const expenseDate = value(formData, 'date');
     const {error} = await supabase
@@ -322,6 +347,7 @@ export async function updateTransactionAction(formData: FormData) {
   }
 
   revalidatePath(localizedPath(locale, '/transactions'));
+  revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
   redirect(`${localizedPath(locale, '/transactions')}?success=transaction_updated`);
@@ -336,10 +362,12 @@ export async function deleteTransactionAction(formData: FormData) {
     redirect(`${localizedPath(locale, '/transactions')}?error=transaction_missing`);
   }
 
-  const {supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const {profile, supabase, workspaceId} = await getCurrentUserWorkspace(locale);
+  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const shouldSyncReceipt = canUseAutoQuittance(billing) || value(formData, 'sync_receipt') === 'true';
 
   if (type === 'revenue') {
-    const {data: payment} = await supabase.from('rent_payments').select('rent_charge_id').eq('id', id).eq('workspace_id', workspaceId).single<{rent_charge_id: string}>();
+    const {data: payment} = await supabase.from('rent_payments').select('notes, rent_charge_id').eq('id', id).eq('workspace_id', workspaceId).single<{notes: string | null; rent_charge_id: string}>();
     const {error} = await supabase.from('rent_payments').delete().eq('id', id).eq('workspace_id', workspaceId);
 
     if (error) {
@@ -348,6 +376,15 @@ export async function deleteTransactionAction(formData: FormData) {
 
     if (payment?.rent_charge_id) {
       await updateRentChargeStatus(supabase, workspaceId, payment.rent_charge_id);
+
+      if (shouldSyncReceipt && isRentPayment(payment)) {
+        try {
+          await syncQuittanceForRentCharge(supabase, workspaceId, payment.rent_charge_id, profile.full_name || profile.email || 'Proprietaire');
+        } catch (syncError) {
+          console.error('Quittance synchronization failed after transaction deletion', {error: syncError, paymentId: id, rentChargeId: payment.rent_charge_id, workspaceId});
+          redirect(`${localizedPath(locale, '/transactions')}?error=receipt_sync_failed`);
+        }
+      }
     }
   } else if (type === 'expense') {
     const {error} = await supabase.from('expenses').delete().eq('id', id).eq('workspace_id', workspaceId);
@@ -358,6 +395,7 @@ export async function deleteTransactionAction(formData: FormData) {
   }
 
   revalidatePath(localizedPath(locale, '/transactions'));
+  revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
   redirect(`${localizedPath(locale, '/transactions')}?success=transaction_deleted`);

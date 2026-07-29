@@ -20,6 +20,8 @@ export type TransactionActionRow = {
   notes?: string | null;
   paymentMethod?: string | null;
   propertyId?: string | null;
+  receiptAutoSync?: boolean;
+  receiptExists?: boolean;
   revenueType?: string | null;
   taxCategoryId?: string | null;
   type: 'expense' | 'revenue';
@@ -57,7 +59,9 @@ export function TransactionActionsMenu({
   const summaryRef = useRef<HTMLElement>(null);
   const [viewOpen, setViewOpen] = useState(initialViewOpen);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [position, setPosition] = useState({left: 0, top: 0});
+  const canOfferReceiptSync = row.type === 'revenue' && row.revenueType === 'rent' && row.receiptExists && !row.receiptAutoSync;
 
   useEffect(() => {
     const close = (event: Event) => {
@@ -117,23 +121,62 @@ export function TransactionActionsMenu({
           <button className="w-full rounded-md px-3 py-2 text-left hover:bg-[#f0f5f2] cursor-pointer" onClick={() => setEditOpen(true)} type="button">
             {common('edit')}
           </button>
-          <form action={deleteTransactionAction}>
+          {canOfferReceiptSync ? (
+            <button className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0]" onClick={() => setDeleteOpen(true)} type="button">
+              {common('delete')}
+            </button>
+          ) : (
+            <form action={deleteTransactionAction}>
+              <input name="locale" type="hidden" value={locale} />
+              <input name="type" type="hidden" value={row.type} />
+              <input name="revenue_type" type="hidden" value={row.revenueType ?? 'rent'} />
+              <input name="id" type="hidden" value={row.id} />
+              <input name="sync_receipt" type="hidden" value={row.receiptAutoSync ? 'true' : 'false'} />
+              <ConfirmSubmitButton
+                cancelLabel={common('cancel')}
+                className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0]"
+                confirmLabel={common('delete')}
+                description={t('deleteDescription')}
+                title={t('deleteTitle')}
+              >
+                {common('delete')}
+              </ConfirmSubmitButton>
+            </form>
+          )}
+        </div>
+      </details>
+
+      {deleteOpen ? (
+        <Modal hideHeaderClose title={t('receiptDeleteTitle')} onClose={() => setDeleteOpen(false)}>
+          <form action={deleteTransactionAction} className="grid gap-5">
             <input name="locale" type="hidden" value={locale} />
             <input name="type" type="hidden" value={row.type} />
             <input name="revenue_type" type="hidden" value={row.revenueType ?? 'rent'} />
             <input name="id" type="hidden" value={row.id} />
-            <ConfirmSubmitButton
-              cancelLabel={common('cancel')}
-              className="w-full rounded-md px-3 py-2 text-left text-[#ba1a1a] hover:bg-[#fff3f0] cursor-pointer"
-              confirmLabel={common('delete')}
-              description={t('deleteDescription')}
-              title={t('deleteTitle')}
-            >
-              {common('delete')}
-            </ConfirmSubmitButton>
+            <p className="text-sm leading-6 text-[#53615f]">{t('receiptDeleteDescription')}</p>
+            <div className="flex flex-col-reverse gap-3 border-t border-[var(--line-soft)] pt-4 sm:flex-row sm:justify-end">
+              <button className="focus-ring min-h-11 rounded-md border border-[var(--line)] px-4 text-sm font-semibold" onClick={() => setDeleteOpen(false)} type="button">
+                {common('cancel')}
+              </button>
+              <PendingSubmitButton
+                className="focus-ring min-h-11 rounded-md border border-[#e5a5a5] px-4 text-sm font-semibold text-[#9f1d1d] disabled:cursor-wait disabled:opacity-70"
+                name="sync_receipt"
+                value="false"
+              >
+                {t('deleteTransactionOnly')}
+              </PendingSubmitButton>
+              <PendingSubmitButton
+                className="focus-ring min-h-11 rounded-md bg-[#ba1a1a] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70"
+                name="sync_receipt"
+                style={{color: '#ffffff'}}
+                value="true"
+              >
+                {t('deleteWithReceipt')}
+              </PendingSubmitButton>
+            </div>
           </form>
-        </div>
-      </details>
+        </Modal>
+      ) : null}
 
       {viewOpen ? (
         <Modal title={t('detailTitle')} onClose={() => setViewOpen(false)}>
@@ -156,6 +199,7 @@ export function TransactionActionsMenu({
             <input name="locale" type="hidden" value={locale} />
             <input name="type" type="hidden" value={row.type} />
             <input name="id" type="hidden" value={row.id} />
+            {row.receiptAutoSync ? <input name="sync_receipt" type="hidden" value="true" /> : null}
             <label className="grid gap-2 text-sm text-[#3d4947]">
               {t('date')}
               <DateDisplayInput className="focus-ring h-11 min-h-11 w-full rounded-md border border-[var(--line)] px-3" defaultValue={row.date} name="date" required />
@@ -183,6 +227,15 @@ export function TransactionActionsMenu({
                   {t('additionalNote')}
                   <textarea className="focus-ring min-h-24 rounded-md border border-[var(--line)] px-3 py-3" defaultValue={row.notes ?? ''} name="notes" />
                 </label>
+                {canOfferReceiptSync ? (
+                  <label className="flex items-start gap-3 rounded-lg border border-[#b9d9cf] bg-[#f1faf6] p-4 text-sm text-[#24423b]">
+                    <input className="mt-0.5 h-4 w-4 accent-[var(--accent)]" defaultChecked name="sync_receipt" type="checkbox" value="true" />
+                    <span>
+                      <strong className="block font-semibold">{t('receiptEditOption')}</strong>
+                      <span className="mt-1 block leading-5 text-[#53615f]">{t('receiptEditDescription')}</span>
+                    </span>
+                  </label>
+                ) : null}
               </>
             ) : (
               <>
