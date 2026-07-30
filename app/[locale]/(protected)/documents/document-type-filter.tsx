@@ -40,7 +40,7 @@ function syncRows(type: string) {
   }
 }
 
-export function DocumentTypeFilter({folders, initialType}: {folders: FolderItem[]; initialType: string}) {
+export function DocumentTypeFilter({folders, hrefForType, initialType}: {folders: FolderItem[]; hrefForType: (type: string) => string; initialType: string}) {
   const [type, setType] = useState(initialType);
 
   useEffect(() => {
@@ -62,10 +62,8 @@ export function DocumentTypeFilter({folders, initialType}: {folders: FolderItem[
       return;
     }
 
-    const query = new URLSearchParams(window.location.search);
-    query.set('type', nextType);
-    window.history.pushState(null, '', `${window.location.pathname}?${query.toString()}`);
     setType(nextType);
+    window.location.assign(hrefForType(nextType));
   }
 
   return (

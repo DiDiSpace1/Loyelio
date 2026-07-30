@@ -2,6 +2,7 @@ import {Link} from '@/components/app/localized-link';
 import {getLocale, getTranslations} from 'next-intl/server';
 
 import {ConfirmSubmitButton} from '@/components/app/confirm-submit-button';
+import {localizedPath} from '@/lib/navigation';
 import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {deleteDocumentAction} from './actions';
@@ -46,6 +47,7 @@ type DocumentWithUrl = DocumentRow & {
 type DocumentsPageProps = {
   searchParams: Promise<{
     error?: string;
+    page?: string;
     property_id?: string;
     q?: string;
     type?: string;
@@ -66,6 +68,13 @@ const FOLDER_TYPES = [
   {iconClassName: 'bg-[#dde1ff] text-[#3755c3]', labelKey: 'rentReceipt', value: 'rent_receipt'},
   {iconClassName: 'bg-[#dee4e1] text-[#3d4947]', labelKey: 'tax', value: 'tax'}
 ];
+
+const DOCUMENT_PAGE_SIZE = 10;
+
+function parsePage(value: string | undefined) {
+  const page = value ? Number.parseInt(value, 10) : 1;
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
 
 function formatBytes(bytes: number | null) {
   if (!bytes) {
@@ -99,6 +108,86 @@ function typeMeta(type: string) {
 
 function formatDate(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(value));
+}
+
+function documentsHref(input: {locale: string; page?: number; propertyId: string; query: string; type: string; year: number | null}) {
+  const params = new URLSearchParams();
+
+  if (input.query) {
+    params.set('q', input.query);
+  }
+
+  if (input.year) {
+    params.set('year', String(input.year));
+  }
+
+  if (input.type) {
+    params.set('type', input.type);
+  }
+
+  if (input.propertyId) {
+    params.set('property_id', input.propertyId);
+  }
+
+  if (input.page && input.page > 1) {
+    params.set('page', String(input.page));
+  }
+
+  const query = params.toString();
+  return `${localizedPath(input.locale, '/documents')}${query ? `?${query}` : ''}`;
+}
+
+function DocumentPagination({
+  count,
+  currentPage,
+  hrefForPage,
+  labels,
+  pageCount
+}: {
+  count: number;
+  currentPage: number;
+  hrefForPage: (page: number) => string;
+  labels: {
+    next: string;
+    pageStatus: string;
+    previous: string;
+    summary: string;
+  };
+  pageCount: number;
+}) {
+  if (count <= DOCUMENT_PAGE_SIZE) {
+    return null;
+  }
+
+  const start = (currentPage - 1) * DOCUMENT_PAGE_SIZE + 1;
+  const end = Math.min(currentPage * DOCUMENT_PAGE_SIZE, count);
+  const buttonClass = 'focus-ring inline-flex min-h-9 items-center justify-center rounded-md border border-[var(--line)] bg-white px-3 text-sm font-semibold text-[#33413f] hover:bg-[#f0f5f2]';
+  const disabledClass = 'inline-flex min-h-9 cursor-not-allowed items-center justify-center rounded-md border border-[var(--line-soft)] bg-[#f8fbfa] px-3 text-sm font-semibold text-[#9aa5a2]';
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-[var(--line-soft)] px-5 py-4 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+      <p>{labels.summary.replace('{start}', String(start)).replace('{end}', String(end)).replace('{count}', String(count))}</p>
+      <div className="flex items-center gap-2">
+        {currentPage > 1 ? (
+          <Link className={buttonClass} href={hrefForPage(currentPage - 1)}>
+            {labels.previous}
+          </Link>
+        ) : (
+          <span className={disabledClass}>{labels.previous}</span>
+        )}
+        <span className="min-w-20 text-center text-xs font-semibold text-[#53615e]">
+          {labels.pageStatus.replace('{page}', String(currentPage)).replace('{count}', String(pageCount))}
+        </span>
+        {currentPage < pageCount ? (
+          <Link className={buttonClass} href={hrefForPage(currentPage + 1)}>
+            {labels.next}
+          </Link>
+        ) : (
+          <span className={disabledClass}>{labels.next}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function FileTypeIcon({type}: {type: string}) {
@@ -143,6 +232,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
   const locale = await getLocale();
   const params = await searchParams;
   const query = params.q?.trim() ?? '';
+  const requestedPage = parsePage(params.page);
   const selectedPropertyId = params.property_id ?? '';
   const selectedType = FOLDER_TYPES.some((folder) => folder.value === params.type) ? params.type ?? '' : '';
   const currentYear = new Date().getFullYear();
@@ -155,20 +245,40 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
     .select('id, document_type, file_name, file_path, mime_type, size_bytes, created_at, properties(name), units(name), tenants(full_name)')
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
+  let documentCountQuery = supabase.from('documents').select('id', {count: 'exact', head: true}).eq('workspace_id', workspaceId);
+  let folderCountQuery = supabase.from('documents').select('document_type').eq('workspace_id', workspaceId);
 
   if (selectedPropertyId) {
     documentQuery = documentQuery.eq('property_id', selectedPropertyId);
+    documentCountQuery = documentCountQuery.eq('property_id', selectedPropertyId);
+    folderCountQuery = folderCountQuery.eq('property_id', selectedPropertyId);
   }
 
   if (selectedYear) {
     documentQuery = documentQuery.gte('created_at', selectedYear.start).lt('created_at', selectedYear.end);
+    documentCountQuery = documentCountQuery.gte('created_at', selectedYear.start).lt('created_at', selectedYear.end);
+    folderCountQuery = folderCountQuery.gte('created_at', selectedYear.start).lt('created_at', selectedYear.end);
   }
 
   if (query) {
     documentQuery = documentQuery.ilike('file_name', `%${query}%`);
+    documentCountQuery = documentCountQuery.ilike('file_name', `%${query}%`);
+    folderCountQuery = folderCountQuery.ilike('file_name', `%${query}%`);
   }
 
-  const {data: documents, error: documentsError} = await documentQuery.limit(50).returns<DocumentRow[]>();
+  if (selectedType) {
+    documentQuery = documentQuery.eq('document_type', selectedType);
+    documentCountQuery = documentCountQuery.eq('document_type', selectedType);
+  }
+
+  const {count: documentCount} = await documentCountQuery;
+  const pageCount = Math.max(1, Math.ceil((documentCount ?? 0) / DOCUMENT_PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, pageCount);
+  const pageStart = (currentPage - 1) * DOCUMENT_PAGE_SIZE;
+  const [{data: documents, error: documentsError}, {data: folderDocuments}] = await Promise.all([
+    documentQuery.range(pageStart, pageStart + DOCUMENT_PAGE_SIZE - 1).returns<DocumentRow[]>(),
+    folderCountQuery.returns<{document_type: string}[]>()
+  ]);
   const documentsWithUrls: DocumentWithUrl[] = await Promise.all(
     (documents ?? []).map(async (document) => {
       const [{data: viewData}, {data: downloadData}] = await Promise.all([
@@ -187,7 +297,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
   );
   const folderCounts = new Map<string, number>();
 
-  for (const document of documents ?? []) {
+  for (const document of folderDocuments ?? []) {
     folderCounts.set(document.document_type, (folderCounts.get(document.document_type) ?? 0) + 1);
   }
 
@@ -281,6 +391,7 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
           label: t(`types.${folder.labelKey}`),
           value: folder.value
         }))}
+        hrefForType={(type) => documentsHref({locale, propertyId: selectedPropertyId, query, type, year: selectedYear?.year ?? null})}
         initialType={selectedType}
       />
 
@@ -368,6 +479,18 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
         ) : (
           <div className="p-8 text-center text-sm text-[var(--muted)]">{t('empty')}</div>
         )}
+        <DocumentPagination
+          count={documentCount ?? 0}
+          currentPage={currentPage}
+          hrefForPage={(page) => documentsHref({locale, page, propertyId: selectedPropertyId, query, type: selectedType, year: selectedYear?.year ?? null})}
+          labels={{
+            next: t('nextPage'),
+            pageStatus: t('pageStatus', {count: pageCount, page: currentPage}),
+            previous: t('previousPage'),
+            summary: t('paginationSummary', {count: documentCount ?? 0, end: Math.min(currentPage * DOCUMENT_PAGE_SIZE, documentCount ?? 0), start: pageStart + 1})
+          }}
+          pageCount={pageCount}
+        />
       </section>
     </>
   );
