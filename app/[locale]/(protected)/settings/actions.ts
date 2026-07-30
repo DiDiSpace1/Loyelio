@@ -285,6 +285,7 @@ export async function createCheckoutSessionAction(formData: FormData) {
 
   try {
     session = await stripe.checkout.sessions.create({
+      allow_promotion_codes: true,
       cancel_url: `${returnUrl}${safeReturnPath.includes('?') ? '&' : '?'}checkout=cancelled`,
       customer: customerId,
       line_items: [
