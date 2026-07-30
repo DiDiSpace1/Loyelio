@@ -4,6 +4,7 @@ import {useEffect, useState} from 'react';
 
 type FolderItem = {
   countLabel: string;
+  href: string;
   iconClassName: string;
   label: string;
   value: string;
@@ -40,7 +41,7 @@ function syncRows(type: string) {
   }
 }
 
-export function DocumentTypeFilter({folders, hrefForType, initialType}: {folders: FolderItem[]; hrefForType: (type: string) => string; initialType: string}) {
+export function DocumentTypeFilter({folders, initialType}: {folders: FolderItem[]; initialType: string}) {
   const [type, setType] = useState(initialType);
 
   useEffect(() => {
@@ -57,13 +58,13 @@ export function DocumentTypeFilter({folders, hrefForType, initialType}: {folders
     return () => window.removeEventListener('popstate', handlePopState);
   }, [folders]);
 
-  function changeType(nextType: string) {
+  function changeType(nextType: string, href: string) {
     if (nextType === type) {
       return;
     }
 
     setType(nextType);
-    window.location.assign(hrefForType(nextType));
+    window.location.assign(href);
   }
 
   return (
@@ -76,7 +77,7 @@ export function DocumentTypeFilter({folders, hrefForType, initialType}: {folders
             type === folder.value ? 'border-[var(--accent)]' : 'border-[var(--line-soft)]'
           ].join(' ')}
           key={folder.value}
-          onClick={() => changeType(folder.value)}
+          onClick={() => changeType(folder.value, folder.href)}
           type="button"
         >
           <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg ${folder.iconClassName}`}>

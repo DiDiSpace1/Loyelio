@@ -387,11 +387,11 @@ export default async function DocumentsPage({searchParams}: DocumentsPageProps) 
       <DocumentTypeFilter
         folders={FOLDER_TYPES.map((folder) => ({
           countLabel: t('fileCount', {count: folderCounts.get(folder.value) ?? 0}),
+          href: documentsHref({locale, propertyId: selectedPropertyId, query, type: folder.value, year: selectedYear?.year ?? null}),
           iconClassName: folder.iconClassName,
           label: t(`types.${folder.labelKey}`),
           value: folder.value
         }))}
-        hrefForType={(type) => documentsHref({locale, propertyId: selectedPropertyId, query, type, year: selectedYear?.year ?? null})}
         initialType={selectedType}
       />
 
