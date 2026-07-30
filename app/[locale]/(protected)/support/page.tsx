@@ -50,7 +50,7 @@ export default async function SupportPage({searchParams}: {searchParams: Promise
       {params.success ? <Banner tone="success" text={t(`success.${params.success}`)} /> : null}
       {params.error ? <Banner tone="error" text={t(`errors.${params.error}`)} /> : null}
 
-      <div className="mt-8 max-w-3xl">
+      <div className="mt-8 w-full">
         <form action={createPrioritySupportTicketAction} className="rounded-xl border border-[var(--line-soft)] bg-white p-6 shadow-sm">
           <input name="locale" type="hidden" value={locale} />
           <h2 className="text-lg font-semibold">{t('newTicket')}</h2>
