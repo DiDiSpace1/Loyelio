@@ -61,6 +61,18 @@ function isRentPayment(payment: {notes?: string | null}) {
   return noteRevenueType(payment.notes) === 'rent';
 }
 
+function redirectHref(locale: string, formData: FormData, fallbackPath: `/${string}`, params?: Record<string, string>) {
+  const fallback = `${localizedPath(locale, fallbackPath)}${params ? `?${new URLSearchParams(params).toString()}` : ''}`;
+  const returnHref = value(formData, 'return_href');
+  const localeRoot = localizedPath(locale, '/');
+
+  if (!returnHref || returnHref.startsWith('//') || !returnHref.startsWith(localeRoot)) {
+    return fallback;
+  }
+
+  return returnHref;
+}
+
 export async function createRevenueTransactionAction(formData: FormData) {
   const locale = value(formData, 'locale') || 'fr';
   const leaseId = value(formData, 'lease_id');
@@ -166,7 +178,7 @@ export async function createRevenueTransactionAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(`${localizedPath(locale, '/transactions')}?success=transaction_created`);
+  redirect(redirectHref(locale, formData, '/transactions', {success: 'transaction_created'}));
 }
 
 export async function createExpenseTransactionAction(formData: FormData) {
@@ -242,7 +254,7 @@ export async function createExpenseTransactionAction(formData: FormData) {
   revalidatePath(localizedPath(locale, '/documents'));
   revalidatePath(localizedPath(locale, '/dashboard'));
   revalidatePath(localizedPath(locale, '/tax'));
-  redirect(`${localizedPath(locale, '/transactions')}?success=transaction_created`);
+  redirect(redirectHref(locale, formData, '/transactions', {success: 'transaction_created'}));
 }
 
 async function updateRentChargeStatus(supabase: Awaited<ReturnType<typeof getCurrentUserWorkspace>>['supabase'], workspaceId: string, rentChargeId: string) {

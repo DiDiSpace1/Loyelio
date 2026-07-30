@@ -7,6 +7,7 @@ import {getCurrentUserWorkspace} from '@/lib/workspace';
 
 import {createTenantAction} from './actions';
 import {TenantTableClient} from './tenant-table-client';
+import type {LeaseOption, PropertyOption, TaxCategoryOption} from '../transactions/transaction-drawer';
 
 type TenantRow = {
   id: string;
@@ -77,8 +78,18 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
     .eq('workspace_id', workspaceId)
     .order('created_at', {ascending: false});
 
-  const {data: tenants, error} = await query.returns<TenantRow[]>();
-  const billing = await getWorkspaceBilling(supabase, workspaceId);
+  const [{data: tenants, error}, {data: transactionProperties}, {data: taxCategories}, {data: transactionLeases}, billing] = await Promise.all([
+    query.returns<TenantRow[]>(),
+    supabase.from('properties').select('id, name').eq('workspace_id', workspaceId).order('name', {ascending: true}).returns<PropertyOption[]>(),
+    supabase.from('tax_categories').select('id, label').eq('country_code', 'FR').eq('tax_regime', 'LMNP').eq('active', true).order('sort_order', {ascending: true}).returns<TaxCategoryOption[]>(),
+    supabase
+      .from('leases')
+      .select('id, start_date, end_date, monthly_rent, charges_amount, deposit_amount, properties(id, name), tenants(id, full_name), rent_charges(id, period_month, total_due, rent_payments(amount, notes))')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', {ascending: false})
+      .returns<LeaseOption[]>(),
+    getWorkspaceBilling(supabase, workspaceId)
+  ]);
   const hasReminderAccess = canUseRentReminders(billing);
   const hasPortfolioAccess = hasPaidAccess(billing) && normalizeBillingPlan(billing?.plan) === 'portfolio';
   const allRows = tenants ?? [];
@@ -121,7 +132,18 @@ export default async function TenantsPage({searchParams}: TenantsPageProps) {
       {showCreate ? (
         <CreateTenantView hasReminderAccess={hasReminderAccess} locale={locale} />
       ) : (
-        <TenantTableClient hasPortfolioAccess={hasPortfolioAccess} hasReminderAccess={hasReminderAccess} initialMonth={selectedMonth} initialQuery={queryText} initialView={selectedView} locale={locale} tenants={allRows} />
+        <TenantTableClient
+          hasPortfolioAccess={hasPortfolioAccess}
+          hasReminderAccess={hasReminderAccess}
+          initialMonth={selectedMonth}
+          initialQuery={queryText}
+          initialView={selectedView}
+          locale={locale}
+          properties={transactionProperties ?? []}
+          taxCategories={taxCategories ?? []}
+          tenants={allRows}
+          transactionLeases={transactionLeases ?? []}
+        />
       )}
     </>
   );

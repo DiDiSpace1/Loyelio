@@ -7,12 +7,12 @@ import {DateDisplayInput, MonthDisplayInput} from '@/components/forms/date-displ
 
 import {createExpenseTransactionAction, createRevenueTransactionAction} from './actions';
 
-type PropertyOption = {
+export type PropertyOption = {
   id: string;
   name: string;
 };
 
-type TaxCategoryOption = {
+export type TaxCategoryOption = {
   id: string;
   label: string;
 };
@@ -86,7 +86,10 @@ export function TransactionDrawer({
   initialTenantId,
   leases,
   locale,
+  onClose,
   properties,
+  returnHref,
+  showTrigger = true,
   taxCategories
 }: {
   initialLeaseId?: string;
@@ -96,7 +99,10 @@ export function TransactionDrawer({
   initialTenantId?: string;
   leases: LeaseOption[];
   locale: string;
+  onClose?: () => void;
   properties: PropertyOption[];
+  returnHref?: string;
+  showTrigger?: boolean;
   taxCategories: TaxCategoryOption[];
 }) {
   const t = useTranslations('transactions');
@@ -116,26 +122,32 @@ export function TransactionDrawer({
   const selectedLease = useMemo(() => leases.find((lease) => lease.id === selectedLeaseId), [leases, selectedLeaseId]);
   const amountDue = remainingForPeriod(selectedLease, periodMonth);
   const amountPlaceholder = revenueType === 'deposit' ? Number(selectedLease?.deposit_amount ?? 0).toFixed(2).replace('.', ',') : revenueType === 'rent' ? '560,00' : '0,00';
+  const closeDrawer = () => {
+    setOpen(false);
+    onClose?.();
+  };
 
   return (
     <>
-      <button
-        className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[var(--accent-strong)]"
-        onClick={() => setOpen(true)}
-        style={{color: '#ffffff'}}
-        type="button"
-      >
-        <Icon className="text-[18px]">add</Icon>
-        {t('addTransaction')}
-      </button>
+      {showTrigger ? (
+        <button
+          className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[var(--accent-strong)]"
+          onClick={() => setOpen(true)}
+          style={{color: '#ffffff'}}
+          type="button"
+        >
+          <Icon className="text-[18px]">add</Icon>
+          {t('addTransaction')}
+        </button>
+      ) : null}
 
       {open ? (
         <div className="fixed inset-0 z-[10000]">
-          <button aria-label={t('close')} className="absolute inset-0 bg-[#171d1c]/45" onClick={() => setOpen(false)} type="button" />
+          <button aria-label={t('close')} className="absolute inset-0 bg-[#171d1c]/45" onClick={closeDrawer} type="button" />
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-[520px] flex-col bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--line-soft)] px-6 py-5">
               <h2 className="text-xl font-semibold text-[#171d1c]">{t('addTransaction')}</h2>
-              <button className="focus-ring rounded-md p-2 text-[#171d1c] hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button">
+              <button className="focus-ring rounded-md p-2 text-[#171d1c] hover:bg-[#f0f5f2]" onClick={closeDrawer} type="button">
                 <Icon>close</Icon>
               </button>
             </div>
@@ -163,6 +175,7 @@ export function TransactionDrawer({
               {mode === 'revenue' ? (
                 <form action={createRevenueTransactionAction} className="grid gap-5" id="transaction-revenue-form">
                   <input name="locale" type="hidden" value={locale} />
+                  {returnHref ? <input name="return_href" type="hidden" value={returnHref} /> : null}
                   <label className="grid gap-2 text-sm text-[#3d4947]">
                     {t('revenueType')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm text-[#171d1c]" name="revenue_type" value={revenueType} onChange={(event) => setRevenueType(event.target.value as 'deposit' | 'other' | 'rent')}>
@@ -246,6 +259,7 @@ export function TransactionDrawer({
               ) : (
                 <form action={createExpenseTransactionAction} className="grid gap-5" id="transaction-expense-form">
                   <input name="locale" type="hidden" value={locale} />
+                  {returnHref ? <input name="return_href" type="hidden" value={returnHref} /> : null}
                   <label className="grid gap-2 text-sm text-[#3d4947]">
                     {t('expenseCategory')}
                     <select className="focus-ring min-h-11 rounded-md border border-[var(--line)] bg-white px-3 text-sm" name="tax_category_id" defaultValue={taxCategories[0]?.id ?? ''}>
@@ -328,7 +342,7 @@ export function TransactionDrawer({
             </div>
 
             <div className="grid grid-cols-[1fr_1.6fr] gap-4 border-t border-[var(--line-soft)] bg-[#fbfdfc] px-6 py-5">
-              <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white text-sm font-semibold hover:bg-[#f0f5f2]" onClick={() => setOpen(false)} type="button">
+              <button className="focus-ring min-h-11 rounded-lg border border-[var(--line)] bg-white text-sm font-semibold hover:bg-[#f0f5f2]" onClick={closeDrawer} type="button">
                 {common('cancel')}
               </button>
               <button className="focus-ring min-h-11 rounded-lg bg-[var(--accent)] text-sm font-semibold text-white shadow-sm hover:bg-[var(--accent-strong)]" form={mode === 'revenue' ? 'transaction-revenue-form' : 'transaction-expense-form'} style={{color: '#ffffff'}} type="submit">

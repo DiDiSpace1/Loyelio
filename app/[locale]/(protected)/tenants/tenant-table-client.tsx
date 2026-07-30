@@ -10,6 +10,7 @@ import {isOutstandingRentStatus, leaseHasOverdueRent} from '@/lib/rent/overdue';
 import {deleteTenantAction, updateLeaseReminderAction, updateTenantActiveAction, updateTenantBatchActiveAction} from './actions';
 import {DeleteTenantButton} from './delete-tenant-button';
 import {TenantActionDetails} from './tenant-action-details';
+import {TransactionDrawer, type LeaseOption, type PropertyOption, type TaxCategoryOption} from '../transactions/transaction-drawer';
 
 export type TenantTableRow = {
   id: string;
@@ -38,6 +39,12 @@ const MONTH_PARAM_PATTERN = /^\d{4}-\d{2}$/;
 const TENANT_VIEWS = ['active', 'all', 'expiring', 'overdue', 'unassigned'] as const;
 
 type TenantView = (typeof TENANT_VIEWS)[number];
+
+type TransactionDrawerRequest = {
+  leaseId: string;
+  periodMonth: string;
+  tenantId: string;
+};
 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -183,7 +190,10 @@ export function TenantTableClient({
   initialQuery,
   initialView,
   locale,
-  tenants
+  properties,
+  taxCategories,
+  tenants,
+  transactionLeases
 }: {
   hasPortfolioAccess: boolean;
   hasReminderAccess: boolean;
@@ -191,7 +201,10 @@ export function TenantTableClient({
   initialQuery: string;
   initialView: string;
   locale: string;
+  properties: PropertyOption[];
+  taxCategories: TaxCategoryOption[];
   tenants: TenantTableRow[];
+  transactionLeases: LeaseOption[];
 }) {
   const common = useTranslations('common');
   const t = useTranslations('tenants');
@@ -202,7 +215,17 @@ export function TenantTableClient({
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [pendingBatchOperation, setPendingBatchOperation] = useState<'activate' | 'deactivate' | null>(null);
   const [selectedView, setSelectedView] = useState<TenantView>(sanitizeView(initialView));
+  const [transactionRequest, setTransactionRequest] = useState<TransactionDrawerRequest | null>(null);
   const overdueMonth = useMemo(() => latestOverdueMonth(tenants, selectedMonth), [selectedMonth, tenants]);
+  const currentTenantHref = useMemo(() => {
+    const params = new URLSearchParams({month: selectedMonth, view: selectedView});
+
+    if (appliedQuery) {
+      params.set('q', appliedQuery);
+    }
+
+    return `/${locale}/tenants?${params.toString()}`;
+  }, [appliedQuery, locale, selectedMonth, selectedView]);
 
   const summary = useMemo(() => {
     const activeTenantRows = tenants.filter((tenant) => tenant.is_active);
@@ -445,16 +468,23 @@ export function TenantTableClient({
                           {common('edit')}
                         </Link>
                         {hasLease ? (
-                          <Link
-                            className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]"
-                            href={
-                              hasPortfolioAccess && lease
-                                ? `/collections?month=${selectedMonth}&view=all&lease_id=${lease.id}#collection-lease-${lease.id}`
-                                : `/transactions?new=transaction&tenant_id=${tenant.id}&lease_id=${lease?.id ?? ''}&period_month=${selectedMonth}`
-                            }
-                          >
-                            {t('actions.transaction')}
-                          </Link>
+                          hasPortfolioAccess && lease ? (
+                            <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/collections?month=${selectedMonth}&view=all&lease_id=${lease.id}#collection-lease-${lease.id}`}>
+                              {t('actions.transaction')}
+                            </Link>
+                          ) : (
+                            <button
+                              className="block w-full rounded-md px-3 py-2 text-left hover:bg-[#f0f5f2]"
+                              onClick={() => {
+                                if (lease) {
+                                  setTransactionRequest({leaseId: lease.id, periodMonth: selectedMonth, tenantId: tenant.id});
+                                }
+                              }}
+                              type="button"
+                            >
+                              {t('actions.transaction')}
+                            </button>
+                          )
                         ) : (
                           <Link className="block rounded-md px-3 py-2 hover:bg-[#f0f5f2]" href={`/bail/new?tenant_id=${tenant.id}`}>
                             {t('actions.createLease')}
@@ -528,6 +558,22 @@ export function TenantTableClient({
             </form>
           </div>
         </div>
+      ) : null}
+      {transactionRequest ? (
+        <TransactionDrawer
+          initialLeaseId={transactionRequest.leaseId}
+          initialOpen
+          initialPeriodMonth={transactionRequest.periodMonth}
+          initialTenantId={transactionRequest.tenantId}
+          key={`${transactionRequest.tenantId}-${transactionRequest.leaseId}-${transactionRequest.periodMonth}`}
+          leases={transactionLeases}
+          locale={locale}
+          onClose={() => setTransactionRequest(null)}
+          properties={properties}
+          returnHref={currentTenantHref}
+          showTrigger={false}
+          taxCategories={taxCategories}
+        />
       ) : null}
       </section>
     </>
