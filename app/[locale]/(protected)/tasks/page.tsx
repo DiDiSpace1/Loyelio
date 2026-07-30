@@ -1,4 +1,5 @@
 import {Link} from '@/components/app/localized-link';
+import {PendingSubmitButton} from '@/components/app/pending-submit-button';
 import {getLocale, getTranslations} from 'next-intl/server';
 
 import {hasPaidAccess, normalizeBillingPlan} from '@/lib/billing/config';
@@ -139,7 +140,7 @@ export default async function TasksPage({searchParams}: {searchParams: Promise<{
       .eq('workspace_id', workspaceId)
       .eq('user_id', user.id)
       .order('completed_at', {ascending: false})
-      .limit(30)
+      .limit(5)
       .returns<TaskCompletionRow[]>(),
     supabase
       .from('automation_events')
@@ -311,7 +312,7 @@ export default async function TasksPage({searchParams}: {searchParams: Promise<{
         </div>
         {(completionEvents ?? []).length ? (
           <div className="divide-y divide-[var(--line-soft)]">
-            {(completionEvents ?? []).slice(0, 15).map((event) => (
+            {(completionEvents ?? []).slice(0, 5).map((event) => (
               <div className="flex flex-col gap-2 px-5 py-4 md:flex-row md:items-center md:justify-between" key={event.id}>
                 <div>
                   <p className="font-semibold text-[#171d1c]">{event.title}</p>
@@ -366,7 +367,9 @@ function TaskRow({completeLabel, locale, priorityLabel, task, typeLabel}: {compl
           <input name="task_type" type="hidden" value={task.type} />
           <input name="title" type="hidden" value={task.title} />
           <input name="meta" type="hidden" value={task.meta} />
-          <button className="min-h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white" style={{color: '#ffffff'}} type="submit">{completeLabel}</button>
+          <PendingSubmitButton className="min-h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-75" pendingLabel={completeLabel} style={{color: '#ffffff'}}>
+            {completeLabel}
+          </PendingSubmitButton>
         </form>
       </div>
     </div>
